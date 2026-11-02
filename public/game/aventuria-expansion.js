@@ -62,6 +62,7 @@ function avxSchedule(e){
 }
 function renderPanel(){
  const s=state(),e=ensure();if(!s||!e)return;
+ const w=avxSchedule(e);
  const q=e.daily.quests;
  const pets=[{id:'slime',name:'Slime companheiro',emoji:'🟢',desc:'Um pequeno aliado que segue você.'},{id:'fox',name:'Raposa mística',emoji:'🦊',desc:'Uma companheira ágil e curiosa.'},{id:'wisp',name:'Fada luminosa',emoji:'✨',desc:'Uma luz mágica que acompanha suas jornadas.'}];
  const pet=pets.find(x=>x.id===e.pet);
@@ -134,6 +135,8 @@ panel.addEventListener('click',ev=>{
 });
 
  const tabs=panel.querySelectorAll('[data-tab]');
+ tabs.forEach(t=>{if(t.dataset.tab==='all'){t.classList.add('active');t.click();}});
+
  tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.toggle('active',x===t));const v=t.dataset.tab;panel.querySelectorAll('#avx-content>.avx-card').forEach(card=>{const sec=card.dataset.section||'growth';card.style.display=(v==='all'||sec===v||(v==='growth'&&sec==='talents')||(v==='world'&&(sec==='boss'||sec==='season')))?'':'none'})});
  bind('avx-guild',()=>{if(w.guild){notify('Sua guilda local já está criada.');return}const name=(prompt('Escolha o nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('O nome precisa ter de 3 a 20 caracteres.');return}if(!spend(200))return;w.guild=name;w.guildLevel=1;w.guildRenown=0;w.seasonXp+=50;notify('🏰 '+name+' foi fundada! Sua guilda está salva neste personagem. Convites online ainda precisam do servidor.')});
 
@@ -172,7 +175,13 @@ function updateMobileNPCButton(){
 }
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
+ const schedule=avxSchedule(e);
  updateMobileNPCButton();
+ let eventHud=$('avx-live-events');if(!eventHud){eventHud=document.createElement('div');eventHud.id='avx-live-events';eventHud.style.cssText='position:fixed;left:12px;top:12px;z-index:99990;max-width:min(310px,calc(100vw - 24px));padding:10px 13px;border:1px solid #d6ad62;border-radius:12px;background:#10151eee;color:#fff0c5;font:800 12px/1.55 system-ui;box-shadow:0 5px 22px #0009;pointer-events:none';document.body.appendChild(eventHud)}
+ const bossLine=schedule.worldBoss?.active?'🐉 COLOSSO ATIVO · procure no mapa':'🐉 Próximo chefe: '+avxCountdown(schedule.nextBossAt-Date.now());
+ const seasonLine=schedule.seasonActive?'🎉 FESTIVAL ATIVO · '+Math.max(0,10-((s.animalKills||0)-(schedule.seasonStartKills||0)))+'/10 abates':'🎉 Próximo evento: '+avxCountdown(schedule.nextSeasonAt-Date.now());
+ eventHud.innerHTML='<div>'+bossLine+'</div><div>'+seasonLine+'</div>';
+ for(const [id,at,active] of [['avx-boss-countdown',schedule.nextBossAt,schedule.worldBoss?.active],['avx-season-countdown',schedule.nextSeasonAt,schedule.seasonActive]]){const el=$(id);if(el&&!active)el.textContent=avxCountdown(at-Date.now())}
  const treasureHud=$('avx-treasure-hud');
  if(e.advanced?.treasure&&g?.player){
   let hud=treasureHud;if(!hud){hud=document.createElement('div');hud.id='avx-treasure-hud';hud.style.cssText='position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:9998;padding:8px 13px;border:1px solid #d6ad62;border-radius:10px;background:#101d20ee;color:#ffe7ad;font:800 12px Inter,system-ui;pointer-events:none';document.body.appendChild(hud)}
@@ -188,7 +197,7 @@ function tick(){
  lastResources={...res};
  const q=e.daily?.quests||[];
  if(e.advanced?.contracts?.active){const c=e.advanced.contracts;c.progress=Math.min(c.goal,Math.max(0,(s.animalKills||0)-(c.startKills||0)))}
- const schedule=avxSchedule(e),now=Date.now();
+ const now=Date.now();
  if(!schedule.worldBoss.active&&now>=schedule.nextBossAt&&g?.running&&g.player&&!g.player.realmId){
   const angle=Math.random()*Math.PI*2,distance=680;
   const boss=g.spawnAnimal('golem_cristal',g.player.x+Math.cos(angle)*distance,g.player.y+Math.sin(angle)*distance,{mult:3.8,raid:'world-boss'});
