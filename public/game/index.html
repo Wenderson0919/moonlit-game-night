@@ -761,8 +761,8 @@ class Game{
   this.player={x:S().x,y:S().y,speed:3.8,dir:'down',moving:false,atkT:0,atkCd:0,atkAng:0,invuln:0,hurtT:0,dashT:0,dashCd:0,dvx:0,dvy:0,inSafeZone:true,biome:'forest',lavaT:0};
   for(const k in ANIMALS)for(let i=0;i<ANIMALS[k].cap;i++)this.trySpawnWild(k);
   this.respawnT=0;this.raidT=0;this.raidInfoT=0;this.miniT=0;this.saveT=0;
-  // Raids são controladas exclusivamente pelo servidor online.
-  this.raids=[];
+  this.raids=[];this.raidT=30;
+  for(let i=0;i<3;i++)this.spawnRaid(null,null,true);
   this.running=true;renderHotbar();updateUIStats();
   showNotification('Bem-vindo a Aventuria! Explore os biomas e enfrente as raids.');
  }
@@ -867,7 +867,7 @@ class Game{
  spawnRaid(forceTier,forceBiome,silent){
   const act=this.raids.filter(r=>r.state!=='cleared');
   let tier=forceTier;
-  if(tier==null){tier=rollRarity([40,28,18,10,4]);if(tier===4&&act.some(r=>r.tier===4))tier=3;if(tier===3&&act.filter(r=>r.tier===3).length>=2)tier=2}
+  if(tier==null){tier=rollRarity([50,28,14,6,2]);if(tier===4&&act.some(r=>r.tier===4))tier=3;if(tier===3&&act.filter(r=>r.tier===3).length>=2)tier=2}
   const T=TIERS[tier];let biome=forceBiome;
   if(!biome){const opts=BKEYS.filter(b=>b!=='forest'||tier<=1);biome=pick(opts)}
   for(let i=0;i<300;i++){
@@ -1149,8 +1149,11 @@ class Game{
   for(const a of this.animals.slice())this.updateAnimal(a,dt);
   this.respawnT-=dt;
   if(this.respawnT<=0){this.respawnT=3;for(const kd in ANIMALS){const c=this.animals.filter(a=>a.kind===kd&&!a.raid).length;if(c<ANIMALS[kd].cap)this.trySpawnWild(kd)}}
-  // Raids locais desativadas: o servidor é a única autoridade de spawn/estado.
-  this.raids=[];
+  // Raids: surgem periodicamente nos biomas (comuns frequentes, lendárias raras).
+  for(const r of this.raids.slice())this.updateRaid(r,dt);
+  this.raids=this.raids.filter(r=>!(r.state==='cleared'&&this.t>=r.removeAt)&&!(r.state==='idle'&&this.t>=r.expire));
+  this.raidT-=dt;
+  if(this.raidT<=0){this.raidT=rand(45,75);if(this.raids.filter(r=>r.state!=='cleared').length<6)this.spawnRaid()}
   // hazards
   for(let i=this.hazards.length-1;i>=0;i--){const h=this.hazards[i];h.t-=dt;if(h.t<=0){if(Math.hypot(p.x-h.x,p.y-h.y)<h.r)this.hurtPlayer(h.dmg,{src:'Chefe'});this.fx.push({x:h.x,y:h.y,r:h.r*.4,max:h.r,t:.3,col:h.col});this.hazards.splice(i,1)}}
   // projéteis
