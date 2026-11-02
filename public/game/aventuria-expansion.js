@@ -332,7 +332,29 @@ function installGameHooks(){
  }
  const g=game(),GameCtor=g?.constructor;
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
- const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
+ const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked;
+ if(originalBlocked&&!proto.__avxHouseCollision){
+  proto.blocked=function(x,y){
+   if(originalBlocked.call(this,x,y))return true;
+   if(!this.player?.realmId){
+    const houses=[
+     [-360,-360], [360,-360], [-360,360], [360,360],
+     [-650,0], [650,0], [0,-650], [0,650], [-515,-255], [515,-255]
+    ];
+    for(const [dx,dy] of houses){
+     const hx=EXP_SAFE.x+dx,hy=EXP_SAFE.y+dy;
+     const left=hx-80,right=hx+80,top=hy-56,bottom=hy+56;
+     if(x>=left-10&&x<=right+10&&y>=top-10&&y<=bottom+10){
+      // Porta central aberta na fachada inferior; paredes e interior continuam sólidos.
+      const inDoor=Math.abs(x-hx)<17&&y>hy+12&&y<bottom+11;
+      if(!inDoor)return true;
+     }
+    }
+   }
+   return false;
+  };
+  proto.__avxHouseCollision=true;
+ }
 const AVX_WEATHER={kind:'clear',until:0,particles:[],last:0};
 function weatherKind(biome){
  const pool={forest:['rain','rain','storm','clear','clear'],desert:['clear','clear','storm','rain'],snow:['snow','blizzard','snow','clear'],swamp:['rain','storm','rain','clear'],volcano:['storm','storm','clear','rain']};
