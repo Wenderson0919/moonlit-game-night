@@ -125,7 +125,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         roster();
       })
       .subscribe((status, err) => {
-        console.log("[mundo] status", status, err?.message ?? "");
+        console.log("[mundo] status", status, err?.message ?? "", status === "CLOSED" ? new Error().stack : "");
         if (ch !== channel) return; // canal antigo (já removido): ignora
         if (status === "SUBSCRIBED") {
           state = "conectado";
