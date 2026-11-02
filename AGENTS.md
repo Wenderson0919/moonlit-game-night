@@ -11,3 +11,4 @@
 
 - Multiplayer: the original game lives untouched (plus a WebSocket shim) in public/game/index.html; src/lib/world-bridge.ts replaces the old Node server.js using Lovable Cloud Realtime broadcast/presence — Workers can't host a persistent WebSocket server.
 - /jogar is behind the _authenticated gate; accounts use Cloud auth (email, Google, Lovable).
+- Online world: positions go over Realtime broadcast; presence `track` is throttled (≥20s) because the Realtime presence rate limit closes the channel.

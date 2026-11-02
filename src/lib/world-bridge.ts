@@ -9,7 +9,9 @@ const SEED = 20260101;
 const CX = (32 * 125) / 2;
 const SAFE_R = 260;
 const SNAP_MS = 50;
-const SEND_MS = 66;
+const SEND_MS = 100;
+// O serviço de presença derruba o canal se "track" for chamado demais; atualiza no máximo a cada 20s.
+const TRACK_MS = 20000;
 const STALE_MS = 6000;
 
 type Remote = {
@@ -40,6 +42,13 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
   let me: Remote | null = null;
   let channel: RealtimeChannel | null = null;
   let lastSend = 0;
+  let lastTrack = 0;
+  function track() {
+    if (!channel || !me) return;
+    lastTrack = Date.now();
+    const { last: _l, ...pl } = me;
+    void channel.track(pl);
+  }
   let snapTimer: number | undefined;
 
   const post = (o: unknown) => frame.contentWindow?.postMessage(o, origin);
@@ -124,13 +133,17 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         }
         roster();
       })
-      .subscribe((status) => {
+      .subscribe((status, err) => {
+        if (status !== "SUBSCRIBED") console.warn("[mundo] conexão:", status, err?.message ?? "");
+        if (ch !== channel) return; // canal antigo (já removido): ignora
         if (status === "SUBSCRIBED") {
           state = "conectado";
           post({ av: "opened" });
+          if (snapTimer) window.clearInterval(snapTimer);
+          if (presTimer) window.clearInterval(presTimer);
           snapTimer = window.setInterval(snap, SNAP_MS);
           presTimer = window.setInterval(() => {
-            if (me && channel) { const { last: _l, ...pl } = me; void channel.track(pl); }
+            if (me && channel && Date.now() - lastTrack > TRACK_MS) track();
             report();
           }, 1000);
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
@@ -146,8 +159,9 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
     if (presTimer) window.clearInterval(presTimer);
     presTimer = undefined;
     snapTimer = undefined;
-    if (channel) void supabase.removeChannel(channel);
-    channel = null;
+    const old = channel;
+    channel = null; // zera antes de remover, para o aviso "CLOSED" não chamar close() de novo
+    if (old) void supabase.removeChannel(old);
     others.clear();
     me = null;
     if (notifyGame) post({ av: "closed" });
@@ -158,7 +172,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       case "join": {
         me = toRemote(myId, { ...m, x: CX, y: CX + 110 });
         deliver({ t: "welcome", id: myId, x: me.x, y: me.y, seed: SEED, raids: [] });
-        void channel?.track((({ last: _l, ...pl }) => pl)(me));
+        track();
         void channel?.send({ type: "broadcast", event: "sys", payload: { m: `${me.name} entrou no mundo.` } });
         broadcastState(true);
         roster();
