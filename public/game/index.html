@@ -1583,7 +1583,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
 <script>
 /* AVENTURIA ONLINE v5 — conexão global e negociação validada pelo servidor */
 (()=>{
- const state={ws:null,id:0,players:new Map(),bosses:new Map(),minions:new Map(),raids:[],ready:false,lastSend:0,tradePeer:0,tradeOffer:null,tradeAccepted:false};
+ const state={ws:null,id:0,players:new Map(),bosses:new Map(),minions:new Map(),raids:[],raidHost:0,ready:false,lastSend:0,tradePeer:0,tradeOffer:null,tradeAccepted:false};
  const S=()=>window.MMO.localState, $=id=>document.getElementById(id);
  const send=o=>{if(state.ws&&state.ws.readyState===1)state.ws.send(JSON.stringify(o))};
  const safeItems=()=>({inventory:(S().inventory||[]).slice(0,60),equipment:S().equipment||{}});
@@ -1609,8 +1609,30 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  function handle(m){
   if(m.t==='welcome'){state.id=m.id;state.ready=true;state.raids=m.raids||[];window.AVENTURIA_ONLINE={id:m.id,online:true,count:1};if(window.game){if(m.seed&&window.game.seed!==m.seed)window.game.start(m.seed);if(window.game.player&&Number.isFinite(m.x)&&Number.isFinite(m.y)){window.game.player.x=m.x;window.game.player.y=m.y;S().x=m.x;S().y=m.y;}}setHud('Mundo global · 1 jogador',true);updateOnlineRaidPanel();toast('Você entrou no servidor global!');}
   else if(m.t==='raids'){state.raids=m.raids||[];updateOnlineRaidPanel();}
-  else if(m.t==='snap'){const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
+  else if(m.t==='snap'){state.raidHost=+m.rh||state.raidHost||0;const g0=window.game;if(g0?.running&&state.raidHost&&state.raidHost!==state.id){g0.raids=[];}else if(g0?.running&&state.raidHost===state.id&&state.raids.length&&!g0.raids.length){g0.raids=state.raids.map(r=>JSON.parse(JSON.stringify(r)));}const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
   else if(m.t==='fx'){const g=window.game;if(!g?.running||!Array.isArray(m.l))return;const rp=state.players.get(m.id);const P=g.player;for(const e of m.l.slice(0,24)){if(!Array.isArray(e)||Math.hypot((e[1]||0)-P.x,(e[2]||0)-P.y)>1200&&e[0]!=='s')continue;if(e[0]==='p'&&g.projs.length<400)g.projs.push({x:+e[1],y:+e[2],vx:+e[3],vy:+e[4],r:+e[5]||6,life:Math.min(3,+e[6]||1),color:String(e[7]||'#fff'),kind:String(e[8]||''),ang:+e[9]||0,from:'ghost',dmg:0});else if(e[0]==='f'&&g.fx.length<300)g.fx.push({x:+e[1],y:+e[2],r:+e[3]||8,max:Math.min(400,+e[4]||40),t:Math.min(1,+e[5]||.3),col:String(e[6]||'#fff'),_o:1});else if(e[0]==='s'&&rp){rp.swUntil=performance.now()+220;rp.swA=+e[1]||0;rp.swR=+e[2]||30}else if(e[0]==='t'&&rp){rp.trUntil=Date.now()+Math.min(9000,+e[1]||0)}}}
+  else if(m.t==='raid_evt'){
+   const g=window.game;
+   if(m.kind==='sync'&&m.from!==state.id){
+    state.raids=Array.isArray(m.raids)?m.raids:[];
+    state.bosses.clear();
+    for(const r of state.raids)if(r.state==='active'&&r.boss)state.bosses.set(r.id,{...r.boss,id:r.id,raidId:r.id,name:r.boss.name,x:r.boss.x,y:r.boss.y,hp:r.boss.hp,maxHp:r.boss.maxHp,onlineRaidBoss:true,sz:r.boss.sz||34,def:{sz:r.boss.sz||34}});
+    updateOnlineRaidPanel();
+   }else if(m.kind==='hit'&&state.raidHost===state.id&&g?.running){
+    const r=g.raids.find(q=>q.id===m.raidId&&q.state==='active');
+    const p=state.players.get(+m.from);
+    if(r&&p&&Math.hypot(p.x-r.x,p.y-r.y)<=r.r+100&&Math.hypot(p.x-r.boss.x,p.y-r.boss.y)<260){
+     r.participants=r.participants||[];if(!r.participants.includes(+m.from))r.participants.push(+m.from);
+     g.damageTarget(r.boss,Math.max(1,Math.min(250,+m.dmg||1)),0,true);
+    }
+   }else if(m.kind==='reward'&&m.from!==state.id){
+    const s=S(),g=window.game;if(!s||!g)return;
+    if(m.gold)s.gold+=m.gold;if(m.xp)g.gainExp(m.xp);
+    for(const [k,v] of Object.entries(m.resources||{}))s.resources[k]=(s.resources[k]||0)+v;
+    if(m.item&&s.inventory.length<60)s.inventory.push(m.item);
+    s.raidsCleared=(s.raidsCleared||0)+1;updateUIStats();saveGame(false);toast('Recompensa da raid cooperativa recebida!');
+   }
+  }
   else if(m.t==='roster'){window.AVENTURIA_ONLINE=window.AVENTURIA_ONLINE||{};window.AVENTURIA_ONLINE.roster=m.roster||[];}
   else if(m.t==='hurt'){const g=window.game;if(!g?.running)return;const before=g.lastDeathAt;g.hurtPlayer(m.raw||0,{src:m.src||'outro jogador',pvp:true,from:m.from});if(g.lastDeathAt!==before){send({t:'died',by:m.from});if(g.player){S().x=g.player.x;S().y=g.player.y}}}
   else if(m.t==='kill'){const s=S(),g=window.game;const gold=10+Math.round((m.lvl||1)*4);s.gold+=gold;if(g?.gainExp)g.gainExp(20+(m.lvl||1)*8);if(typeof showNotification==='function')showNotification('⚔ Você derrotou '+m.name+'! +'+gold+' Gold','#fbbf24');if(typeof updateUIStats==='function')updateUIStats();}
@@ -1658,7 +1680,36 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  if(gameProto&&gameProto.damageTarget){const original=gameProto.damageTarget;gameProto.damageTarget=function(t,dmg,ang,noKb){if(t?.online&&t.id){const now=performance.now();if(!t.pvp||!(window.AV_PVP&&window.AV_PVP())){if(now-(state.pvpWarn||0)>2500){state.pvpWarn=now;toast(t.pvp?'Ligue seu PvP (🗡) para atacar jogadores.':t.name+' está com PvP desligado.')}return}if(now-(t.lastHit||0)<150)return;t.lastHit=now;t.hitShow=now+200;send({t:'hit',k:'p',id:t.id,d:dmg});this.floatText(t.x,t.y-34,'-'+Math.round(dmg),'#fbbf24');t.hurtT=.2;return}if(t?.onlineRaidBoss){send({t:'hit',k:'b',id:t.id,d:dmg});return}if(t?.onlineMinion){send({t:'hit',k:'m',id:t.id,d:dmg});return}return original.call(this,t,dmg,ang,noKb)}}
  // Adiciona os jogadores online à lista de alvos; bots PvP locais ficam desativados no modo online.
  const each=Game?.prototype?.eachTarget;
- if(each)Game.prototype.eachTarget=function(fn){each.call(this,fn);for(const p of state.players.values())fn(p)};
+ if(each)Game.prototype.eachTarget=function(fn){each.call(this,fn);for(const p of state.players.values())fn(p);for(const b of state.bosses.values())fn(b)};
+ const spawn0=Game?.prototype?.spawnRaid;
+ if(spawn0)Game.prototype.spawnRaid=function(){if(state.raidHost&&state.raidHost!==state.id)return null;return spawn0.apply(this,arguments)};
+ const updateRaid0=Game?.prototype?.updateRaid;
+ if(updateRaid0)Game.prototype.updateRaid=function(r,dt){if(state.raidHost&&state.raidHost!==state.id)return;return updateRaid0.call(this,r,dt)};
+ const dead0=Game?.prototype?.onBossDead;
+ if(dead0)Game.prototype.onBossDead=function(r){
+  if(state.raidHost!==state.id)return;
+  const s=S(),T=TIERS[r.tier],gold=Math.floor((T.gold[0]+T.gold[1])/2),xp=T.xp;
+  const mats={forest:['wood','berry','iron'],desert:['sand','cactus','goldOre'],snow:['ice','pine','diamond'],swamp:['mushroom','herb','fang'],volcano:['obsidian','ember','iron']}[r.biome]||[];
+  const resources={};mats.forEach(k=>resources[k]=6+r.tier*4);
+  const oldState=r.state;dead0.call(this,r);
+  if(oldState!=='cleared')send({t:'raid_reward',kind:'reward',raidId:r.id,gold,xp,resources});
+ };
+ // Sincroniza o estado completo da raid a partir do líder eleito; o próximo líder
+ // assume o último snapshot recebido se o líder atual sair.
+ setInterval(()=>{
+  if(!state.ready||!state.id||!window.game?.running||!state.raidHost)return;
+  const g=window.game;
+  if(state.raidHost===state.id){
+   const raids=g.raids.map(r=>JSON.parse(JSON.stringify(r)));
+   send({t:'raid_sync',kind:'sync',raids});
+  }
+ },250);
+ // Jogadores que não são líderes enviam pedidos de dano ao chefe compartilhado.
+ const dmg0=Game?.prototype?.damageTarget;
+ if(dmg0)Game.prototype.damageTarget=function(t,dmg,ang,noKb){
+  if(t?.onlineRaidBoss){send({t:'raid_hit',kind:'hit',raidId:t.raidId,dmg:Math.round(dmg)});this.floatText(t.x,t.y-35,'-'+Math.round(dmg),'#fbbf24');return}
+  return dmg0.call(this,t,dmg,ang,noKb);
+ };
  window.addEventListener('beforeunload',()=>{try{state.ws?.close()}catch{}});
  connect();
 })();
