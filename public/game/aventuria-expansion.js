@@ -179,10 +179,11 @@ function mountAndPetDraw(g){
  c.restore();
 }
 const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
-const originalRender=window.Game?.prototype?.render;
-if(originalRender){window.Game.prototype.render=function(){originalRender.call(this);mountAndPetDraw(this)}}
-const originalInteract=window.Game?.prototype?.interact;
-if(originalInteract){window.Game.prototype.interact=function(){
+const GameCtor=window.game?.constructor;
+const originalRender=GameCtor?.prototype?.render;
+if(originalRender){GameCtor.prototype.render=function(){originalRender.call(this);mountAndPetDraw(this)}}
+const originalInteract=GameCtor?.prototype?.interact;
+if(originalInteract){GameCtor.prototype.interact=function(){
  const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
  if(ensure()?.dungeon?.active&&Math.hypot(p.x-(MAP-380),p.y-(MAP-430))<75){advanceDungeon();return}
