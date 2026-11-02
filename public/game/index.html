@@ -2005,6 +2005,23 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
 })();
 </script>
 
+<style id="remove-boss-event-countdowns">
+#avx-live-events,#avx-event,#avx-season-event,[data-avx-countdown]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+</style>
+<script id="remove-legacy-boss-event-countdowns">
+(()=>{
+ const removeCountdowns=root=>{
+  if(!root||!root.querySelectorAll)return;
+  for(const el of root.querySelectorAll('body *')){
+   if(el.id==='remove-legacy-boss-event-countdowns'||el.id==='remove-boss-event-countdowns')continue;
+   const t=(el.innerText||el.textContent||'').replace(new RegExp('\\s+','g'),' ').trim();
+   if(t.length<180&&t.toLowerCase().includes('próximo chefe')&&t.toLowerCase().includes('próximo evento'))el.remove();
+  }
+ };
+ removeCountdowns(document);
+ new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes)if(n.nodeType===1)removeCountdowns(n)}).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 <script src="./aventuria-expansion.js"></script>
 </body>
 </html>
