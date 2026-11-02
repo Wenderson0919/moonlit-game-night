@@ -241,13 +241,13 @@ function installGameHooks(){
  if(!window.__avxNpcKeyHook){
   window.__avxNpcKeyHook=true;
   window.addEventListener('keydown',ev=>{
-   if(ev.code!=='KeyE'||ev.repeat||!game()?.running)return;
+   if((ev.code!=='KeyE'&&ev.key?.toLowerCase()!=='e')||ev.repeat)return;
    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
    const g=game(),p=g.player;if(!p)return;
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
    const nearby=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearby&&nearby.d<115){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearby.n.id);return}
+   if(nearby&&nearby.d<210){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearby.n.id);return}
   },true);
  }
  if(GameCtor.prototype.__avxTownHooks)return;
@@ -263,6 +263,8 @@ function installGameHooks(){
  proto.__avxTownHooks=true;
 }
 window.addEventListener('load',installGameHooks);
+// Also install immediately: this script may load after the browser's load event.
+installGameHooks();
 const PET_CATALOG=[
 {id:'slime',name:'Slime',emoji:'🟢',price:250,desc:'Companheiro resistente',bonus:'Defesa +8'},
 {id:'fox',name:'Raposa Mística',emoji:'🦊',price:450,desc:'Ágil e companheira',bonus:'Ataque +6'},
