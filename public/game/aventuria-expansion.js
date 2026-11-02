@@ -167,7 +167,7 @@ function tick(){
  const gathered=Math.max(0,total-(e.dayStartTotal??(e.dayStartTotal=total)));const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
   const safeT=Number.isFinite(g.t)?g.t:Date.now()/1000;
-  const phase=((safeT%360)+360)%360/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2-.2)+.12)/1.12));
+  const phase=((safeT%360)+360)%360/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2+Math.PI-.2)+.12)/1.12));
   const weather=['Céu limpo','Chuva leve','Neblina','Vento forte'][Math.floor(g.t/150)%4];
   if(Math.floor(g.t/360)!==lastClock){lastClock=Math.floor(g.t/360);notify('O mundo entrou em um novo período do dia.')}
   const p=g.player;if(p){const base=p.baseSpd||p.speed||3.8;if(p.baseSpd){p.speed=p.baseSpd}}
@@ -379,7 +379,7 @@ function drawWeather(g){
  if(w.kind==='blizzard'){c.fillStyle='rgba(210,230,245,.12)';c.fillRect(0,0,W,H)}
  // Ciclo noturno cinematográfico: céu profundo, estrelas, lua, brilho e vinheta.
  const clock=((Number(g.t)||0)%360+360)%360/360;
- const night=Math.max(0,Math.min(1,(Math.cos(clock*Math.PI*2-.2)+.12)/1.12));
+ const night=Math.max(0,Math.min(1,(Math.cos(clock*Math.PI*2+Math.PI-.2)+.12)/1.12));
  if(night>.08){
   c.fillStyle='rgba(5,10,29,'+(night*.62)+')';c.fillRect(0,0,W,H);
   c.globalAlpha=night*.9;
