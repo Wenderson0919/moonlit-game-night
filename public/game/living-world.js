@@ -61,7 +61,7 @@
    const duration=template.duration+(Math.floor(world.day+catchup)%2);
    const event={id:'event-'+Math.floor(startAt/1000),...template,startAt,endAt:startAt+duration*DAY_MS,status:t>=startAt+duration*DAY_MS?'finished':'active'};
    world.events.push(event);world.history.unshift({title:event.title,at:startAt,desc:event.desc});
-   if(event.kind==='market'){
+   if(event.kind==='market'&&event.status==='active'){
     const visitors=[
      {name:'Mercador Kael',role:'mercador viajante',color:'#a77b45',hair:'#34271f',skin:'#d6a36e'},
      {name:'Suri',role:'contadora de histórias',color:'#557f91',hair:'#392b50',skin:'#e8b985'}
