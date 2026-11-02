@@ -104,6 +104,7 @@
   const active=world.events.find(e=>e.status==='active'&&t>=e.startAt&&t<e.endAt);
   if(active&&active.kind==='festival'&&h>=16&&h<22&&n.id!=='borin')place='plaza';
   if(active&&active.kind==='celebration'&&h>=15&&h<21)place='plaza';
+  n.activity=place;
   return routes[place](n);
  }
  function updateNPC(n){
@@ -153,6 +154,8 @@
    const moving=Math.hypot(n.to[0]-n.from[0],n.to[1]-n.from[1])>2&&t<n.moveUntil;
    window.drawCharacter(c,n.x,n.y,{dir:'down',name:n.name,title:n.role,cls:'Guerreiro',race:'Humano',hair:n.hair,eye:'#49372c',skin:n.skin,hairStyle:'Curto',beard:'Nenhuma',outfit:n.color,outfitStyle:'Armadura',cloak:'#252b45',accessory:'Nenhum',mark:'Nenhuma',moving,local:false});
    c.font='bold 10px Inter,sans-serif';c.textAlign='center';c.fillStyle='#fff0c2';c.fillText(n.name,n.x,n.y-30);
+   if(n.activity==='sleep'){c.font='bold 12px Inter,sans-serif';c.fillStyle='#b8d7ff';c.fillText('Z z z',n.x+19,n.y-18)}
+   else if(n.activity==='work'){c.font='10px Inter,sans-serif';c.fillStyle='#f4d68e';c.fillText('⚒',n.x+17,n.y-17)}
    if(n.bubble)drawBubble(c,n.bubble,n.x,n.y);
   }
   const festival=world.events.find(e=>e.status==='active'&&e.kind==='festival');
