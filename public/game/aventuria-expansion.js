@@ -62,7 +62,7 @@ function avxSchedule(e){
 }
 function renderPanel(){
  const s=state(),e=ensure();if(!s||!e)return;
- const w=avxSchedule(e);
+ avxSchedule(e);
  const q=e.daily.quests;
  const pets=[{id:'slime',name:'Slime companheiro',emoji:'🟢',desc:'Um pequeno aliado que segue você.'},{id:'fox',name:'Raposa mística',emoji:'🦊',desc:'Uma companheira ágil e curiosa.'},{id:'wisp',name:'Fada luminosa',emoji:'✨',desc:'Uma luz mágica que acompanha suas jornadas.'}];
  const pet=pets.find(x=>x.id===e.pet);
