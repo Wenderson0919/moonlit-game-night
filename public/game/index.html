@@ -1298,6 +1298,56 @@ class Game{
   const s0=SAFE;c.fillStyle='#4a5b60';c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.fill();
   c.strokeStyle='rgba(20,30,34,.35)';c.lineWidth=1;for(let r=40;r<s0.radius;r+=40){c.beginPath();c.arc(s0.x,s0.y,r,0,6.283);c.stroke()}
   c.fillStyle='rgba(16,185,129,.08)';c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.fill();c.strokeStyle='#10b981';c.lineWidth=6;c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.stroke();
+  // Vila de Aventuria: praça central, caminhos, canteiros, lanternas e fachadas.
+  // Desenhada antes das entidades para que personagens e NPCs fiquem por cima.
+  {
+   const X=s0.x,Y=s0.y;
+   c.save();
+   // piso de pedra dentro do círculo seguro
+   c.fillStyle='#887b61';c.beginPath();c.arc(X,Y,s0.radius-5,0,6.283);c.fill();
+   c.save();c.beginPath();c.arc(X,Y,s0.radius-7,0,6.283);c.clip();
+   c.strokeStyle='rgba(47,55,49,.22)';c.lineWidth=1;
+   for(let yy=Y-250;yy<Y+250;yy+=24){c.beginPath();c.moveTo(X-250,yy);c.lineTo(X+250,yy);c.stroke()}
+   for(let xx=X-250;xx<X+250;xx+=24){c.beginPath();c.moveTo(xx,Y-250);c.lineTo(xx,Y+250);c.stroke()}
+   // caminhos que ligam a praça aos serviços
+   c.lineCap='round';c.strokeStyle='#c9b995';c.lineWidth=42;
+   [[X,Y,X,Y-205],[X,Y,X+150,Y-105],[X,Y,X-150,Y-105],[X,Y,X+150,Y+105],[X,Y,X-150,Y+105]].forEach(a=>{c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(a[2],a[3]);c.stroke()});
+   c.strokeStyle='rgba(91,75,53,.28)';c.lineWidth=2;
+   for(let a=-220;a<=220;a+=22){c.beginPath();c.moveTo(X-240,Y+a);c.lineTo(X+240,Y+a);c.stroke()}
+   // praça central circular e fonte
+   c.fillStyle='#b9a982';c.beginPath();c.arc(X,Y,65,0,6.283);c.fill();
+   c.strokeStyle='#e6d6ad';c.lineWidth=5;c.beginPath();c.arc(X,Y,58,0,6.283);c.stroke();
+   c.fillStyle='#526f75';c.beginPath();c.arc(X,Y,25,0,6.283);c.fill();
+   c.fillStyle='#9bd4d0';c.beginPath();c.arc(X,Y,15,0,6.283);c.fill();
+   c.fillStyle='#e6f4df';c.beginPath();c.arc(X,Y-5,5,0,6.283);c.fill();
+   // canteiros e arbustos decorativos
+   const beds=[[-205,-15],[205,-15],[-205,145],[205,145],[-25,205],[25,-225]];
+   for(const [dx,dy] of beds){const bx=X+dx,by=Y+dy;c.fillStyle='#594b36';c.fillRect(bx-19,by-15,38,30);c.fillStyle='#547b45';c.fillRect(bx-16,by-12,32,24);for(let k=0;k<4;k++){c.fillStyle=k%2?'#8ebd62':'#6e9e50';c.beginPath();c.arc(bx-9+(k%2)*17,by-5+Math.floor(k/2)*11,6,0,6.283);c.fill()}}
+   c.restore();
+   // fachadas de lojas ao redor da praça, mantendo livres os pontos dos NPCs
+   const houses=[
+    {x:X-188,y:Y-174,w:76,h:58,roof:'#8b4937',wall:'#d7b77f',sign:'ESTÁBULO',icon:'🐎'},
+    {x:X+112,y:Y-178,w:78,h:58,roof:'#3f7180',wall:'#d9c28d',sign:'MERCADO',icon:'⚒'},
+    {x:X-188,y:Y+108,w:76,h:58,roof:'#78619a',wall:'#d8bd91',sign:'GUILDA',icon:'⚔'},
+    {x:X+112,y:Y+108,w:78,h:58,roof:'#547c55',wall:'#d7c18d',sign:'MASCOTES',icon:'🐾'},
+    {x:X-38,y:Y-244,w:76,h:48,roof:'#554b80',wall:'#d7c18d',sign:'PORTAL',icon:'✦'}
+   ];
+   for(const h of houses){
+    c.fillStyle='rgba(0,0,0,.28)';c.fillRect(h.x-3,h.y+9,h.w+6,h.h+5);
+    c.fillStyle=h.wall;c.fillRect(h.x,h.y,h.w,h.h);
+    c.fillStyle='#6a4934';c.fillRect(h.x+8,h.y+23,16,h.h-23);c.fillRect(h.x+h.w-24,h.y+20,14,14);
+    c.fillStyle='#8a6544';c.fillRect(h.x+31,h.y+28,15, h.h-28);
+    c.fillStyle=h.roof;c.beginPath();c.moveTo(h.x-8,h.y+5);c.lineTo(h.x+h.w/2,h.y-22);c.lineTo(h.x+h.w+8,h.y+5);c.closePath();c.fill();
+    c.strokeStyle='#e8d3a4';c.lineWidth=2;c.stroke();
+    c.fillStyle='rgba(16,22,20,.82)';c.fillRect(h.x+2,h.y-39,h.w-4,14);
+    c.fillStyle='#fff0c2';c.font='bold 9px Inter';c.textAlign='center';c.fillText(h.sign,h.x+h.w/2,h.y-29);
+   }
+   // postes de iluminação e bandeirolas
+   for(const [dx,dy] of [[-125,-205],[125,-205],[-225,65],[225,65],[-120,205],[120,205]]){
+    const lx=X+dx,ly=Y+dy;c.fillStyle='#49372a';c.fillRect(lx-3,ly-3,6,25);c.fillStyle='#d6a94f';c.beginPath();c.arc(lx,ly-7,8,0,6.283);c.fill();c.fillStyle='rgba(255,207,105,.18)';c.beginPath();c.arc(lx,ly-7,17,0,6.283);c.fill();
+   }
+   c.restore();
+  }
   // lagos
   for(const q of this.ponds){
    const cols={water:['#c3ad70','#367f83','#4e9b9a'],ice:['#c9e6f2','#9fd3e8','#c5e8f5'],swamp:['#3a4a2a','#4f6b3f','#66834e'],lava:['#2a1512','#c2410c','#fb923c']}[q.kind];
