@@ -64,8 +64,8 @@ function renderPanel(){
  '<div class="avx-card"><b class="text-amber-100 text-sm">🐎 Montaria</b><p class="text-[11px] text-slate-400 mt-1">Montaria de viagem: aumenta a velocidade de deslocamento em 30%.</p><button id="avx-mount" class="avx-action mt-2">'+(e.mount?'Guardar montaria':'Invocar montaria · 500 Gold')+'</button></div>'+
  '<div class="avx-card"><b class="text-amber-100 text-sm">🏆 Conquistas de aventura</b><div id="avx-achievements" class="text-[11px] text-slate-300 mt-2"></div></div>';
 
- const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
- w.dungeon??={room:0,hp:0,active:false,guard:0};w.worldBoss??={hp:0,active:false,phase:0};w.seasonStarted??=Date.now();
+ const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
+ w.worldBoss??={hp:0,active:false,phase:0};w.seasonStarted??=Date.now();
  const skillDefs=[['power','Força','+5% de dano por nível',5],['vitality','Vitalidade','+8 de vida máxima por nível',5],['haste','Agilidade','+3% de velocidade por nível',5],['fortune','Fortuna','+4% de ouro em recompensas por nível',5]];
  const skillHtml=skillDefs.map(x=>'<div class="flex items-center justify-between gap-2 py-1"><div><b>'+x[1]+'</b><div class="text-[10px] text-slate-400">'+x[2]+'</div></div><button class="avx-action" data-skill="'+x[0]+'">Evoluir ('+(w.skills[x[0]]||0)+'/'+x[3]+')</button></div>').join('');
  const featureHtml=
@@ -84,7 +84,7 @@ function renderPanel(){
  const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{fn();persist();renderPanel();if(typeof updateUIStats==='function')updateUIStats()}};
  const spend=(n)=>{if((s.gold||0)<n){notify('Gold insuficiente.');return false}s.gold-=n;return true};
  bind('avx-guild',()=>{if(w.guild){notify('Sua guilda local já está criada.');return}const name=(prompt('Escolha o nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('O nome precisa ter de 3 a 20 caracteres.');return}if(!spend(200))return;w.guild=name;w.guildLevel=1;w.guildRenown=0;w.seasonXp+=50;notify('🏰 '+name+' foi fundada! Sua guilda está salva neste personagem. Convites online ainda precisam do servidor.')});
- bind('avx-dungeon',()=>openDungeonPortal());
+
  bind('avx-arena',()=>{if((s.level||1)<5){notify('Arena desbloqueada no nível 5.');return}if(!spend(25))return;const st=window.getRPGStats?window.getRPGStats():{atk:0,def:0,power:0};const power=(s.level||1)*12+(st.atk||0)*3+(st.def||0)*1.5+(st.power||0)*2+(w.gear||0)*8;const rival=(s.level||1)*13+35+Math.random()*70;const score=power+Math.random()*55;if(score>=rival){w.arenaWins++;w.seasonXp+=110;s.gold+=100+Math.floor((s.level||1)*4);notify('🏅 Vitória na arena! Sua build superou o rival. +Gold e 110 XP de temporada.')}else{w.seasonXp+=25;notify('Derrota honrosa! O rival venceu por '+Math.ceil(rival-score)+' pontos. Você ganhou 25 XP de temporada.')}});
  bind('avx-market',()=>{if(!spend(120))return;s.gold+=0;s.resources??={};s.resources.berry=(s.resources.berry||0)+5;s.resources.wood=(s.resources.wood||0)+5;w.marketLog.push({item:'Kit de aventura',at:Date.now()});w.seasonXp+=20;notify('Kit comprado: +5 frutas e +5 madeiras.')});
  bind('avx-house',()=>{const cost=300+w.house*250;if(w.house>=10){notify('Sua casa já alcançou o nível máximo.');return}if(!spend(cost))return;w.house++;w.seasonXp+=60;notify('Sua propriedade evoluiu para o nível '+w.house+'!')});
@@ -272,7 +272,6 @@ function drawWeather(g){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
   if(n&&Math.hypot(p.x-n.x,p.y-n.y)<230){openTownNPC(n.id);return}
-  if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
   return originalInteract.call(this);
  };
  proto.__avxTownHooks=true;
@@ -349,14 +348,13 @@ function openMerchantUI(){
 }
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
- const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
+ const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
  magic:()=>openMagicUI(),
  pet:()=>openCompanionUI(),
  guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Estamos preparando criação de guildas, convites e batalhas cooperativas.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
- dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:dungeonRooms[0].hp,enemyName:dungeonRooms[0].enemy,deadline:Date.now()+8*60*1000,startedAt:Date.now(),timeLimit:480};const g=game();if(g?.player){g.player.x=dungeonRooms[0].x+60;g.player.y=dungeonRooms[0].y+130;s.x=g.player.x;s.y=g.player.y}notify('⚔ Masmorra iniciada! Você tem 8 minutos para derrotar o chefão.');persist()}
  };
  actions[id]?.();if(panel.style.display==='block')renderPanel();
 }
