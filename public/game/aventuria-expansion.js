@@ -420,10 +420,25 @@ function openCompanionUI(){
 function openArmorerUI(){
  const s=state(),ex=ensure();if(!s||!ex)return;
  const stock=[
-  {id:'bronze_sword',name:'Espada de Bronze',icon:'⚔️',price:180,slot:'weapon',ilvl:1,rar:0,stats:{atk:8,crit:1},sell:45,desc:'Lâmina simples para aventureiros.'},
-  {id:'iron_sword',name:'Espada de Ferro',icon:'🗡️',price:520,slot:'weapon',ilvl:5,rar:1,stats:{atk:19,crit:2},sell:130,desc:'Mais resistente e afiada.',level:4},
-  {id:'crystal_blade',name:'Lâmina de Cristal',icon:'💎',price:1250,slot:'weapon',ilvl:9,rar:2,stats:{atk:30,power:12},sell:310,desc:'Arma rara de energia arcana.',level:8},
-  {id:'guardian_armor',name:'Armadura do Guardião',icon:'🛡️',price:850,slot:'armor',ilvl:6,rar:1,stats:{def:22,hp:25},sell:210,desc:'Proteção reforçada.',level:5}
+  {id:'bronze_sword',name:'Espada de Bronze',icon:'⚔️',price:180,slot:'weapon',ilvl:1,rar:0,stats:{atk:8,crit:1},sell:45,desc:'Lâmina inicial.'},
+  {id:'iron_sword',name:'Espada de Ferro',icon:'🗡️',price:520,slot:'weapon',ilvl:5,rar:1,stats:{atk:19,crit:2},sell:130,desc:'Lâmina resistente.',level:4},
+  {id:'crystal_blade',name:'Lâmina de Cristal',icon:'💎',price:1250,slot:'weapon',ilvl:9,rar:2,stats:{atk:30,power:12},sell:310,desc:'Energia arcana.',level:8},
+  {id:'guardian_armor',name:'Armadura do Guardião',icon:'🛡️',price:850,slot:'armor',ilvl:6,rar:1,stats:{def:22,hp:25},sell:210,desc:'Proteção reforçada.',level:5},
+  {id:'longbow',name:'Arco do Batedor',icon:'🏹',price:460,slot:'weapon',ilvl:4,rar:1,stats:{atk:15,speed:3},sell:115,desc:'Arco leve.',level:3},
+  {id:'twin_daggers',name:'Adagas Gêmeas',icon:'🗡️',price:760,slot:'weapon',ilvl:6,rar:1,stats:{atk:17,crit:5,speed:2},sell:190,desc:'Ataques rápidos.',level:5},
+  {id:'war_hammer',name:'Martelo de Guerra',icon:'🔨',price:980,slot:'weapon',ilvl:7,rar:2,stats:{atk:27,def:4},sell:245,desc:'Impacto pesado.',level:6},
+  {id:'sage_staff',name:'Cajado do Sábio',icon:'🪄',price:1050,slot:'weapon',ilvl:8,rar:2,stats:{power:28,atk:9},sell:260,desc:'Amplifica magia.',level:7},
+  {id:'shadow_blade',name:'Lâmina Sombria',icon:'🌑',price:1750,slot:'weapon',ilvl:12,rar:2,stats:{atk:38,crit:7,speed:4},sell:430,desc:'Arma de assassinos.',level:11},
+  {id:'sun_spear',name:'Lança Solar',icon:'🌞',price:2450,slot:'weapon',ilvl:16,rar:3,stats:{atk:49,power:18},sell:610,desc:'Lança de luz antiga.',level:15},
+  {id:'dragon_fang',name:'Presa do Dragão',icon:'🐉',price:4200,slot:'weapon',ilvl:22,rar:4,stats:{atk:72,crit:12,power:22},sell:1050,desc:'Relíquia lendária.',level:21},
+  {id:'leather_armor',name:'Couraça de Couro',icon:'🥋',price:300,slot:'armor',ilvl:3,rar:0,stats:{def:12,hp:12},sell:75,desc:'Proteção flexível.',level:2},
+  {id:'ranger_armor',name:'Traje do Patrulheiro',icon:'🧥',price:1100,slot:'armor',ilvl:8,rar:2,stats:{def:29,hp:40,speed:2},sell:275,desc:'Armadura leve.',level:7},
+  {id:'crystal_plate',name:'Placas de Cristal',icon:'💠',price:2100,slot:'armor',ilvl:14,rar:3,stats:{def:48,hp:85},sell:525,desc:'Defesa cristalina.',level:13},
+  {id:'guardian_helm',name:'Elmo do Guardião',icon:'⛑️',price:650,slot:'helmet',ilvl:6,rar:1,stats:{def:16,hp:15},sell:160,desc:'Elmo reforçado.',level:5},
+  {id:'arcane_crown',name:'Coroa Arcana',icon:'👑',price:1550,slot:'helmet',ilvl:11,rar:2,stats:{power:24,def:12},sell:390,desc:'Coroa de poder mágico.',level:10},
+  {id:'swift_boots',name:'Botas Velozes',icon:'🥾',price:720,slot:'boots',ilvl:7,rar:1,stats:{def:10,speed:5},sell:180,desc:'Aumenta mobilidade.',level:6},
+  {id:'phoenix_ring',name:'Anel da Fênix',icon:'💍',price:1350,slot:'ring',ilvl:10,rar:2,stats:{power:17,hp:35},sell:335,desc:'Energia de renascimento.',level:9},
+  {id:'moon_amulet',name:'Amuleto Lunar',icon:'📿',price:1950,slot:'accessory',ilvl:13,rar:3,stats:{power:25,hp:55},sell:485,desc:'Relíquia da noite.',level:12}
  ];
  let m=$('avx-armorer-modal');if(!m){m=document.createElement('div');m.id='avx-armorer-modal';document.body.appendChild(m)}
  m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;background:#061018dd';
@@ -443,9 +458,18 @@ function openArmorerUI(){
 function openMagicUI(){
  const s=state();if(!s)return;
  const stock=[
-  {id:'arcane_bolt',name:'Projétil Arcano',icon:'🔮',price:220,desc:'Aprenda um disparo mágico.'},
-  {id:'frost_nova',name:'Nova Congelante',icon:'❄️',price:480,desc:'Uma explosão de gelo ao seu redor.'},
-  {id:'healing_light',name:'Luz Restauradora',icon:'✨',price:650,desc:'Aprenda uma magia de cura.'}
+  {id:'arcane_bolt',name:'Projétil Arcano',icon:'🔮',price:220,desc:'Disparo arcano de longo alcance.'},
+  {id:'frost_nova',name:'Nova Congelante',icon:'❄️',price:480,desc:'Explosão de gelo em área.'},
+  {id:'healing_light',name:'Luz Restauradora',icon:'✨',price:650,desc:'Recupera sua vida.'},
+  {id:'fireball',name:'Bola de Fogo',icon:'🔥',price:700,desc:'Projétil flamejante.'},
+  {id:'thunder_strike',name:'Raio Celestial',icon:'⚡',price:950,desc:'Descarga elétrica poderosa.'},
+  {id:'nature_roots',name:'Raízes Prisioneiras',icon:'🌿',price:900,desc:'Energia da natureza em área.'},
+  {id:'shadow_burst',name:'Explosão Sombria',icon:'🌑',price:1200,desc:'Impacto de energia sombria.'},
+  {id:'arcane_lance',name:'Lança Astral',icon:'💠',price:1450,desc:'Perfuração arcana de longo alcance.'},
+  {id:'wind_blades',name:'Lâminas de Vento',icon:'🌪️',price:1100,desc:'Cortes rápidos de vento.'},
+  {id:'holy_smite',name:'Julgamento Sagrado',icon:'☀️',price:1800,desc:'Impacto sagrado em área.'},
+  {id:'poison_cloud',name:'Nuvem Venenosa',icon:'☠️',price:1600,desc:'Nuvem tóxica ao redor.'},
+  {id:'meteor',name:'Chuva de Meteoros',icon:'☄️',price:3200,desc:'Magia suprema de fogo.'}
  ];
  s.learnedSpells??=[];
  let m=$('avx-magic-modal');if(!m){m=document.createElement('div');m.id='avx-magic-modal';document.body.appendChild(m)}
