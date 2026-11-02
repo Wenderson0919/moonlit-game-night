@@ -515,6 +515,7 @@ function getRPGStats(){
  const ex=s.expansion||{},w=ex.world||{};st.atk+=Math.floor((w.skills?.power||0)*1.5)+(w.gear||0)*3;st.def+=Math.floor((w.skills?.vitality||0)*2)+(w.gear||0);st.speed+=(w.skills?.haste||0)*.8;st.crit+=(w.skills?.fortune||0)*.01;st.hp+=(w.skills?.vitality||0)*8;
  return st;
 }
+window.getRPGStats=getRPGStats;
 const effMaxHp=()=>S().maxHp+getRPGStats().hp;
 const playerSubclass=()=>{const s=S(),c=CLASS_INFO[s.className];return s.level>=35?c.sub[2]:s.level>=20?c.sub[1]:s.level>=10?c.sub[0]:'Aprendiz'};
 
