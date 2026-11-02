@@ -155,8 +155,8 @@ function updateMobileNPCButton(){
  const g=game(),p=g?.player;if(!g?.running||!p||p.realmId){$('avx-mobile-interact')?.remove();return}
  const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
  let btn=$('avx-mobile-interact');
- if(!near||near.d>240){btn?.remove();return}
- if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<260)openTownNPC(n.n.id)});document.body.appendChild(btn)}
+ if(!near||near.d>520){btn?.remove();return}
+ if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<540)openTownNPC(n.n.id)});document.body.appendChild(btn)}
  btn.textContent='E · '+near.n.name;
  btn.style.cssText='position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 190px);z-index:99999;padding:14px 18px;border-radius:16px;border:2px solid '+near.n.color+';background:#10212bea;color:#fff;font:800 13px system-ui;box-shadow:0 5px 22px #0009;touch-action:manipulation;pointer-events:auto';
 }
@@ -310,7 +310,7 @@ function mountAndPetDraw(g){
   c.fillStyle='#26342e';c.fillRect(-6,-14,3,2);c.fillRect(3,-14,3,2);
   c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);c.restore();
   // nome sempre visível; função + [E] e um anel pulsante só para o NPC ao alcance
-  const near=Math.hypot(p.x-n.x,p.y-n.y)<230;
+  const near=Math.hypot(p.x-n.x,p.y-n.y)<520;
   if(near){const pu=.5+.5*Math.sin(now/260);c.strokeStyle='rgba(255,227,160,'+(.45+.35*pu)+')';c.lineWidth=2;c.beginPath();c.ellipse(n.x,n.y+14,26+pu*4,10+pu*2,0,0,Math.PI*2);c.stroke()}
   c.font='bold 10px Inter';c.textAlign='center';
   const tw=Math.max(70,c.measureText(n.name).width+18);c.fillStyle='rgba(7,19,17,.85)';c.fillRect(n.x-tw/2,n.y-61,tw,16);c.fillStyle=near?'#fff3c4':'#ffe3a0';c.fillText(n.name,n.x,n.y-49);
@@ -355,7 +355,7 @@ function installGameHooks(){
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<230){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
+   if(nearest&&nearest.d<520){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
   },true);
  }
  const g=game(),GameCtor=g?.constructor;
@@ -428,7 +428,7 @@ function drawWeather(g){
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
-  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<230){openTownNPC(n.id);return}
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<520){openTownNPC(n.id);return}
   return originalInteract.call(this);
  };
  proto.__avxTownHooks=true;
