@@ -118,6 +118,7 @@ function updateMobileNPCButton(){
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  updateMobileNPCButton();
+ if(e.dungeon?.active&&e.dungeon.deadline){const left=Math.max(0,Math.ceil((e.dungeon.deadline-Date.now())/1000));if(left===0){exitDungeon('⏳ O tempo acabou! A masmorra expulsou você.');}else{let hud=$('avx-dungeon-timer');if(!hud){hud=document.createElement('div');hud.id='avx-dungeon-timer';hud.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9998;padding:9px 15px;border:1px solid #d7b66e;border-radius:12px;background:#101a27ed;color:#ffe3a0;font:900 14px system-ui;pointer-events:none';document.body.appendChild(hud)}hud.textContent='⏳ MASMORRA '+String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0')+' · SALA '+e.dungeon.room+'/4';}}else $('avx-dungeon-timer')?.remove();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
  if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
  lastResources={...res};
@@ -210,9 +211,10 @@ const townNPCs=[
  {id:'dungeon',name:'Guardião do Portal',role:'Masmorras',x:EXP_SAFE.x,y:EXP_SAFE.y-175,icon:'🌀',color:'#b99aff'}
 ];
 const dungeonRooms=[
- {name:'Vestíbulo das Ruínas',x:EXP_MAP-560,y:EXP_MAP-560,w:360,h:260,enemy:'Sentinela das Ruínas',hp:100,reward:100},
- {name:'Galeria dos Ecos',x:EXP_MAP-560,y:EXP_MAP-260,w:360,h:260,enemy:'Cavaleiro Espectral',hp:180,reward:180},
- {name:'Câmara do Guardião',x:EXP_MAP-560,y:EXP_MAP-80,w:360,h:260,enemy:'Guardião Ancestral',hp:300,reward:350}
+ {name:'Entrada das Catacumbas',x:EXP_MAP-650,y:EXP_MAP-650,w:420,h:260,enemy:'Rato das Catacumbas',hp:130,reward:70},
+ {name:'Galeria dos Ossos',x:EXP_MAP-650,y:EXP_MAP-360,w:420,h:260,enemy:'Cavaleiro Espectral',hp:220,reward:110},
+ {name:'Covil das Criaturas',x:EXP_MAP-650,y:EXP_MAP-70,w:420,h:260,enemy:'Hidra das Profundezas',hp:340,reward:160},
+ {name:'Câmara do Chefe',x:EXP_MAP-650,y:EXP_MAP+220,w:420,h:300,enemy:'☠ DRAGÃO ANCESTRAL · CHEFÃO',hp:650,reward:500,boss:true}
 ];
 function mountAndPetDraw(g){
  if(!g?.running||!g.player)return;
@@ -352,8 +354,8 @@ function openTownNPC(id){
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
  pet:()=>openCompanionUI(),
- guild:()=>{if(!w.guild){const name=(prompt('Nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('Nome inválido.');return}if(s.gold<200){notify('Fundar uma guilda custa 200 Gold.');return}s.gold-=200;w.guild=name;w.members=[{name:s.name||'Líder',role:'Líder',joined:Date.now()}];notify('Guilda '+name+' fundada!')}else{const online=window.AVENTURIA_ONLINE?.players||[];const list=online.filter(x=>x.name!==s.name).map(x=>x.name).join(', ');const who=prompt('Guilda: '+w.guild+'\\nMembros: '+w.members.map(m=>m.name).join(', ')+'\\nJogadores visíveis: '+(list||'nenhum detectado')+'\\nDigite nome de membro para registrar convite local:');if(who){w.members.push({name:who,role:'Recruta',joined:Date.now(),pending:true});notify('Convite anotado. Para convite real entre contas precisamos persistir guildas no servidor.')}}persist()},
- dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:100,enemyName:dungeonRooms[0].enemy};const g=game();if(g?.player){g.player.x=EXP_MAP-380;g.player.y=EXP_MAP-430;s.x=g.player.x;s.y=g.player.y}notify('🌀 Você atravessou o portal! Derrote o guardião e avance pelas três salas.');persist()}
+ guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Estamos preparando criação de guildas, convites e batalhas cooperativas.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
+ dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:dungeonRooms[0].hp,enemyName:dungeonRooms[0].enemy,deadline:Date.now()+8*60*1000,startedAt:Date.now(),timeLimit:480};const g=game();if(g?.player){g.player.x=dungeonRooms[0].x+60;g.player.y=dungeonRooms[0].y+130;s.x=g.player.x;s.y=g.player.y}notify('⚔ Masmorra iniciada! Você tem 8 minutos para derrotar o chefão.');persist()}
  };
  actions[id]?.();if(panel.style.display==='block')renderPanel();
 }
@@ -368,7 +370,7 @@ function openDungeonPortal(){
 function exitDungeon(reason='Você saiu da expedição.'){
  const ex=ensure(),s=state(),g=game(),d=ex?.dungeon;
  if(!d?.active){notify('Você não está em uma expedição.');return}
- d.active=false;d.abandonedAt=Date.now();d.exitReason=reason;
+ d.active=false;$('avx-dungeon-timer')?.remove();d.abandonedAt=Date.now();d.exitReason=reason;
  if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y;g.player.inSafeZone=true;delete g.player.realmId}
  if(s){s.x=EXP_SAFE.x;s.y=EXP_SAFE.y}
  persist();notify(reason);if(panel.style.display==='block')renderPanel();
@@ -380,10 +382,10 @@ function advanceDungeon(){
  const room=dungeonRooms[d.room-1],st=window.getRPGStats?.()||{atk:10,power:5,def:3};
  const hit=30+(s.level||1)*5+(st.atk||0)*2+(st.power||0)*2+(e.gear||0)*5+Math.random()*24+(e.petEquipped?8:0);
  d.enemyHp=Math.max(0,(d.enemyHp??room.hp)-hit);d.hp-=Math.max(2,10+d.room*3-(st.def||0)*.35);
- if(d.hp<=0){d.active=false;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
+ if(d.hp<=0){d.active=false;$('avx-dungeon-timer')?.remove();const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
  if(d.enemyHp>0){notify('⚔ '+d.enemyName+' recebeu '+Math.floor(hit)+' de dano. HP restante: '+Math.ceil(d.enemyHp)+' · Sua vida: '+Math.ceil(d.hp));persist();return}
- if(d.room<3){d.room++;const next=dungeonRooms[d.room-1];d.enemyName=next.enemy;d.enemyHp=Math.round(next.hp*(d.mult||1));d.hp=Math.min(d.maxHp,d.hp+25);const g=game();if(g?.player){g.player.x=next.x+next.w/2;g.player.y=next.y+next.h/2;s.x=g.player.x;s.y=g.player.y}notify('Sala '+d.room+'/3 concluída! Você avançou para '+next.name+'.');}
- else{d.active=false;e.world.dungeonWins++;e.world.seasonXp+=Math.round(200*(d.mult||1));s.gold+=Math.round((room.reward+150)*(d.mult||1));s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
+ if(d.room<4){d.room++;const next=dungeonRooms[d.room-1];d.enemyName=next.enemy;d.enemyHp=Math.round(next.hp*(d.mult||1));d.hp=Math.min(d.maxHp,d.hp+25);const g=game();if(g?.player){g.player.x=next.x+next.w/2;g.player.y=next.y+next.h/2;s.x=g.player.x;s.y=g.player.y}notify('Sala '+d.room+'/3 concluída! Você avançou para '+next.name+'.');}
+ else{d.active=false;$('avx-dungeon-timer')?.remove();e.world.dungeonWins++;e.world.seasonXp+=Math.round(200*(d.mult||1));s.gold+=Math.round((room.reward+150)*(d.mult||1));s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
  persist();if(panel.style.display==='block')renderPanel();
 }
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
