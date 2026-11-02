@@ -242,16 +242,8 @@ function mountAndPetDraw(g){
  }else{
   // Elementos de ambientação desenhados depois do mapa, sem cobrir o jogador.
   const cx=EXP_SAFE.x,cy=EXP_SAFE.y;
-  c.fillStyle='#c9b58a';c.fillRect(cx-145,cy-145,290,290);
-  c.fillStyle='#b8a27d';c.fillRect(cx-1200,cy-1200,2400,2400);
   // Caminhos largos em cruz e pequenos caminhos até cada serviço.
-  c.fillStyle='#d7c59c';c.fillRect(cx-38,cy-1100,76,2200);c.fillRect(cx-1100,cy-38,2200,76);
-  c.fillRect(cx-520,cy-38,1040,76);c.fillRect(cx-38,cy-520,76,1040);
   // Praça e fonte.
-  c.fillStyle='#a98d62';c.beginPath();c.arc(cx,cy,88,0,Math.PI*2);c.fill();
-  c.fillStyle='#477f7a';c.beginPath();c.arc(cx,cy,68,0,Math.PI*2);c.fill();
-  c.fillStyle='#8dd9cb';c.beginPath();c.arc(cx,cy,48,0,Math.PI*2);c.fill();
-  c.fillStyle='#e6d39e';c.fillRect(cx-7,cy-57,14,114);c.fillRect(cx-57,cy-7,114,14);
   // Casas estilizadas com sombra, fundação, paredes, telhado, porta, janelas e letreiro.
   const buildings=[
    {x:-360,y:-360,w:150,h:112,roof:'#865a3a',label:'MERCADO'},
