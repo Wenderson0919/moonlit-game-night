@@ -21,8 +21,20 @@ const ensure=()=>{
 };
 const css=`
 #av-exp-btn{position:fixed;right:18px;top:68px;z-index:55}
-#av-exp-panel{position:fixed;right:18px;top:112px;z-index:56;width:min(390px,calc(100vw - 24px));max-height:78vh;overflow:auto;display:none}
-.avx-card{background:#0b171b;border:1px solid #665638;border-radius:12px;padding:10px;margin:8px 0}
+#av-exp-panel{position:fixed;right:18px;top:112px;z-index:56;width:min(470px,calc(100vw - 24px));max-height:82vh;overflow:auto;display:none;background:radial-gradient(ellipse at 50% 0%,#203c3a 0%,#0b171b 65%);border:1px solid #8b6b38;box-shadow:0 18px 70px #000b}
+.avx-card{background:linear-gradient(145deg,#14272a,#0b171b);border:1px solid #665638;border-radius:13px;padding:12px;margin:9px 0;box-shadow:inset 0 1px #ffffff0b}
+.avx-tabs{display:flex;gap:5px;overflow:auto;padding:9px 0;position:sticky;top:0;background:#0b171bf2;z-index:3}
+.avx-tab{white-space:nowrap;border:1px solid #45565b;border-radius:9px;padding:7px 10px;font-size:10px;color:#cbd5e1;background:#172326}
+.avx-tab.active{background:#59421f;border-color:#e4b85c;color:#ffe5a1}
+.avx-card h4{font-size:13px;font-weight:900;color:#f8df9a}
+.avx-muted{font-size:11px;color:#9aabb2}
+.avx-action{transition:transform .12s,filter .12s}.avx-action:hover{filter:brightness(1.2);transform:translateY(-1px)}
+.avx-action:active{transform:scale(.97)}
+.avx-reward{color:#9fe5bb;font-weight:800}
+.avx-stat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.avx-stat>div{background:#071114;border:1px solid #34494b;border-radius:9px;padding:7px;text-align:center}
+.avx-stat b{display:block;color:#f4d68e;font-size:14px}
+.avx-stat span{font-size:9px;color:#9aabb2}
 .avx-bar{height:7px;border-radius:9px;background:#26383a;overflow:hidden;margin-top:7px}.avx-bar>i{display:block;height:100%;background:linear-gradient(90deg,#b98736,#f2d27b)}
 .avx-action{border:1px solid #8c6b36;background:#4b3519;color:#ffe8b1;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:800}
 .avx-action:disabled{opacity:.35}
@@ -34,7 +46,7 @@ const btn=document.createElement('button');btn.id='av-exp-btn';btn.className='gl
 btn.onclick=()=>{const p=$('av-exp-panel');p.style.display=p.style.display==='block'?'none':'block';renderPanel()};
 document.body.appendChild(btn);
 const panel=document.createElement('section');panel.id='av-exp-panel';panel.className='glass-panel rounded-2xl p-3';
-panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200">✦ Diário de Aventuria</b><div class="text-[10px] text-slate-400">Missões, mascotes, profissões e exploração</div></div><button class="avx-action" id="avx-close">Fechar</button></header><div id="avx-content"></div>';
+panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200 text-base">✦ CRÔNICAS DE AVENTURIA</b><div class="text-[10px] text-slate-400">Central de aventura · progressão · desafios</div></div><button class="avx-action" id="avx-close">✕</button></header><div class="avx-tabs" id="avx-tabs"><button class="avx-tab active" data-tab="all">Tudo</button><button class="avx-tab" data-tab="social">Social</button><button class="avx-tab" data-tab="combat">Combate</button><button class="avx-tab" data-tab="growth">Progressão</button><button class="avx-tab" data-tab="world">Mundo</button></div><div id="avx-content"></div>';
 document.body.appendChild(panel);$('avx-close').onclick=()=>panel.style.display='none';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function professionLevel(p){return Math.min(20,1+Math.floor(Math.sqrt((p.xp||0)/80)))}
