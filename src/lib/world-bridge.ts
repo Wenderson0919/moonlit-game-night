@@ -77,7 +77,8 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       if (now - o.last > STALE_MS) { others.delete(o.id); continue; }
       p.push([o.id, o.name, o.cls, o.race, o.hair, o.eye, o.x, o.y, o.dir, o.m ? 1 : 0, o.lvl, o.hp, o.mh, o.pv ? 1 : 0]);
     }
-    deliver({ t: "snap", p, b: [], m: [], n: p.length + 1 });
+    const raidHost = Math.min(myId, ...others.keys());
+    deliver({ t: "snap", p, b: [], m: [], n: p.length + 1, rh: raidHost });
   }
 
   function broadcastState(force = false) {
@@ -103,6 +104,10 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       others.set(id, toRemote(id, payload));
       if (isNew) roster();
     })
+      .on("broadcast", { event: "raid" }, ({ payload }: { payload: Bag }) => {
+        if (num(payload?.from, 0) === myId) return;
+        deliver({ t: "raid_evt", ...payload });
+      })
       .on("broadcast", { event: "chat" }, ({ payload }: { payload: Bag }) => {
         deliver({ t: "chat", id: num(payload?.id, 0), n: str(payload?.n, 24, "Jogador"), m: str(payload?.m, 120) });
       })
@@ -197,6 +202,14 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       case "fx": {
         if (!me || !channel || !Array.isArray(m.l)) return;
         void channel.send({ type: "broadcast", event: "fx", payload: { id: myId, l: (m.l as unknown[]).slice(0, 24) } });
+        break;
+      }
+      case "raid_sync":
+      case "raid_hit":
+      case "raid_reward": {
+        if (!me || !channel) return;
+        const payload = { ...m, from: myId };
+        void channel.send({ type: "broadcast", event: "raid", payload });
         break;
       }
       case "chat": {
