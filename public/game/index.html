@@ -512,6 +512,7 @@ function getRPGStats(){
  const c=s.className;if(c==='Guerreiro')st.def+=3;if(c==='Mago'||c==='Curandeiro')st.power+=3;if(c==='Arqueiro'||c==='Assassino')st.atk+=2;
  if(s.race==='Elfo'){st.atk+=2;st.power+=1;st.speed+=5}else if(s.race==='Anão')st.def+=4;else if(s.race==='Ser mágico')st.power+=4;
  const k=s.skills||{};st.atk+=(k.strength||0)*2+(k.agility||0);st.def+=(k.vitality||0)*2;st.power+=(k.wisdom||0)*3;st.speed+=(k.agility||0)*.5;
+ const ex=s.expansion||{},w=ex.world||{};st.atk+=Math.floor((w.skills?.power||0)*1.5)+(w.gear||0)*3;st.def+=Math.floor((w.skills?.vitality||0)*2)+(w.gear||0);st.speed+=(w.skills?.haste||0)*.8;st.crit+=(w.skills?.fortune||0)*.01;st.hp+=(w.skills?.vitality||0)*8;
  return st;
 }
 const effMaxHp=()=>S().maxHp+getRPGStats().hp;
