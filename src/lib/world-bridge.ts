@@ -125,6 +125,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         roster();
       })
       .subscribe((status) => {
+        if (ch !== channel) return; // canal antigo (já removido): ignora
         if (status === "SUBSCRIBED") {
           state = "conectado";
           post({ av: "opened" });
@@ -146,8 +147,9 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
     if (presTimer) window.clearInterval(presTimer);
     presTimer = undefined;
     snapTimer = undefined;
-    if (channel) void supabase.removeChannel(channel);
-    channel = null;
+    const old = channel;
+    channel = null; // zera antes de remover, para o aviso "CLOSED" não chamar close() de novo
+    if (old) void supabase.removeChannel(old);
     others.clear();
     me = null;
     if (notifyGame) post({ av: "closed" });
