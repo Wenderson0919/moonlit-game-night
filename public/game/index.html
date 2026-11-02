@@ -252,7 +252,7 @@ input,textarea,select,[contenteditable="true"]{user-select:text;-webkit-user-sel
 'use strict';
 /* ============================ CONSTANTES ============================ */
 const TILE=32, MT=125, MAP=TILE*MT, CX=MAP/2;
-const SAFE={x:CX,y:CX,radius:260};
+const SAFE={x:CX,y:CX,radius:680};
 const $=id=>document.getElementById(id);
 const rand=(a,b)=>a+Math.random()*(b-a);
 const ri=(a,b)=>Math.floor(rand(a,b+1));
@@ -881,7 +881,7 @@ class Game{
  }
  biomeCalc(x,y){
   const dx=x-CX,dy=y-CX,r=Math.hypot(dx,dy),n=vnoise(x/260,y/260,this.seed)-.5;
-  if(r<720+n*380)return 'forest';
+  if(r<1120+n*260)return 'forest';
   let a=Math.atan2(dy,dx)+n*1.1;a=(a/(Math.PI*2)+1)%1;
   return a<.25?'desert':a<.5?'swamp':a<.75?'snow':'volcano';
  }
