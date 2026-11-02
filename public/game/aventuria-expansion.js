@@ -46,12 +46,7 @@ const style=document.createElement('style');style.textContent=css;document.head.
 const panel=document.createElement('section');panel.id='av-exp-panel';panel.className='glass-panel rounded-2xl p-3';
 panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200 text-base">✦ CRÔNICAS DE AVENTURIA</b><div class="text-[10px] text-slate-400">Central de aventura · progressão · desafios</div></div><button class="avx-action" id="avx-close">✕</button></header><div class="avx-tabs" id="avx-tabs"><button class="avx-tab active" data-tab="all">Tudo</button><button class="avx-tab" data-tab="social">Social</button><button class="avx-tab" data-tab="combat">Combate</button><button class="avx-tab" data-tab="growth">Progressão</button><button class="avx-tab" data-tab="world">Mundo</button></div><div id="avx-content"></div>';
 document.body.appendChild(panel);$('avx-close').onclick=()=>panel.style.display='none';
-const launcher=document.createElement('button');
-launcher.id='av-exp-btn';launcher.type='button';launcher.textContent='✦ SISTEMAS';
-launcher.style.cssText='position:fixed;right:14px;top:14px;z-index:10001;padding:12px 16px;border:2px solid #d6ad62;border-radius:12px;background:linear-gradient(135deg,#493319,#17272b);color:#ffe7ad;font:900 12px Inter,system-ui;letter-spacing:1px;box-shadow:0 5px 22px #000a;cursor:pointer;pointer-events:auto';
-launcher.addEventListener('click',()=>{panel.style.display='block';renderPanel()});
-document.body.appendChild(launcher);
-
+// A navegação de serviços acontece exclusivamente pelos NPCs físicos da cidade.
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function professionLevel(p){return Math.min(20,1+Math.floor(Math.sqrt((p.xp||0)/80)))}
 function professionName(k){return ({miner:'Minerador',lumberjack:'Lenhador',forager:'Coletor',fisher:'Pescador'})[k]}
@@ -225,11 +220,17 @@ function interactRealmPortal(g){const p=g.player,s=state(),r=window.AVENTURIA_RE
    SAFE/MAP são const locais do index.html; este script externo usa coordenadas equivalentes. */
 const EXP_MAP=32*125,EXP_CX=EXP_MAP/2,EXP_SAFE={x:EXP_CX,y:EXP_CX,radius:260};
 const townNPCs=[
- {id:'merchant',name:'Mercador de Aventuria',role:'Loja geral',x:EXP_SAFE.x+105,y:EXP_SAFE.y-75,icon:'🛒',color:'#d5a34c'},
- {id:'stable',name:'Armeiro de Aventuria',role:'Armas e Armaduras',x:EXP_SAFE.x-105,y:EXP_SAFE.y-75,icon:'⚒️',color:'#d6a45e'},
- {id:'pet',name:'Cuidadora de Mascotes',role:'Mascotes',x:EXP_SAFE.x+105,y:EXP_SAFE.y+75,icon:'🐾',color:'#8bcf9a'},
- {id:'guild',name:'Mestre das Guildas',role:'Guildas',x:EXP_SAFE.x-105,y:EXP_SAFE.y+75,icon:'🛡️',color:'#9cb9d8'},
- {id:'magic',name:'Mestre das Magias',role:'Magias',x:EXP_SAFE.x,y:EXP_SAFE.y-175,icon:'✨',color:'#a78bfa'}
+ {id:'merchant',name:'Mercador Geral',role:'Poções e suprimentos',x:EXP_SAFE.x+120,y:EXP_SAFE.y-360,icon:'🛒',color:'#d5a34c'},
+ {id:'stable',name:'Armeiro Real',role:'Armas e armaduras',x:EXP_SAFE.x-120,y:EXP_SAFE.y-360,icon:'⚒️',color:'#d6a45e'},
+ {id:'pet',name:'Cuidadora de Mascotes',role:'Companheiros e mascotes',x:EXP_SAFE.x+360,y:EXP_SAFE.y-120,icon:'🐾',color:'#8bcf9a'},
+ {id:'guild',name:'Mestre das Guildas',role:'Guildas e grupos',x:EXP_SAFE.x-360,y:EXP_SAFE.y-120,icon:'🛡️',color:'#9cb9d8'},
+ {id:'magic',name:'Mestre Arcano',role:'Magias e grimórios',x:EXP_SAFE.x,y:EXP_SAFE.y-420,icon:'✨',color:'#a78bfa'},
+ {id:'element',name:'Sábia Elemental',role:'Combinação elemental',x:EXP_SAFE.x+360,y:EXP_SAFE.y+150,icon:'🔥',color:'#fb923c'},
+ {id:'forge',name:'Mestre Ferreiro',role:'Forja e aprimoramento',x:EXP_SAFE.x-360,y:EXP_SAFE.y+150,icon:'🔨',color:'#f59e0b'},
+ {id:'contract',name:'Capitã da Guarda',role:'Contratos e recompensas',x:EXP_SAFE.x+120,y:EXP_SAFE.y+390,icon:'📜',color:'#93c5fd'},
+ {id:'treasure',name:'Cartógrafo',role:'Mapas e caça ao tesouro',x:EXP_SAFE.x-120,y:EXP_SAFE.y+390,icon:'🧭',color:'#d6ad62'},
+ {id:'stylist',name:'Estilista',role:'Aparência do personagem',x:EXP_SAFE.x+420,y:EXP_SAFE.y-390,icon:'🎭',color:'#f0abfc'},
+ {id:'awakening',name:'Oráculo das Armas',role:'Despertar de armas',x:EXP_SAFE.x-420,y:EXP_SAFE.y-390,icon:'🌟',color:'#c4b5fd'}
 ];
 function mountAndPetDraw(g){
  if(!g?.running||!g.player)return;
@@ -380,18 +381,51 @@ function openMerchantUI(){
  $('avx-merchant-close').onclick=()=>m.remove();
  m.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{const x=offers.find(v=>v.id===b.dataset.offer);if(!x||s.gold<x.price){notify('Gold insuficiente.');return}s.gold-=x.price;if(x.id==='potion')s.items.potion=(s.items.potion||0)+1;if(x.id==='egg'){e.petsOwned??=[];const id=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petsOwned.push(id);e.pet=id;e.petEquipped=true}if(x.id==='kit'){s.resources.wood=(s.resources.wood||0)+5;s.resources.iron=(s.resources.iron||0)+2}persist();notify(x.name+' comprado!');openMerchantUI()});
 }
+function openAppearanceEditor(){
+ const s=state();if(!s)return;
+ const d={cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,skin:s.skinColor,hairStyle:s.hairStyle||'Curto',beardStyle:s.beardStyle||'Nenhuma',outfitColor:s.outfitColor||'#8b3430',outfitStyle:s.outfitStyle||'Armadura',cloakColor:s.cloakColor||'#252b45',accessory:s.accessory||'Nenhum',faceMark:s.faceMark||'Nenhuma'};
+ const choices={
+ hair:['#583a2b','#e6c66b','#171717','#e7e5e4','#a9472d','#7650a8','#2f6fb3','#ef9ac4'],
+ eye:['#28211b','#3b82f6','#22a06b','#eabf45','#a78bfa','#ef4444'],
+ skin:['#f4d1b1','#e8b985','#d6a36e','#b9784d','#8d563d','#633d32','#9c8bd0'],
+ hairStyle:['Curto','Longo','Espetado','Moicano','Coque','Tranças','Careca'],
+ beardStyle:['Nenhuma','Bigode','Cavanhaque','Cheia'],
+ outfitColor:['#8b3430','#493b91','#245c43','#292d3a','#397b83','#d6a84b','#e8e1c9','#252b45'],
+ outfitStyle:['Armadura','Capa'],cloakColor:['#252b45','#172b35','#5b2c50','#234d3c','#7c3f22'],
+ accessory:['Nenhum','Capuz','Chifres','Coroa','Tiara','Óculos'],
+ faceMark:['Nenhuma','Cicatriz','Pintura','Sardas']
+ };
+ let m=$('avx-style-modal');if(!m){m=document.createElement('div');m.id='avx-style-modal';document.body.appendChild(m)}
+ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const opts=(key,colors=false)=>choices[key].map(v=>'<button type="button" data-style="'+key+'" data-value="'+esc(v)+'" style="padding:6px 9px;border-radius:9px;border:1px solid '+(d[key]===v?'#f3c969':'#53636b')+';background:'+(colors?v:'#17272c')+';color:'+(colors?'transparent':'#f6e8c8')+';min-width:'+(colors?'30px':'auto')+';min-height:30px" title="'+esc(v)+'">'+(colors?'　':esc(v))+'</button>').join('');
+ const field=(label,key,colors=false)=>'<div style="margin:12px 0"><div style="font-size:12px;color:#f4d68e;margin-bottom:6px">'+label+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+opts(key,colors)+'</div></div>';
+ m.style.cssText='position:fixed;inset:0;z-index:10002;display:flex;align-items:center;justify-content:center;padding:12px;background:#020914eF';
+ m.innerHTML='<section style="width:min(760px,100%);max-height:92vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);color:#fff;padding:18px"><header style="display:flex;justify-content:space-between;align-items:center"><div><small style="color:#e6c47d;letter-spacing:2px">ATELIÊ DE AVENTURIA</small><h2 style="font-size:24px;font-weight:900">🎭 Aparência do personagem</h2><p style="font-size:11px;color:#aebfc4">Visualização instantânea · mudanças sem alterar classe ou atributos</p></div><button id="avx-style-close">✕</button></header><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px"><div style="background:#081217;border:1px solid #34474e;border-radius:14px;padding:12px;display:grid;place-items:center"><canvas id="avx-style-preview" width="200" height="240" style="width:200px;height:240px;image-rendering:pixelated"></canvas><b style="font-size:12px">'+esc(s.name)+'</b><small style="color:#aebfc4">'+esc(s.className)+' · '+esc(s.race)+'</small></div><div>'+field('Cor do cabelo','hair',true)+field('Cor dos olhos','eye',true)+field('Tom de pele','skin',true)+field('Penteado','hairStyle')+field('Barba','beardStyle')+field('Marcas faciais','faceMark')+field('Cor da roupa','outfitColor',true)+field('Estilo da roupa','outfitStyle')+field('Cor da capa','cloakColor',true)+field('Acessório','accessory')+'</div></div><footer style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="avx-style-cancel" style="padding:10px 16px;border:1px solid #65777e;border-radius:9px">Cancelar</button><button id="avx-style-save" style="padding:10px 16px;background:#725326;border:1px solid #e3bd69;border-radius:9px;color:#fff1c8;font-weight:900">Salvar aparência</button></footer></section>';
+ const preview=()=>{const c=$('avx-style-preview').getContext('2d');c.clearRect(0,0,200,240);c.save();c.translate(100,150);c.scale(4.4,4.4);drawCharacter(c,0,0,{dir:'down',cls:d.cls,race:d.race,hair:d.hair,eye:d.eye,skin:d.skin,hairStyle:d.hairStyle,beard:d.beardStyle,outfit:d.outfitColor,outfitStyle:d.outfitStyle,cloak:d.cloakColor,accessory:d.accessory,mark:d.faceMark,moving:false,local:true});c.restore()};
+ m.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{d[b.dataset.style]=b.dataset.value;m.querySelectorAll('[data-style="'+b.dataset.style+'"]').forEach(q=>q.style.borderColor=q===b?'#f3c969':'#53636b');preview()});
+ $('avx-style-close').onclick=$('avx-style-cancel').onclick=()=>m.remove();
+ $('avx-style-save').onclick=()=>{s.hairColor=d.hair;s.eyeColor=d.eye;s.skinColor=d.skin;s.hairStyle=d.hairStyle;s.beardStyle=d.beardStyle;s.outfitColor=d.outfitColor;s.outfitStyle=d.outfitStyle;s.cloakColor=d.cloakColor;s.accessory=d.accessory;s.faceMark=d.faceMark;persist();if(typeof updateUIStats==='function')updateUIStats();notify('Aparência atualizada!');m.remove()};
+ preview();
+}
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
- const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
+ const openAdvanced=(section)=>{const target=document.querySelector('#avx-content [data-section="'+section+'"]');if(!target){notify('Este serviço está sendo preparado.');return}target.scrollIntoView({behavior:'smooth',block:'center'});target.style.outline='2px solid #e4b85c';setTimeout(()=>target.style.outline='',1300)};
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
  magic:()=>openMagicUI(),
  pet:()=>openCompanionUI(),
- guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Estamos preparando criação de guildas, convites e batalhas cooperativas.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
+ guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Criação de guildas e convites online precisam de servidor multiplayer.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
+ element:()=>openAdvanced('combat'),
+ forge:()=>openAdvanced('growth'),
+ contract:()=>openAdvanced('world'),
+ treasure:()=>openAdvanced('world'),
+ awakening:()=>openAdvanced('growth'),
+ stylist:()=>openAppearanceEditor()
  };
- actions[id]?.();if(panel.style.display==='block')renderPanel();
+ actions[id]?.();
 }
+
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
 document.body.appendChild(overlay);
 const clock=document.createElement('div');clock.id='avx-world-clock';clock.className='fixed left-1/2 -translate-x-1/2 bottom-3 z-10 glass-panel rounded-full px-3 py-1 text-[10px] font-bold text-amber-100 pointer-events-none';clock.textContent='☀️ Dia · Céu limpo';document.body.appendChild(clock);
