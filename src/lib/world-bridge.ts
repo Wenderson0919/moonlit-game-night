@@ -43,6 +43,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
   let channel: RealtimeChannel | null = null;
   let lastSend = 0;
   let lastTrack = 0;
+  let lastWarn = 0;
   function track() {
     if (!channel || !me) return;
     lastTrack = Date.now();
@@ -114,6 +115,10 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         if (Math.hypot(from.x - me.x, from.y - me.y) > 260) return;
         const raw = Math.max(0, Math.min(500, num(payload?.raw, 0)));
         deliver({ t: "hurt", raw, src: from.name, from: from.id, kind: "pvp" });
+      })
+      .on("broadcast", { event: "kill" }, ({ payload }: { payload: Bag }) => {
+        if (num(payload?.to, 0) !== myId) return;
+        deliver({ t: "kill", name: str(payload?.n, 24, "Jogador"), lvl: num(payload?.lvl, 1) });
       })
       .on("presence", { event: "sync" }, () => {
         // Reserva: posição também vai na presença, caso alguma mensagem rápida se perca.
@@ -197,14 +202,21 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         if (!me || m.k !== "p") return;
         const target = others.get(num(m.id, 0));
         if (!target) return;
-        if (!me.pv || !target.pv) return deliver({ t: "sys", m: "Os dois jogadores precisam estar com PvP ligado." });
-        if (!outsideSafe(me) || !outsideSafe(target)) return deliver({ t: "sys", m: "PvP não funciona na Área Safe." });
+        const warn = (text: string) => {
+          if (Date.now() - lastWarn < 3000) return;
+          lastWarn = Date.now();
+          deliver({ t: "sys", m: text });
+        };
+        if (!me.pv || !target.pv) return warn("Os dois jogadores precisam estar com PvP ligado.");
+        if (!outsideSafe(me) || !outsideSafe(target)) return warn("PvP não funciona na Área Safe.");
+        if (Math.hypot(me.x - target.x, me.y - target.y) > 260) return;
         void channel?.send({ type: "broadcast", event: "hurt", payload: { to: target.id, from: myId, raw: num(m.d, 0) } });
         break;
       }
       case "died": {
         if (!me) return;
         const killer = others.get(num(m.by, 0));
+        if (killer) void channel?.send({ type: "broadcast", event: "kill", payload: { to: killer.id, n: me.name, lvl: me.lvl } });
         const text = killer ? `⚔ ${killer.name} derrotou ${me.name} no PvP!` : `${me.name} caiu em combate.`;
         void channel?.send({ type: "broadcast", event: "sys", payload: { m: text } });
         deliver({ t: "sys", m: text });
