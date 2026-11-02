@@ -704,15 +704,18 @@ function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.par
 /* ============================ PERSONAGEM (DESENHO) ============================ */
 function drawCharacter(ctx,x,y,o){
  const t=performance.now()/150,walk=o.moving?Math.sin(t)*2.2:0,dir=o.dir||'down';
- const pal={Guerreiro:['#8b3430','#9a3831'],Mago:['#493b91','#5846b0'],Arqueiro:['#245c43','#3c8a5b'],Assassino:['#292d3a','#3b4055'],Curandeiro:['#397b83','#4c9a9c']}[o.cls]||['#245c43','#3c8a5b'];
+ const basePal={Guerreiro:['#8b3430','#9a3831'],Mago:['#493b91','#5846b0'],Arqueiro:['#245c43','#3c8a5b'],Assassino:['#292d3a','#3b4055'],Curandeiro:['#397b83','#4c9a9c']}[o.cls]||['#245c43','#3c8a5b'];
+ const pal=o.outfit?[o.outfit,o.outfit]:basePal;
  ctx.save();ctx.translate(Math.round(x),Math.round(y));if(o.alpha!=null)ctx.globalAlpha=o.alpha;
  ctx.fillStyle='rgba(5,13,10,.34)';ctx.beginPath();ctx.ellipse(0,13,15,6,0,0,6.283);ctx.fill();
  if(o.local){ctx.strokeStyle='rgba(244,205,112,.35)';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(0,13,19,8,0,0,6.283);ctx.stroke()}
  ctx.fillStyle=pal[0];ctx.beginPath();ctx.moveTo(-8,-5);ctx.lineTo(9,-5);ctx.lineTo(11,10+walk);ctx.lineTo(0,14+walk);ctx.lineTo(-10,8+walk);ctx.closePath();ctx.fill();
  ctx.fillStyle='#d9b45f';ctx.fillRect(-7,1+walk,14,3);
  ctx.fillStyle='#39291f';ctx.fillRect(-9,6+walk,7,9);ctx.fillRect(2,6-walk,7,9);ctx.fillStyle='#b58a4d';ctx.fillRect(-9,12+walk,7,2);ctx.fillRect(2,12-walk,7,2);
- ctx.fillStyle=pal[1];ctx.fillRect(-10,-7,20,16);ctx.fillStyle=pal[0];ctx.fillRect(-8,-7,16,12);ctx.fillStyle='#d7b45f';ctx.fillRect(-2,-5,4,13);ctx.fillRect(-9,2,18,2);
- ctx.fillStyle='#d6a36e';
+ ctx.fillStyle=pal[1];ctx.fillRect(-10,-7,20,16);ctx.fillStyle=pal[0];ctx.fillRect(-8,-7,16,12);
+ if(o.outfitStyle==='Capa'){ctx.fillStyle=o.cloak||'#252b45';ctx.fillRect(-12,-4,4,18);ctx.fillRect(8,-4,4,18)}
+ ctx.fillStyle='#d7b45f';ctx.fillRect(-2,-5,4,13);ctx.fillRect(-9,2,18,2);
+ ctx.fillStyle=skin;
  if(dir==='left'){ctx.fillRect(-14,-4,5,10);ctx.fillRect(8,-3,4,8)}else if(dir==='right'){ctx.fillRect(9,-4,5,10);ctx.fillRect(-12,-3,4,8)}else{ctx.fillRect(-13,-3,5,9);ctx.fillRect(8,-3,5,9)}
  const skin=o.skin||(o.race==='Anão'?'#bd895f':o.race==='Elfo'?'#e0bd9b':o.race==='Ser mágico'?'#9c8bd0':'#b9784d');
  ctx.fillStyle=skin;ctx.fillRect(-9,-20,18,16);ctx.fillStyle=skin;ctx.fillRect(-8,-19,16,13);
@@ -730,7 +733,16 @@ function drawCharacter(ctx,x,y,o){
  ctx.fillStyle=o.eye||'#2b211b';
  if(dir==='down'){ctx.fillRect(-5,-12,2,2);ctx.fillRect(3,-12,2,2);ctx.fillStyle='#9b5542';ctx.fillRect(-1,-8,3,1)}else if(dir==='left')ctx.fillRect(-7,-12,2,2);else if(dir==='right')ctx.fillRect(5,-12,2,2);else{ctx.fillStyle=o.hair||'#583a2b';ctx.fillRect(-8,-20,16,9)}
  ctx.fillStyle={Mago:'#493b91',Assassino:'#252938',Curandeiro:'#e8e1c9',Guerreiro:'#8b3430'}[o.cls]||'#2e7048';
- ctx.beginPath();ctx.moveTo(-12,-19);ctx.lineTo(8,-24);ctx.lineTo(14,-17);ctx.lineTo(-7,-15);ctx.closePath();ctx.fill();ctx.fillStyle='#d9b45f';ctx.fillRect(-7,-18,14,2);
+ if(o.accessory==='Capuz'){ctx.beginPath();ctx.arc(0,-15,13,Math.PI,Math.PI*2);ctx.lineTo(12,-5);ctx.lineTo(-12,-5);ctx.closePath();ctx.fill()}
+ else if(o.accessory==='Chifres'){ctx.fillRect(-11,-24,4,7);ctx.fillRect(7,-24,4,7);ctx.fillRect(-13,-27,3,5);ctx.fillRect(10,-27,3,5)}
+ else if(o.accessory==='Coroa'){ctx.fillRect(-11,-25,22,3);ctx.fillRect(-10,-29,3,5);ctx.fillRect(-2,-31,4,7);ctx.fillRect(7,-29,3,5)}
+ else if(o.accessory==='Tiara'){ctx.fillRect(-11,-24,22,2);ctx.fillRect(-2,-27,4,3)}
+ else if(o.accessory==='Óculos'){ctx.strokeStyle='#d7e4ed';ctx.lineWidth=1.5;ctx.strokeRect(-7,-14,6,5);ctx.strokeRect(2,-14,6,5);ctx.beginPath();ctx.moveTo(-1,-12);ctx.lineTo(2,-12);ctx.stroke()}
+ else{ctx.beginPath();ctx.moveTo(-12,-19);ctx.lineTo(8,-24);ctx.lineTo(14,-17);ctx.lineTo(-7,-15);ctx.closePath();ctx.fill()}
+ ctx.fillStyle='#d9b45f';ctx.fillRect(-7,-18,14,2);
+ if(o.mark==='Cicatriz'&&dir==='down'){ctx.strokeStyle='#8f4c42';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(5,-14);ctx.lineTo(2,-9);ctx.stroke()}
+ if(o.mark==='Pintura'&&dir==='down'){ctx.fillStyle='#c84b4b';ctx.fillRect(-8,-10,3,2);ctx.fillRect(6,-10,3,2)}
+ if(o.mark==='Sardas'&&dir==='down'){ctx.fillStyle='#754735';ctx.fillRect(-4,-9,1,1);ctx.fillRect(3,-9,1,1);ctx.fillRect(5,-8,1,1)}
  ctx.fillStyle='#6f4529';ctx.fillRect(5,1,6,6);ctx.fillStyle='#d8ad59';ctx.fillRect(6,2,4,2);
  ctx.save();
  if(dir==='left')ctx.translate(-15,1);else if(dir==='right')ctx.translate(15,1);else if(dir==='up')ctx.translate(8,-2);else ctx.translate(10,5);
@@ -1632,7 +1644,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  function handle(m){
   if(m.t==='welcome'){state.id=m.id;state.ready=true;state.raids=m.raids||[];window.AVENTURIA_ONLINE={id:m.id,online:true,count:1};if(window.game){if(m.seed&&window.game.seed!==m.seed)window.game.start(m.seed);if(window.game.player&&Number.isFinite(m.x)&&Number.isFinite(m.y)){window.game.player.x=m.x;window.game.player.y=m.y;S().x=m.x;S().y=m.y;}}setHud('Mundo global · 1 jogador',true);updateOnlineRaidPanel();toast('Você entrou no servidor global!');}
   else if(m.t==='raids'){state.raids=m.raids||[];updateOnlineRaidPanel();}
-  else if(m.t==='snap'){state.raidHost=+m.rh||state.raidHost||0;const g0=window.game;if(g0?.running&&state.raidHost&&state.raidHost!==state.id){g0.raids=[];}else if(g0?.running&&state.raidHost===state.id&&state.raids.length&&!g0.raids.length){g0.raids=state.raids.map(r=>JSON.parse(JSON.stringify(r)));}const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],skin:a[14],hairStyle:a[15],beard:a[16],outfit:a[17],outfitStyle:a[18],cloak:a[19],accessory:a[20],mark:a[21],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
+  else if(m.t==='snap'){state.raidHost=+m.rh||state.raidHost||0;const g0=window.game;if(g0?.running&&state.raidHost===state.id&&state.raids.length&&!g0.raids.length){g0.raids=state.raids.map(r=>JSON.parse(JSON.stringify(r)));}const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],skin:a[14],hairStyle:a[15],beard:a[16],outfit:a[17],outfitStyle:a[18],cloak:a[19],accessory:a[20],mark:a[21],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
   else if(m.t==='fx'){const g=window.game;if(!g?.running||!Array.isArray(m.l))return;const rp=state.players.get(m.id);const P=g.player;for(const e of m.l.slice(0,24)){if(!Array.isArray(e)||Math.hypot((e[1]||0)-P.x,(e[2]||0)-P.y)>1200&&e[0]!=='s')continue;if(e[0]==='p'&&g.projs.length<400)g.projs.push({x:+e[1],y:+e[2],vx:+e[3],vy:+e[4],r:+e[5]||6,life:Math.min(3,+e[6]||1),color:String(e[7]||'#fff'),kind:String(e[8]||''),ang:+e[9]||0,from:'ghost',dmg:0});else if(e[0]==='f'&&g.fx.length<300)g.fx.push({x:+e[1],y:+e[2],r:+e[3]||8,max:Math.min(400,+e[4]||40),t:Math.min(1,+e[5]||.3),col:String(e[6]||'#fff'),_o:1});else if(e[0]==='s'&&rp){rp.swUntil=performance.now()+220;rp.swA=+e[1]||0;rp.swR=+e[2]||30}else if(e[0]==='t'&&rp){rp.trUntil=Date.now()+Math.min(9000,+e[1]||0)}}}
   else if(m.t==='raid_evt'){
    const g=window.game;
