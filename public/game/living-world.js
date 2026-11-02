@@ -54,6 +54,7 @@
   const elapsed=Math.max(0,t-(world.lastSimAt||t));
   world.day+=(elapsed/DAY_MS);
   world.lastSimAt=t;
+  if(world.nextEventAt-t<=DAY_MS&&world.nextEventAt>t&&world.preannouncedAt!==world.nextEventAt){world.preannouncedAt=world.nextEventAt;announce('📣 Os moradores estão preparando um novo acontecimento. Confira o painel Mundo para saber quando começa!')}
   let catchup=0;
   while(t>=world.nextEventAt&&catchup++<20){
    const startAt=world.nextEventAt;
