@@ -120,13 +120,17 @@ function tick(){
  for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,kills-(e.dayStartKills??(e.dayStartKills=kills)));if(x.type==='raid')x.progress=Math.min(x.goal,raids-(e.dayStartRaids??(e.dayStartRaids=raids)));}
  const gathered=Math.max(0,total-e.dayStartTotal);const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
-  const phase=(g.t%360)/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2-.2)+.12)/1.12));
+  const safeT=Number.isFinite(g.t)?g.t:Date.now()/1000;
+  const phase=((safeT%360)+360)%360/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2-.2)+.12)/1.12));
   const weather=['Céu limpo','Chuva leve','Neblina','Vento forte'][Math.floor(g.t/150)%4];
   if(Math.floor(g.t/360)!==lastClock){lastClock=Math.floor(g.t/360);notify('O mundo entrou em um novo período do dia.')}
   const p=g.player;if(p){const base=p.baseSpd||p.speed||3.8;if(p.baseSpd){p.speed=p.baseSpd}}
   if(e.petEquipped&&e.pet&&g.ctx&&Date.now()-lastDraw>80){lastDraw=Date.now();const c=g.ctx,W=g.canvas.width,H=g.canvas.height;c.save();c.font='18px serif';const em=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.fillText(em,W/2-30,H/2+17);c.restore()}
   const overlay=$('avx-world-overlay');if(overlay){overlay.style.background='rgba(7,12,35,'+(night*.24)+')';overlay.dataset.weather=weather}
   const clock=$('avx-world-clock');if(clock)clock.textContent=(night>.55?'🌙 Noite':'☀️ Dia')+' · '+weather;
+  let exitBtn=$('avx-expedition-exit');
+  if(e.dungeon?.active&&!exitBtn){exitBtn=document.createElement('button');exitBtn.id='avx-expedition-exit';exitBtn.textContent='↩ Sair da expedição';exitBtn.style.cssText='position:fixed;top:76px;right:16px;z-index:9997;padding:10px 14px;border:1px solid #e4b96c;border-radius:10px;background:#422d28;color:#fff;font-weight:800;box-shadow:0 4px 18px #0008';exitBtn.onclick=()=>exitDungeon('Você abandonou a expedição e voltou à Área Safe.');document.body.appendChild(exitBtn)}
+  if(!e.dungeon?.active&&exitBtn)exitBtn.remove();
  }
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
 }
@@ -345,9 +349,19 @@ function openDungeonPortal(){
  let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#02090ddd;padding:16px';document.body.appendChild(m)}
  const opts=[['crypt','Cripta Esquecida',3,50,'Mortos-vivos e relíquias',1],['ember','Catacumbas Ígneas',8,100,'Guardião flamejante e tesouros',1.7],['abyss','Abismo dos Ecos',15,180,'Desafio extremo e itens raros',2.5]];
  m.innerHTML='<div style="width:min(540px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172b32,#080f18);border:1px solid #b68b48;border-radius:18px;padding:20px;color:#fff"><div style="display:flex;justify-content:space-between"><div><small style="color:#e5bc70;letter-spacing:2px">SANTUÁRIO DOS PORTAIS</small><h2 style="font-size:24px;font-weight:900">🌀 Escolha sua masmorra</h2></div><button id="avx-dm-close">✕</button></div><p style="font-size:12px;color:#a9bbc3;margin:8px 0">Cada expedição possui três salas. Derrote os guardiões para avançar e conquistar recompensas.</p>'+(e.dungeon?.active?'<div style="padding:12px;border:1px solid #c59b55;border-radius:10px;margin:10px 0"><b>Expedição em andamento · Sala '+e.dungeon.room+'/3</b><p style="font-size:12px">Vida: '+Math.ceil(e.dungeon.hp)+' · '+e.dungeon.enemyName+'</p><button id="avx-dm-resume" style="background:#926b32;padding:8px;border-radius:7px">Retomar</button> <button id="avx-dm-abandon" style="background:#713d3d;padding:8px;border-radius:7px">Abandonar</button></div>':'')+opts.map(d=>'<div style="padding:12px;margin:9px 0;border:1px solid #40545b;border-radius:10px"><b style="color:#f6d79b">'+d[1]+'</b><p style="font-size:11px;color:#a9bbc3">'+d[4]+' · Nível '+d[2]+'+ · Entrada '+d[3]+' Gold · Recompensa x'+d[5]+'</p><button data-dun="'+d[0]+'" style="background:#315c59;padding:8px 12px;border-radius:7px" '+((s.level||1)<d[2]||e.dungeon?.active?'disabled':'')+'>Entrar no portal</button></div>').join('')+'</div>';
- $('avx-dm-close').onclick=()=>m.remove();const resume=$('avx-dm-resume');if(resume)resume.onclick=()=>m.remove();const abandon=$('avx-dm-abandon');if(abandon)abandon.onclick=()=>{e.dungeon.active=false;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y;s.x=g.player.x;s.y=g.player.y}persist();m.remove();notify('Expedição abandonada.')};
+ $('avx-dm-close').onclick=()=>m.remove();const resume=$('avx-dm-resume');if(resume)resume.onclick=()=>m.remove();const abandon=$('avx-dm-abandon');if(abandon)abandon.onclick=()=>{exitDungeon('Expedição abandonada. Você voltou à Área Safe.');m.remove()};
  m.querySelectorAll('[data-dun]').forEach(b=>b.onclick=()=>{const d=opts.find(x=>x[0]===b.dataset.dun);if((s.gold||0)<d[3]){notify('Gold insuficiente.');return}s.gold-=d[3];e.dungeon={active:true,type:d[0],name:d[1],mult:d[5],room:1,hp:s.maxHp||100,maxHp:s.maxHp||100,enemyHp:Math.round((100+(s.level||1)*18)*d[5]),enemyName:'Guardião da '+d[1]};const g=game();if(g?.player){g.player.x=EXP_MAP-380;g.player.y=EXP_MAP-430;s.x=g.player.x;s.y=g.player.y}persist();m.remove();notify('Portal aberto! Pressione E perto do guardião para atacar.')});
 }
+function exitDungeon(reason='Você saiu da expedição.'){
+ const ex=ensure(),s=state(),g=game(),d=ex?.dungeon;
+ if(!d?.active){notify('Você não está em uma expedição.');return}
+ d.active=false;d.abandonedAt=Date.now();d.exitReason=reason;
+ if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y;g.player.inSafeZone=true;delete g.player.realmId}
+ if(s){s.x=EXP_SAFE.x;s.y=EXP_SAFE.y}
+ persist();notify(reason);if(panel.style.display==='block')renderPanel();
+ const modal=$('avx-dungeon-modal');if(modal)modal.remove();
+}
+window.AVENTURIA_EXIT_DUNGEON=()=>exitDungeon('Expedição encerrada. Você voltou à Área Safe.');
 function advanceDungeon(){
  const e=ensure(),s=state(),d=e?.dungeon;if(!d?.active)return;
  const room=dungeonRooms[d.room-1],st=window.getRPGStats?.()||{atk:10,power:5,def:3};
