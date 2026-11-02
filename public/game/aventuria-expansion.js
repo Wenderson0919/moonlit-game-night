@@ -106,8 +106,18 @@ function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
 function persist(){try{if(typeof saveGame==='function')saveGame(false)}catch{}}
 let lastResources=null,lastClock=0,lastDraw=0,lastSeasonKills=null,lastSeasonRaids=null;
+function updateMobileNPCButton(){
+ const g=game(),p=g?.player;if(!g?.running||!p||p.realmId){$('avx-mobile-interact')?.remove();return}
+ const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
+ let btn=$('avx-mobile-interact');
+ if(!near||near.d>240){btn?.remove();return}
+ if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<260)openTownNPC(n.n.id)});document.body.appendChild(btn)}
+ btn.textContent='E · '+near.n.name;
+ btn.style.cssText='position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 190px);z-index:99999;padding:14px 18px;border-radius:16px;border:2px solid '+near.n.color+';background:#10212bea;color:#fff;font:800 13px system-ui;box-shadow:0 5px 22px #0009;touch-action:manipulation;pointer-events:auto';
+}
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
+ updateMobileNPCButton();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
  if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
  lastResources={...res};
@@ -158,8 +168,11 @@ function enterRealm(r){
  const g=game(),s=state();if(!g||!s||!r)return;
  if(realmReturnSnapshot){notify('Você já está em outra dimensão.');return}
  realmReturnSnapshot=saveRealmWorld(g);
- g.start(r.seed,{realmId:r.id});
- g.animals=[];g.player.x=2000;g.player.y=2350;g.player.inSafeZone=false;g.player.realmId=r.id;
+ g.start(r.seed);
+ g.animals=[];g.player.x=2000;g.player.y=2700;g.player.inSafeZone=false;g.player.realmId=r.id;
+ g.player.realmSpawn={x:2000,y:2700};g.player.biome=({verdant:'forest',frost:'snow',mire:'swamp',ember:'volcano'})[r.id]||'forest';
+ g.npc={x:2000,y:2000,name:'Portal de Retorno'};
+ g.ponds=[];g.structs=[];g.crops=[];g.loot=[];g.projs=[];g.hazards=[];g.fx=[];g.raids=[];
  populateRealmCreatures(g,r);
  s.x=2000;s.y=2000;s.seed=r.seed;persist();
  notify('🌌 Dimensão '+r.name+' carregada! Explore livremente.');
@@ -174,7 +187,7 @@ function openDungeonPortal(){
  m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Dimensões desconhecidas</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal abre um mundo independente, com terreno, criaturas e exploração próprios. O nível mínimo protege os aventureiros despreparados.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div><div style="font-size:10px;color:#9cc">Criaturas: '+r.creatures.join(', ')+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Entrar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
  $('avx-world-close').onclick=()=>m.remove();m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(r&&(s.level||1)>=r.level){enterRealm(r);m.remove()}});
 }
-function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p.realmId&&Math.hypot(p.x-2000,p.y-2000)<115){leaveRealm();return true}return false}
+function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p?.realmId&&Math.hypot(p.x-2000,p.y-2000)<150){leaveRealm();return true}return false}
 
 function openDungeonPortal(){
  const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';document.body.appendChild(m)}
