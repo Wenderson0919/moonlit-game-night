@@ -252,6 +252,7 @@
  const oldTick=tick;
  tick=function(){oldTick();socialMilestones();};
  const socialBtn=document.createElement('button');socialBtn.id='living-social-btn';socialBtn.textContent='🤝 Laços';socialBtn.style.cssText='position:fixed;left:18px;top:110px;z-index:57;padding:8px 12px;border:1px solid #547d72;border-radius:9px;background:#17332d;color:#b8f0d2;font:bold 11px Inter,sans-serif';socialBtn.onclick=()=>{const el=renderSocialPanel();el.style.display=el.style.display==='none'?'block':'none';if(el.style.display==='block')renderSocialPanel()};document.body.appendChild(socialBtn);
+ const radioBtn=document.createElement('button');radioBtn.id='living-radio-btn';radioBtn.textContent='📻 Rádio';radioBtn.style.cssText='position:fixed;left:18px;top:152px;z-index:57;padding:8px 12px;border:1px solid #397c91;border-radius:9px;background:#17313b;color:#a8e8ff;font:bold 11px Inter,sans-serif';radioBtn.onclick=()=>window.openRadioPanel?.();document.body.appendChild(radioBtn);
  window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();e.stopImmediatePropagation();talkToNPC()}},true);
  window.AventuriaSocial={talk:talkToNPC,open:()=>{const el=renderSocialPanel();el.style.display='block'},getRelations:()=>playerRelations,getStories:()=>stories};
 
