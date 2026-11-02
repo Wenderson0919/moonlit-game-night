@@ -235,7 +235,13 @@ input,textarea,select,[contenteditable="true"]{user-select:text;-webkit-user-sel
         <label class="block text-slate-300">Nome<input id="cc-name" maxlength="16" class="rpg-input" placeholder="Seu nome"></label>
         <div><div class="text-slate-300 mb-1">Classe</div><div id="cc-classes" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div></div>
         <div><div class="text-slate-300 mb-1">Raça</div><div id="cc-races" class="grid grid-cols-2 gap-2"></div></div>
-        <div class="grid grid-cols-2 gap-3"><div><div class="text-slate-300 mb-1">Cabelo</div><div id="cc-hair" class="flex flex-wrap gap-1.5"></div></div><div><div class="text-slate-300 mb-1">Olhos</div><div id="cc-eyes" class="flex flex-wrap gap-1.5"></div></div></div>
+        <div class="grid grid-cols-2 gap-3"><div><div class="text-slate-300 mb-1">Cor do cabelo</div><div id="cc-hair" class="flex flex-wrap gap-1.5"></div></div><div><div class="text-slate-300 mb-1">Cor dos olhos</div><div id="cc-eyes" class="flex flex-wrap gap-1.5"></div></div></div>
+        <div class="rounded-xl border border-amber-500/20 bg-slate-950/35 p-3 space-y-3"><div class="font-bold text-amber-200">✦ Aparência avançada</div>
+        <div><div class="text-slate-300 mb-1">Tom de pele</div><div id="cc-skin" class="flex flex-wrap gap-1.5"></div></div>
+        <div><div class="text-slate-300 mb-1">Penteado</div><div id="cc-hairstyle" class="flex flex-wrap gap-1.5"></div></div>
+        <div class="grid grid-cols-2 gap-3"><div><div class="text-slate-300 mb-1">Barba</div><div id="cc-beard" class="flex flex-wrap gap-1.5"></div></div><div><div class="text-slate-300 mb-1">Marcas faciais</div><div id="cc-mark" class="flex flex-wrap gap-1.5"></div></div></div>
+        <div><div class="text-slate-300 mb-1">Cor da roupa</div><div id="cc-outfit" class="flex flex-wrap gap-1.5"></div></div>
+        <div class="grid grid-cols-2 gap-3"><div><div class="text-slate-300 mb-1">Estilo da roupa</div><div id="cc-outfitstyle" class="flex flex-wrap gap-1.5"></div></div><div><div class="text-slate-300 mb-1">Acessório</div><div id="cc-accessory" class="flex flex-wrap gap-1.5"></div></div></div></div>
         <button class="btn w-full text-sm py-3" onclick="beginNewGame()">⚔ COMEÇAR AVENTURA</button>
       </div>
     </div>
@@ -708,12 +714,19 @@ function drawCharacter(ctx,x,y,o){
  ctx.fillStyle=pal[1];ctx.fillRect(-10,-7,20,16);ctx.fillStyle=pal[0];ctx.fillRect(-8,-7,16,12);ctx.fillStyle='#d7b45f';ctx.fillRect(-2,-5,4,13);ctx.fillRect(-9,2,18,2);
  ctx.fillStyle='#d6a36e';
  if(dir==='left'){ctx.fillRect(-14,-4,5,10);ctx.fillRect(8,-3,4,8)}else if(dir==='right'){ctx.fillRect(9,-4,5,10);ctx.fillRect(-12,-3,4,8)}else{ctx.fillRect(-13,-3,5,9);ctx.fillRect(8,-3,5,9)}
- const skin=o.race==='Anão'?'#bd895f':o.race==='Elfo'?'#e0bd9b':o.race==='Ser mágico'?'#9c8bd0':'#b9784d';
- ctx.fillStyle=skin;ctx.fillRect(-9,-20,18,16);ctx.fillStyle='#e8b985';ctx.fillRect(-8,-19,16,13);
+ const skin=o.skin||(o.race==='Anão'?'#bd895f':o.race==='Elfo'?'#e0bd9b':o.race==='Ser mágico'?'#9c8bd0':'#b9784d');
+ ctx.fillStyle=skin;ctx.fillRect(-9,-20,18,16);ctx.fillStyle=skin;ctx.fillRect(-8,-19,16,13);
  if(o.race==='Ser mágico'){ctx.fillStyle='#c4b5fd';ctx.fillRect(-8,-19,16,13)}
  ctx.fillStyle=skin;ctx.fillRect(-11,-15,3,5);ctx.fillRect(8,-15,3,5);
  if(o.race==='Elfo'){ctx.fillRect(-13,-17,4,3);ctx.fillRect(9,-17,4,3)}
- ctx.fillStyle=o.hair||'#583a2b';ctx.fillRect(-10,-22,20,7);ctx.fillRect(-9,-18,4,5);ctx.fillRect(5,-18,4,5);
+ const hc=o.hair||'#583a2b',hs=o.hairStyle||'Curto';ctx.fillStyle=hc;
+ if(hs==='Careca'){}else if(hs==='Longo'){ctx.fillRect(-11,-23,22,8);ctx.fillRect(-11,-17,4,12);ctx.fillRect(7,-17,4,12)}
+ else if(hs==='Espetado'){ctx.fillRect(-10,-21,20,5);[-8,-3,2,7].forEach((v,i)=>{ctx.beginPath();ctx.moveTo(v,-20);ctx.lineTo(v+2,-27-(i%2)*3);ctx.lineTo(v+5,-20);ctx.fill()})}
+ else if(hs==='Moicano'){ctx.fillRect(-3,-27,6,12);ctx.fillRect(-8,-20,16,4)}
+ else if(hs==='Coque'){ctx.fillRect(-10,-22,20,7);ctx.fillRect(5,-28,7,7);ctx.fillRect(-9,-18,4,5);ctx.fillRect(5,-18,4,5)}
+ else if(hs==='Tranças'){ctx.fillRect(-10,-22,20,7);ctx.fillRect(-11,-17,3,12);ctx.fillRect(8,-17,3,12);ctx.fillRect(-12,-7,3,3);ctx.fillRect(9,-7,3,3)}
+ else{ctx.fillRect(-10,-22,20,7);ctx.fillRect(-9,-18,4,5);ctx.fillRect(5,-18,4,5)}
+ if(o.beard&&o.beard!=='Nenhuma'&&dir!=='up'){ctx.fillStyle=hc;if(o.beard==='Bigode'){ctx.fillRect(-5,-8,4,2);ctx.fillRect(2,-8,4,2)}else if(o.beard==='Cavanhaque'){ctx.fillRect(-2,-7,5,4)}else{ctx.fillRect(-6,-8,12,5);ctx.fillRect(-4,-4,8,3)}}
  ctx.fillStyle=o.eye||'#2b211b';
  if(dir==='down'){ctx.fillRect(-5,-12,2,2);ctx.fillRect(3,-12,2,2);ctx.fillStyle='#9b5542';ctx.fillRect(-1,-8,3,1)}else if(dir==='left')ctx.fillRect(-7,-12,2,2);else if(dir==='right')ctx.fillRect(5,-12,2,2);else{ctx.fillStyle=o.hair||'#583a2b';ctx.fillRect(-8,-20,16,9)}
  ctx.fillStyle={Mago:'#493b91',Assassino:'#252938',Curandeiro:'#e8e1c9',Guerreiro:'#8b3430'}[o.cls]||'#2e7048';
@@ -1309,7 +1322,7 @@ class Game{
   const s=S();
   dr.push({y:p.y,f:()=>{
    const cl=CLASS_INFO[s.className].atk;
-   drawCharacter(c,p.x,p.y,{dir:p.dir,local:true,name:s.name,title:s.title,cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,bubble:s.chatBubble,moving:p.moving,attacking:p.atkT>0&&cl.type==='melee',atkAng:p.atkAng,reach:cl.reach||30,transformed:Date.now()<s.transformUntil,wcol:s.diamondSword?'#79e5f4':'#e8e1c9',alpha:p.invuln>0&&p.dashT>0?.5:p.hurtT>0?.65:1});
+   drawCharacter(c,p.x,p.y,{dir:p.dir,local:true,name:s.name,title:s.title,cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,skin:s.skinColor,hairStyle:s.hairStyle,beard:s.beardStyle,outfit:s.outfitColor,outfitStyle:s.outfitStyle,cloak:s.cloakColor,accessory:s.accessory,mark:s.faceMark,bubble:s.chatBubble,moving:p.moving,attacking:p.atkT>0&&cl.type==='melee',atkAng:p.atkAng,reach:cl.reach||30,transformed:Date.now()<s.transformUntil,wcol:s.diamondSword?'#79e5f4':'#e8e1c9',alpha:p.invuln>0&&p.dashT>0?.5:p.hurtT>0?.65:1});
   }});
   dr.sort((a,b)=>a.y-b.y);dr.forEach(d=>d.f());
   if(s.buildMode)this.drawBuildPreview(c);
@@ -1376,26 +1389,36 @@ class Game{
 }
 
 /* ============================ CRIAÇÃO DE PERSONAGEM ============================ */
-const draft={name:'',cls:'Guerreiro',race:'Humano',hair:HAIRS[0],eye:EYES[0]};
+const draft={name:'',cls:'Guerreiro',race:'Humano',hair:HAIRS[0],eye:EYES[0],skin:'#b9784d',hairStyle:'Curto',beardStyle:'Nenhuma',outfitColor:'#8b3430',outfitStyle:'Armadura',cloakColor:'#252b45',accessory:'Nenhum',faceMark:'Nenhuma'};
+const SKINS=['#f4d1b1','#e8b985','#d6a36e','#b9784d','#8d563d','#633d32','#9c8bd0'];
+const OUTFITS=['#8b3430','#493b91','#245c43','#292d3a','#397b83','#d6a84b','#e8e1c9','#252b45'];
+function optionButtons(id,items,key,colors=false){$(id).innerHTML=items.map(v=>colors?'<button title="'+v+'" class="w-6 h-6 rounded-full border-2 '+(draft[key]===v?'border-amber-300 scale-110':'border-slate-600')+'" style="background:'+v+'" onclick="draft.'+key+'=\''+v+'\';buildCreation()"></button>':'<button class="px-2 py-1 rounded-lg border '+(draft[key]===v?'border-amber-300 bg-amber-900/40 text-amber-100':'border-slate-700 bg-slate-900/60 text-slate-300')+'" onclick="draft.'+key+'=\''+v+'\';buildCreation()">'+v+'</button>').join('')}
 const NAMES=['Aldric','Lyra','Thorin','Selene','Kael','Mira','Dorian','Eowyn','Brandt','Nyx','Rowan','Isolde'];
 function buildCreation(){
  $('cc-classes').innerHTML=Object.keys(CLASS_INFO).map(k=>`<div class="pill ${draft.cls===k?'on':''}" onclick="draft.cls='${k}';buildCreation()"><b>${k}</b><div class="text-[10px] text-slate-400">${CLASS_INFO[k].desc}</div></div>`).join('');
  $('cc-races').innerHTML=Object.keys(RACE_INFO).map(k=>`<div class="pill ${draft.race===k?'on':''}" onclick="draft.race='${k}';buildCreation()"><b>${k}</b><div class="text-[10px] text-slate-400">${RACE_INFO[k]}</div></div>`).join('');
  $('cc-hair').innerHTML=HAIRS.map(h=>`<div class="swatch ${draft.hair===h?'on':''}" style="background:${h}" onclick="draft.hair='${h}';buildCreation()"></div>`).join('');
  $('cc-eyes').innerHTML=EYES.map(h=>`<div class="swatch ${draft.eye===h?'on':''}" style="background:${h}" onclick="draft.eye='${h}';buildCreation()"></div>`).join('');
+ optionButtons('cc-skin',SKINS,'skin',true);
+ optionButtons('cc-hairstyle',['Curto','Longo','Espetado','Moicano','Coque','Tranças','Careca'],'hairStyle');
+ optionButtons('cc-beard',['Nenhuma','Bigode','Cavanhaque','Cheia'],'beardStyle');
+ optionButtons('cc-mark',['Nenhuma','Cicatriz','Pintura','Sardas'],'faceMark');
+ optionButtons('cc-outfit',OUTFITS,'outfitColor',true);
+ optionButtons('cc-outfitstyle',['Armadura','Capa'],'outfitStyle');
+ optionButtons('cc-accessory',['Nenhum','Capuz','Chifres','Coroa','Tiara','Óculos'],'accessory');
  const ci=CLASS_INFO[draft.cls];$('cc-desc').innerHTML=`<b class="text-amber-300">${draft.cls} ${draft.race}</b><br>${ci.hp} de vida inicial · Habilidade: ${ci.skill}<br>Item inicial: ${ci.start.name}`;
 }
-function randomizeCreation(){draft.cls=pick(Object.keys(CLASS_INFO));draft.race=pick(Object.keys(RACE_INFO));draft.hair=pick(HAIRS);draft.eye=pick(EYES);$('cc-name').value=pick(NAMES);buildCreation()}
+function randomizeCreation(){draft.cls=pick(Object.keys(CLASS_INFO));draft.race=pick(Object.keys(RACE_INFO));draft.hair=pick(HAIRS);draft.eye=pick(EYES);draft.skin=pick(SKINS);draft.hairStyle=pick(['Curto','Longo','Espetado','Moicano','Coque','Tranças','Careca']);draft.beardStyle=pick(['Nenhuma','Bigode','Cavanhaque','Cheia']);draft.outfitColor=pick(OUTFITS);draft.outfitStyle=pick(['Armadura','Capa']);draft.accessory=pick(['Nenhum','Capuz','Chifres','Coroa','Tiara','Óculos']);draft.faceMark=pick(['Nenhuma','Cicatriz','Pintura','Sardas']);$('cc-name').value=pick(NAMES);buildCreation()}
 let previewDir=0;
 setInterval(()=>{
  const cv=$('cc-preview');if(!cv||$('create-modal').classList.contains('hidden'))return;const g=cv.getContext('2d');g.clearRect(0,0,200,240);g.imageSmoothingEnabled=false;
  g.save();g.translate(100,150);g.scale(4.4,4.4);previewDir=(previewDir+.02)%4;
- drawCharacter(g,0,0,{dir:['down','right','up','left'][Math.floor(previewDir)],cls:draft.cls,race:draft.race,hair:draft.hair,eye:draft.eye,moving:false,local:true});
+ drawCharacter(g,0,0,{dir:['down','right','up','left'][Math.floor(previewDir)],cls:draft.cls,race:draft.race,hair:draft.hair,eye:draft.eye,skin:draft.skin,hairStyle:draft.hairStyle,beard:draft.beardStyle,outfit:draft.outfitColor,outfitStyle:draft.outfitStyle,cloak:draft.cloakColor,accessory:draft.accessory,mark:draft.faceMark,moving:false,local:true});
  g.restore();
 },60);
 function applyStart(){
  const ci=CLASS_INFO[draft.cls],s=newState();
- s.name=($('cc-name').value.trim()||pick(NAMES)).slice(0,16);s.className=draft.cls;s.race=draft.race;s.hairColor=draft.hair;s.eyeColor=draft.eye;
+ s.name=($('cc-name').value.trim()||pick(NAMES)).slice(0,16);s.className=draft.cls;s.race=draft.race;s.hairColor=draft.hair;s.eyeColor=draft.eye;s.skinColor=draft.skin;s.hairStyle=draft.hairStyle;s.beardStyle=draft.beardStyle;s.outfitColor=draft.outfitColor;s.outfitStyle=draft.outfitStyle;s.cloakColor=draft.cloakColor;s.accessory=draft.accessory;s.faceMark=draft.faceMark;
  s.maxHp=ci.hp;s.hp=ci.hp;
  s.equipment.weapon={id:'start',slot:'weapon',name:ci.start.name,rar:0,ilvl:1,stats:ci.start.stats,sell:3};
  return s;
@@ -1601,7 +1624,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
   if(!url){setHud('Abra pelo servidor (http://…), não pelo arquivo');return}
   setHud('Conectando ao mundo global...');
   const ws=new WebSocket(url);state.ws=ws;
-  ws.onopen=()=>{const s=S(),g=window.game;send({t:'join',name:s.name,cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,lvl:s.level,x:g?.player?.x,y:g?.player?.y,inventory:s.inventory,equipment:s.equipment});};
+  ws.onopen=()=>{const s=S(),g=window.game;send({t:'join',name:s.name,cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,skin:s.skinColor,hairStyle:s.hairStyle,beard:s.beardStyle,outfit:s.outfitColor,outfitStyle:s.outfitStyle,cloak:s.cloakColor,accessory:s.accessory,mark:s.faceMark,lvl:s.level,x:g?.player?.x,y:g?.player?.y,inventory:s.inventory,equipment:s.equipment});};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch{return}handle(m)};
   ws.onclose=()=>{state.ready=false;state.ws=null;setHud('Reconectando ao mundo global...');setTimeout(connect,2500)};
   ws.onerror=()=>{};
@@ -1609,7 +1632,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  function handle(m){
   if(m.t==='welcome'){state.id=m.id;state.ready=true;state.raids=m.raids||[];window.AVENTURIA_ONLINE={id:m.id,online:true,count:1};if(window.game){if(m.seed&&window.game.seed!==m.seed)window.game.start(m.seed);if(window.game.player&&Number.isFinite(m.x)&&Number.isFinite(m.y)){window.game.player.x=m.x;window.game.player.y=m.y;S().x=m.x;S().y=m.y;}}setHud('Mundo global · 1 jogador',true);updateOnlineRaidPanel();toast('Você entrou no servidor global!');}
   else if(m.t==='raids'){state.raids=m.raids||[];updateOnlineRaidPanel();}
-  else if(m.t==='snap'){state.raidHost=+m.rh||state.raidHost||0;const g0=window.game;if(g0?.running&&state.raidHost&&state.raidHost!==state.id){g0.raids=[];}else if(g0?.running&&state.raidHost===state.id&&state.raids.length&&!g0.raids.length){g0.raids=state.raids.map(r=>JSON.parse(JSON.stringify(r)));}const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
+  else if(m.t==='snap'){state.raidHost=+m.rh||state.raidHost||0;const g0=window.game;if(g0?.running&&state.raidHost&&state.raidHost!==state.id){g0.raids=[];}else if(g0?.running&&state.raidHost===state.id&&state.raids.length&&!g0.raids.length){g0.raids=state.raids.map(r=>JSON.parse(JSON.stringify(r)));}const seen=new Set();for(const a of m.p||[]){seen.add(a[0]);const q=state.players.get(a[0]);const d={id:a[0],name:a[1],cls:a[2],race:a[3],hair:a[4],eye:a[5],tx:a[6],ty:a[7],dir:a[8],moving:!!a[9],lvl:a[10],hp:a[11],mh:a[12],pvp:!!a[13],skin:a[14],hairStyle:a[15],beard:a[16],outfit:a[17],outfitStyle:a[18],cloak:a[19],accessory:a[20],mark:a[21],online:true,sz:16};if(q){if(Math.hypot(q.x-d.tx,q.y-d.ty)>400){q.x=d.tx;q.y=d.ty}Object.assign(q,d)}else state.players.set(a[0],Object.assign(d,{x:d.tx,y:d.ty}))}for(const id of [...state.players.keys()])if(!seen.has(id))state.players.delete(id);state.bosses.clear();for(const a of m.b||[])state.bosses.set(a[0],{id:a[0],name:'Chefe da Raid',x:a[1],y:a[2],hp:a[3],maxHp:a[4],face:a[5],onlineRaidBoss:true,sz:34,def:{sz:34}});state.minions.clear();for(const a of m.m||[])state.minions.set(a[0],{id:a[0],kind:a[1],x:a[2],y:a[3],hp:a[4],maxHp:a[5],onlineMinion:true,sz:18,def:{sz:18}});window.AVENTURIA_ONLINE.count=m.n;const n=m.n||(state.players.size+1);setHud('Mundo global · '+n+' jogador'+(n===1?'':'es'),true);}
   else if(m.t==='fx'){const g=window.game;if(!g?.running||!Array.isArray(m.l))return;const rp=state.players.get(m.id);const P=g.player;for(const e of m.l.slice(0,24)){if(!Array.isArray(e)||Math.hypot((e[1]||0)-P.x,(e[2]||0)-P.y)>1200&&e[0]!=='s')continue;if(e[0]==='p'&&g.projs.length<400)g.projs.push({x:+e[1],y:+e[2],vx:+e[3],vy:+e[4],r:+e[5]||6,life:Math.min(3,+e[6]||1),color:String(e[7]||'#fff'),kind:String(e[8]||''),ang:+e[9]||0,from:'ghost',dmg:0});else if(e[0]==='f'&&g.fx.length<300)g.fx.push({x:+e[1],y:+e[2],r:+e[3]||8,max:Math.min(400,+e[4]||40),t:Math.min(1,+e[5]||.3),col:String(e[6]||'#fff'),_o:1});else if(e[0]==='s'&&rp){rp.swUntil=performance.now()+220;rp.swA=+e[1]||0;rp.swR=+e[2]||30}else if(e[0]==='t'&&rp){rp.trUntil=Date.now()+Math.min(9000,+e[1]||0)}}}
   else if(m.t==='raid_evt'){
    const g=window.game;
@@ -1668,7 +1691,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  window.avOnlineAccept=()=>send({t:'trade_accept'});
  window.avOnlineCancel=()=>send({t:'trade_cancel'});
  // Posição e estado enviados em intervalo fixo; servidor controla PvP e valida distância.
- setInterval(()=>{const g=window.game,s=S();if(!state.ready||!g?.running)return;const t=performance.now();if(t-state.lastSend<50)return;state.lastSend=t;if(Math.floor(t/500)!==Math.floor((t-50)/500))updateOnlineRaidPanel();send({t:'p',x:g.player.x,y:g.player.y,d:g.player.dir||'down',m:!!g.player.moving,hp:s.hp,mh:effMaxHp(),lvl:s.level,pv:!!(window.AV_PVP&&window.AV_PVP())});},50);
+ setInterval(()=>{const g=window.game,s=S();if(!state.ready||!g?.running)return;const t=performance.now();if(t-state.lastSend<50)return;state.lastSend=t;if(Math.floor(t/500)!==Math.floor((t-50)/500))updateOnlineRaidPanel();send({t:'p',x:g.player.x,y:g.player.y,d:g.player.dir||'down',m:!!g.player.moving,hp:s.hp,mh:effMaxHp(),lvl:s.level,pv:!!(window.AV_PVP&&window.AV_PVP()),skin:s.skinColor,hairStyle:s.hairStyle,beard:s.beardStyle,outfit:s.outfitColor,outfitStyle:s.outfitStyle,cloak:s.cloakColor,accessory:s.accessory,mark:s.faceMark});},50);
  // Efeitos visuais: poderes, projéteis e golpes aparecem para os outros jogadores.
  let wasAtk=false,lastTr=0;
  setInterval(()=>{const g=window.game,s=S();if(!state.ready||!g?.running)return;const P=g.player,out=[];
@@ -1680,7 +1703,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
   if(out.length)send({t:'fx',l:out.slice(0,24)});
  },150);
  // Desenha jogadores remotos sobre o canvas do jogo.
- function drawRemote(){const g=window.game;if(g?.running&&g.ctx){const c=g.ctx,W=g.canvas.width,H=g.canvas.height;c.save();c.translate(-Math.round(g.player.x-W/2),-Math.round(g.player.y-H/2));for(const p of state.players.values()){if(Number.isFinite(p.tx)){p.x+=(p.tx-p.x)*.35;p.y+=(p.ty-p.y)*.35}if(typeof drawCharacter==='function')drawCharacter(c,p.x,p.y,{dir:p.dir,name:p.name,title:p.pvp?'PvP':'Online',cls:p.cls,race:p.race,hair:p.hair,eye:p.eye,moving:p.moving,bubble:p.chatBubble,attacking:(p.swUntil||0)>performance.now(),atkAng:p.swA,reach:p.swR||30,transformed:(p.trUntil||0)>Date.now(),alpha:(p.hitShow||0)>performance.now()?.6:1});if(p.chatBubbleTimer>0)p.chatBubbleTimer-=.05;c.fillStyle='#fff';c.font='11px sans-serif';c.textAlign='center';c.fillText(p.name+' · Nv '+p.lvl,p.x,p.y-30);{const r=Math.max(0,Math.min(1,(p.hp||0)/(p.mh||1)));c.fillStyle='rgba(0,0,0,.6)';c.fillRect(p.x-18,p.y-26,36,5);c.fillStyle=p.pvp?'#ef4444':'#22c55e';c.fillRect(p.x-17,p.y-25,34*r,3)}}for(const r of state.raids){if(r.state==='cleared')continue;c.strokeStyle=r.state==='active'?'#ef4444':'#f59e0b';c.lineWidth=3;c.beginPath();c.arc(r.x,r.y,r.r,0,Math.PI*2);c.stroke();c.fillStyle='#f59e0b';c.font='bold 12px sans-serif';c.textAlign='center';c.fillText('RAID '+(r.tierName||['COMUM','INCOMUM','RARA','ÉPICA','LENDÁRIA'][r.tier]||'')+' · '+r.name,r.x,r.y-r.r-12)}for(const m of state.minions.values()){c.fillStyle='#a16207';c.beginPath();c.arc(m.x,m.y,12,0,Math.PI*2);c.fill()}c.restore()}}
+ function drawRemote(){const g=window.game;if(g?.running&&g.ctx){const c=g.ctx,W=g.canvas.width,H=g.canvas.height;c.save();c.translate(-Math.round(g.player.x-W/2),-Math.round(g.player.y-H/2));for(const p of state.players.values()){if(Number.isFinite(p.tx)){p.x+=(p.tx-p.x)*.35;p.y+=(p.ty-p.y)*.35}if(typeof drawCharacter==='function')drawCharacter(c,p.x,p.y,{dir:p.dir,name:p.name,title:p.pvp?'PvP':'Online',cls:p.cls,race:p.race,hair:p.hair,eye:p.eye,skin:p.skin,hairStyle:p.hairStyle,beard:p.beard,outfit:p.outfit,outfitStyle:p.outfitStyle,cloak:p.cloak,accessory:p.accessory,mark:p.mark,moving:p.moving,bubble:p.chatBubble,attacking:(p.swUntil||0)>performance.now(),atkAng:p.swA,reach:p.swR||30,transformed:(p.trUntil||0)>Date.now(),alpha:(p.hitShow||0)>performance.now()?.6:1});if(p.chatBubbleTimer>0)p.chatBubbleTimer-=.05;c.fillStyle='#fff';c.font='11px sans-serif';c.textAlign='center';c.fillText(p.name+' · Nv '+p.lvl,p.x,p.y-30);{const r=Math.max(0,Math.min(1,(p.hp||0)/(p.mh||1)));c.fillStyle='rgba(0,0,0,.6)';c.fillRect(p.x-18,p.y-26,36,5);c.fillStyle=p.pvp?'#ef4444':'#22c55e';c.fillRect(p.x-17,p.y-25,34*r,3)}}for(const r of state.raids){if(r.state==='cleared')continue;c.strokeStyle=r.state==='active'?'#ef4444':'#f59e0b';c.lineWidth=3;c.beginPath();c.arc(r.x,r.y,r.r,0,Math.PI*2);c.stroke();c.fillStyle='#f59e0b';c.font='bold 12px sans-serif';c.textAlign='center';c.fillText('RAID '+(r.tierName||['COMUM','INCOMUM','RARA','ÉPICA','LENDÁRIA'][r.tier]||'')+' · '+r.name,r.x,r.y-r.r-12)}for(const m of state.minions.values()){c.fillStyle='#a16207';c.beginPath();c.arc(m.x,m.y,12,0,Math.PI*2);c.fill()}c.restore()}}
  // Desenha depois do render do jogo (antes era apagado pelo próximo frame).
  if(Game?.prototype?.render){const r0=Game.prototype.render;Game.prototype.render=function(){const out=r0.apply(this,arguments);try{drawRemote()}catch(e){}return out}}
  // PvP: golpes locais em personagens online são enviados ao servidor, nunca resolvidos localmente.
