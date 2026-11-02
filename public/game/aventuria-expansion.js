@@ -280,6 +280,22 @@ const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=to
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
    é carregado durante o parse, instalar os hooks imediatamente encontraria window.game vazio. */
 function installGameHooks(){
+ // Clique/toque diretamente no NPC no cenário (desktop e mobile).
+ if(!window.__avxNpcPointerHook){
+  window.__avxNpcPointerHook=true;
+  const handleNpcPointer=ev=>{
+   if(ev.button!==undefined&&ev.button!==0)return;
+   if(ev.target?.closest?.('button,a,input,textarea,select,[role="dialog"]'))return;
+   const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas)return;
+   const rect=canvas.getBoundingClientRect();
+   if(ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;
+   const wx=p.x+(ev.clientX-(rect.left+rect.width/2))*(canvas.width/rect.width);
+   const wy=p.y+(ev.clientY-(rect.top+rect.height/2))*(canvas.height/rect.height);
+   const nearest=townNPCs.map(n=>({n,d:Math.hypot(wx-n.x,wy-n.y)})).sort((a,b)=>a.d-b.d)[0];
+   if(nearest&&nearest.d<68){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id)}
+  };
+  document.addEventListener('pointerdown',handleNpcPointer,true);
+ }
  // Keyboard handling is installed independently of the Game constructor.
  if(!window.__avxNpcKeyHook){
   window.__avxNpcKeyHook=true;
