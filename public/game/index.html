@@ -1618,6 +1618,8 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
     state.bosses.clear();
     for(const r of state.raids)if(r.state==='active'&&r.boss)state.bosses.set(r.id,{...r.boss,id:r.id,raidId:r.id,name:r.boss.name,x:r.boss.x,y:r.boss.y,hp:r.boss.hp,maxHp:r.boss.maxHp,onlineRaidBoss:true,sz:r.boss.sz||34,def:{sz:r.boss.sz||34}});
     updateOnlineRaidPanel();
+   }else if(m.kind==='hurt'&&+m.to===state.id&&g?.running){
+    g.hurtPlayer(Math.max(1,Math.min(500,+m.dmg||1)),{src:String(m.src||'Chefe da Raid')});
    }else if(m.kind==='hit'&&state.raidHost===state.id&&g?.running){
     const r=g.raids.find(q=>q.id===m.raidId&&q.state==='active');
     const p=state.players.get(+m.from);
@@ -1684,7 +1686,23 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
  const spawn0=Game?.prototype?.spawnRaid;
  if(spawn0)Game.prototype.spawnRaid=function(){if(state.raidHost&&state.raidHost!==state.id)return null;return spawn0.apply(this,arguments)};
  const updateRaid0=Game?.prototype?.updateRaid;
- if(updateRaid0)Game.prototype.updateRaid=function(r,dt){if(state.raidHost&&state.raidHost!==state.id)return;return updateRaid0.call(this,r,dt)};
+ if(updateRaid0)Game.prototype.updateRaid=function(r,dt){
+  if(state.raidHost&&state.raidHost!==state.id)return;
+  const own=this.player, candidates=[{id:state.id,x:own.x,y:own.y},...state.players.values()]
+   .filter(p=>Math.hypot(p.x-r.x,p.y-r.y)<=r.r+320)
+   .sort((a,b)=>Math.hypot(a.x-r.boss.x,a.y-r.boss.y)-Math.hypot(b.x-r.boss.x,b.y-r.boss.y));
+  const target=candidates[0];
+  if(!target)return updateRaid0.call(this,r,dt);
+  const oldHp=S().hp, oldHurt=this.hurtPlayer;
+  this.player=target;
+  if(target.id!==state.id&&oldHp<=0)S().hp=1;
+  this.hurtPlayer=function(dmg,o){
+   if(target.id===state.id)return oldHurt.call(this,dmg,o);
+   send({t:'raid_hurt',kind:'hurt',to:target.id,dmg:Math.round(dmg),src:o?.src||r.boss.name});
+  };
+  try{return updateRaid0.call(this,r,dt)}
+  finally{this.player=own;this.hurtPlayer=oldHurt;if(target.id!==state.id&&oldHp<=0)S().hp=oldHp}
+ };
  const dead0=Game?.prototype?.onBossDead;
  if(dead0)Game.prototype.onBossDead=function(r){
   if(state.raidHost!==state.id)return;
