@@ -128,18 +128,20 @@ function tick(){
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
 }
 
-/* NPCs de cidade, montaria e mascote integrados ao mundo */
+/* NPCs de cidade, montaria e mascote integrados ao mundo.
+   SAFE/MAP são const locais do index.html; este script externo usa coordenadas equivalentes. */
+const EXP_MAP=32*125,EXP_CX=EXP_MAP/2,EXP_SAFE={x:EXP_CX,y:EXP_CX,radius:260};
 const townNPCs=[
- {id:'merchant',name:'Mercador de Aventuria',role:'Loja geral',x:SAFE.x+105,y:SAFE.y-75,icon:'🛒',color:'#d5a34c'},
- {id:'stable',name:'Mestre das Montarias',role:'Estábulo',x:SAFE.x-105,y:SAFE.y-75,icon:'🐎',color:'#b88b65'},
- {id:'pet',name:'Cuidadora de Mascotes',role:'Mascotes',x:SAFE.x+105,y:SAFE.y+75,icon:'🐾',color:'#8bcf9a'},
- {id:'guild',name:'Mestre das Guildas',role:'Guildas',x:SAFE.x-105,y:SAFE.y+75,icon:'🛡️',color:'#9cb9d8'},
- {id:'dungeon',name:'Guardião do Portal',role:'Masmorras',x:SAFE.x,y:SAFE.y-175,icon:'🌀',color:'#b99aff'}
+ {id:'merchant',name:'Mercador de Aventuria',role:'Loja geral',x:EXP_SAFE.x+105,y:EXP_SAFE.y-75,icon:'🛒',color:'#d5a34c'},
+ {id:'stable',name:'Mestre das Montarias',role:'Estábulo',x:EXP_SAFE.x-105,y:EXP_SAFE.y-75,icon:'🐎',color:'#b88b65'},
+ {id:'pet',name:'Cuidadora de Mascotes',role:'Mascotes',x:EXP_SAFE.x+105,y:EXP_SAFE.y+75,icon:'🐾',color:'#8bcf9a'},
+ {id:'guild',name:'Mestre das Guildas',role:'Guildas',x:EXP_SAFE.x-105,y:EXP_SAFE.y+75,icon:'🛡️',color:'#9cb9d8'},
+ {id:'dungeon',name:'Guardião do Portal',role:'Masmorras',x:EXP_SAFE.x,y:EXP_SAFE.y-175,icon:'🌀',color:'#b99aff'}
 ];
 const dungeonRooms=[
- {name:'Vestíbulo das Ruínas',x:MAP-560,y:MAP-560,w:360,h:260,enemy:'Sentinela das Ruínas',hp:100,reward:100},
- {name:'Galeria dos Ecos',x:MAP-560,y:MAP-260,w:360,h:260,enemy:'Cavaleiro Espectral',hp:180,reward:180},
- {name:'Câmara do Guardião',x:MAP-560,y:MAP-80,w:360,h:260,enemy:'Guardião Ancestral',hp:300,reward:350}
+ {name:'Vestíbulo das Ruínas',x:EXP_MAP-560,y:EXP_MAP-560,w:360,h:260,enemy:'Sentinela das Ruínas',hp:100,reward:100},
+ {name:'Galeria dos Ecos',x:EXP_MAP-560,y:EXP_MAP-260,w:360,h:260,enemy:'Cavaleiro Espectral',hp:180,reward:180},
+ {name:'Câmara do Guardião',x:EXP_MAP-560,y:EXP_MAP-80,w:360,h:260,enemy:'Guardião Ancestral',hp:300,reward:350}
 ];
 function mountAndPetDraw(g){
  if(!g?.running||!g.player)return;
@@ -186,7 +188,7 @@ const originalInteract=GameCtor?.prototype?.interact;
 if(originalInteract){GameCtor.prototype.interact=function(){
  const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
- if(ensure()?.dungeon?.active&&Math.hypot(p.x-(MAP-380),p.y-(MAP-430))<75){advanceDungeon();return}
+ if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
  return originalInteract.call(this);
 }}
 function openTownNPC(id){
@@ -197,7 +199,7 @@ function openTownNPC(id){
  stable:()=>{if(!e.mount){if(s.gold<500){notify('Você precisa de 500 Gold para comprar uma montaria.');return}s.gold-=500;e.mount=true;e.mountType='cavalo';notify('🐎 Cavalo comprado! Pressione E perto do Mestre para montar ou desmontar.')}else{e.mount=!e.mount;notify(e.mount?'Você montou!':'Você desmontou.')}persist()},
  pet:()=>{if(!e.pet){if(s.gold<250){notify('O ovo custa 250 Gold.');return}s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Um companheiro nasceu!')}else{e.petEquipped=!e.petEquipped;notify(e.petEquipped?'Mascote invocado!':'Mascote guardado.')}persist()},
  guild:()=>{if(!w.guild){const name=(prompt('Nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('Nome inválido.');return}if(s.gold<200){notify('Fundar uma guilda custa 200 Gold.');return}s.gold-=200;w.guild=name;w.members=[{name:s.name||'Líder',role:'Líder',joined:Date.now()}];notify('Guilda '+name+' fundada!')}else{const online=window.AVENTURIA_ONLINE?.players||[];const list=online.filter(x=>x.name!==s.name).map(x=>x.name).join(', ');const who=prompt('Guilda: '+w.guild+'\\nMembros: '+w.members.map(m=>m.name).join(', ')+'\\nJogadores visíveis: '+(list||'nenhum detectado')+'\\nDigite nome de membro para registrar convite local:');if(who){w.members.push({name:who,role:'Recruta',joined:Date.now(),pending:true});notify('Convite anotado. Para convite real entre contas precisamos persistir guildas no servidor.')}}persist()},
- dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:100,enemyName:dungeonRooms[0].enemy};const g=game();if(g?.player){g.player.x=MAP-380;g.player.y=MAP-430;s.x=g.player.x;s.y=g.player.y}notify('🌀 Você atravessou o portal! Derrote o guardião e avance pelas três salas.');persist()}
+ dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:100,enemyName:dungeonRooms[0].enemy};const g=game();if(g?.player){g.player.x=EXP_MAP-380;g.player.y=EXP_MAP-430;s.x=g.player.x;s.y=g.player.y}notify('🌀 Você atravessou o portal! Derrote o guardião e avance pelas três salas.');persist()}
  };
  actions[id]?.();if(panel.style.display==='block')renderPanel();
 }
@@ -206,10 +208,10 @@ function advanceDungeon(){
  const room=dungeonRooms[d.room-1],st=window.getRPGStats?.()||{atk:10,power:5,def:3};
  const hit=25+(st.atk||0)*2+(st.power||0)*2+(e.gear||0)*5+Math.random()*20;
  d.enemyHp-=hit;d.hp-=Math.max(3,12-(st.def||0)*.3);
- if(d.hp<=0){d.active=false;const g=game();if(g?.player){g.player.x=SAFE.x;g.player.y=SAFE.y}s.x=SAFE.x;s.y=SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
+ if(d.hp<=0){d.active=false;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
  if(d.enemyHp>0){notify('Você causou '+Math.floor(hit)+' de dano. '+room.enemy+' ainda tem '+Math.ceil(d.enemyHp)+' HP. Sua vida: '+Math.ceil(d.hp));return}
  if(d.room<3){d.room++;const next=dungeonRooms[d.room-1];d.enemyName=next.enemy;d.enemyHp=next.hp;d.hp=Math.min(d.maxHp,d.hp+25);const g=game();if(g?.player){g.player.x=next.x+next.w/2;g.player.y=next.y+next.h/2;s.x=g.player.x;s.y=g.player.y}notify('Sala '+d.room+'/3 concluída! Você avançou para '+next.name+'.');}
- else{d.active=false;e.world.dungeonWins++;e.world.seasonXp+=200;s.gold+=room.reward+150;s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=SAFE.x;g.player.y=SAFE.y}s.x=SAFE.x;s.y=SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
+ else{d.active=false;e.world.dungeonWins++;e.world.seasonXp+=200;s.gold+=room.reward+150;s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
  persist();if(panel.style.display==='block')renderPanel();
 }
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
