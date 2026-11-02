@@ -118,6 +118,9 @@ function renderPanel(){
  panel.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>{const key=b.dataset.skill,def=skillDefs.find(x=>x[0]===key);if((s.level||1)-1-w.spent<=0){notify('Você não tem pontos de habilidade disponíveis.');return}if((w.skills[key]||0)>=def[3]){notify('Essa habilidade já está no nível máximo.');return}w.skills[key]=(w.skills[key]||0)+1;w.spent++;w.seasonXp+=35;persist();renderPanel()});
  bind('avx-gear',()=>{if(w.gear>=10){notify('Equipamento no nível máximo.');return}if((s.resources?.iron||0)<2){notify('Você precisa de 2 minérios de ferro para aprimorar.');return}const cost=150+w.gear*100;if(!spend(cost))return;s.resources.iron-=2;w.gear++;w.seasonXp+=50;notify('Equipamento aprimorado para +'+w.gear+'!')});
  bind('avx-event',()=>{const g=game();if(w.worldBoss.active){notify('O Colosso já está no mundo. Encontre-o e lute usando seus ataques normais.');return}if(!g?.running||!g.player){notify('Entre no mundo para invocar o chefe.');return}if((s.level||1)<5){notify('O Colosso exige nível 5.');return}if(!spend(75))return;const a=Math.random()*Math.PI*2,d=520;const boss=g.spawnAnimal('golem_cristal',g.player.x+Math.cos(a)*d,g.player.y+Math.sin(a)*d,{mult:2.4,raid:'world-boss'});if(!boss){notify('Não foi possível invocar o chefe agora.');return}boss.bossType='colossus';boss.def={...boss.def,n:'Colosso Ancestral',hp:1200+(s.level||1)*260,dmg:34,spd:1.25,sz:34,col:'#d18aee',feat:'bear',beh:'hostile',xp:900,drops:[['diamond',2,4],['crystal',5,9],['iron',8,14]]};boss.hp=boss.maxHp=boss.def.hp;boss.aggroT=999;w.worldBoss={active:true,hp:boss.hp,maxHp:boss.hp,spawnedAt:Date.now()};persist();notify('🐉 O Colosso Ancestral surgiu a '+d+'m! Encontre-o e derrote-o em combate.');});
+ bind('avx-season-event',()=>{const today=Math.floor(Date.now()/86400000);w.eventDaily??={day:today,done:false};if(w.eventDaily.day!==today)w.eventDaily={day:today,done:false};if(w.eventDaily.done){notify('Você já concluiu o desafio do festival hoje. Volte amanhã!');return}const gained=Math.max(0,(s.animalKills||0)-(w.eventDaily.startKills||0));if(!w.eventDaily.started){w.eventDaily={day:today,started:true,done:false,startKills:s.animalKills||0};notify('Desafio iniciado: derrote 6 criaturas hoje.');return}if(gained<6){notify('Progresso do festival: '+gained+'/6 criaturas derrotadas.');return}w.eventDaily.done=true;w.eventChallenges=(w.eventChallenges||0)+1;w.eventPoints=(w.eventPoints||0)+100;w.seasonXp=(w.seasonXp||0)+150;s.gold=(s.gold||0)+220;notify('🎉 Desafio concluído! +100 pontos do festival, 150 XP e 220 Gold!')});
+ panel.querySelectorAll('[data-prof-craft]').forEach(b=>b.onclick=()=>{const kind=b.dataset.profCraft,res=s.resources??={};const recipes={miner:{cost:{iron:4},give:{goldOre:1},xp:35,msg:'Lingote refinado!'},forager:{cost:{herb:5},give:{berry:3},xp:30,msg:'Tônico preparado!'},lumberjack:{cost:{wood:5},give:{pine:2},xp:30,msg:'Tábuas preparadas!'},fisher:{cost:{berry:3},give:{meat:2},xp:25,msg:'Isca e provisões preparadas!'}};const r=recipes[kind];if(!r)return;for(const [k,n] of Object.entries(r.cost))if((res[k]||0)<n){notify('Materiais insuficientes: precisa de '+n+' '+k+'.');return}for(const [k,n] of Object.entries(r.cost))res[k]-=n;for(const [k,n] of Object.entries(r.give))res[k]=(res[k]||0)+n;e.professions[kind].xp+=r.xp;w.seasonXp=(w.seasonXp||0)+10;persist();notify(r.msg+' Profissão +'+r.xp+' XP.');renderPanel();if(typeof updateUIStats==='function')updateUIStats()});
+
  bind('avx-treasure',()=>{if(!spend(40))return;w.treasures++;w.seasonXp+=45;const reward=80+Math.floor(Math.random()*121);s.gold+=reward;notify('Tesouro encontrado! Você recebeu '+reward+' Gold.')});
  bind('avx-season',()=>{const tier=Math.floor(w.seasonXp/500);if(tier<=0||w.seasonClaimed.includes(tier)){notify('Ainda não há prêmio disponível.');return}w.seasonClaimed.push(tier);s.gold+=100+tier*25;notify('Prêmio do patamar '+tier+' resgatado!')});
  panel.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim(b.dataset.claim));
@@ -338,7 +341,16 @@ function installGameHooks(){
  }
  const g=game(),GameCtor=g?.constructor;
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
- const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked;
+ const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked,originalDamage=proto.damageTarget;
+ if(originalDamage&&!proto.__avxBossRewardHook){
+  proto.damageTarget=function(target,...args){
+   const wasBoss=target?.bossType==='colossus',result=originalDamage.call(this,target,...args);
+   if(wasBoss&&target.hp<=0){
+    const s=state(),e=ensure();if(s&&e&&!target.__avxRewarded){target.__avxRewarded=true;e.world??={};e.world.worldBoss={active:false,hp:0,maxHp:0};e.world.eventWins=(e.world.eventWins||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+220;e.world.eventPoints=(e.world.eventPoints||0)+60;s.gold=(s.gold||0)+350+(s.level||1)*8;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+2;persist();notify('🏆 Colosso derrotado! +Gold, 2 diamantes e 60 pontos do festival!');if(typeof updateUIStats==='function')updateUIStats()}
+   }
+   return result;
+  };proto.__avxBossRewardHook=true;
+ }
  if(originalBlocked&&!proto.__avxHouseCollision){
   proto.blocked=function(x,y){
    if(originalBlocked.call(this,x,y))return true;
