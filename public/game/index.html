@@ -891,6 +891,7 @@ class Game{
  resize(){const c=$('canvas-container');this.canvas.width=c.clientWidth;this.canvas.height=c.clientHeight}
  /* ---------- mundo ---------- */
  start(seed,saved){
+  this.t=0;this.lastTime=performance.now();
   this.seed=seed;S().seed=seed;this.rng=mulberry32(seed);
   this.tb=new Uint8Array(MT*MT);
   for(let ty=0;ty<MT;ty++)for(let tx=0;tx<MT;tx++)this.tb[ty*MT+tx]=BKEYS.indexOf(this.biomeCalc(tx*TILE+16,ty*TILE+16));
