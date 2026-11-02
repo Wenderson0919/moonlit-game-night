@@ -236,34 +236,34 @@ const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=to
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
    é carregado durante o parse, instalar os hooks imediatamente encontraria window.game vazio. */
 function installGameHooks(){
- const GameCtor=window.game?.constructor;
- if(!GameCtor)return;
+ // Keyboard handling is installed independently of the Game constructor.
  if(!window.__avxNpcKeyHook){
   window.__avxNpcKeyHook=true;
   window.addEventListener('keydown',ev=>{
    if((ev.code!=='KeyE'&&ev.key?.toLowerCase()!=='e')||ev.repeat)return;
    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
-   const g=game(),p=g.player;if(!p)return;
+   const g=game(),p=g?.player;if(!g||!p||!g.running)return;
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
-   const nearby=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearby&&nearby.d<210){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearby.n.id);return}
+   const nearest=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
+   if(nearest&&nearest.d<230){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
   },true);
  }
- if(GameCtor.prototype.__avxTownHooks)return;
+ const g=game(),GameCtor=g?.constructor;
+ if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
  if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this)};
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
-  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<115){openTownNPC(n.id);return}
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<230){openTownNPC(n.id);return}
   if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
   return originalInteract.call(this);
  };
  proto.__avxTownHooks=true;
 }
+window.addEventListener('aventuria:game-ready',installGameHooks);
 window.addEventListener('load',installGameHooks);
-// Also install immediately: this script may load after the browser's load event.
 installGameHooks();
 const PET_CATALOG=[
 {id:'slime',name:'Slime',emoji:'🟢',price:250,desc:'Companheiro resistente',bonus:'Defesa +8'},
