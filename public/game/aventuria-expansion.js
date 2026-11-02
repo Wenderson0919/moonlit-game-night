@@ -92,6 +92,10 @@ function renderPanel(){
  '<div class="avx-card" data-section="world"><b class="text-amber-100">🧭 Caça ao tesouro</b><p class="avx-muted mt-1">Explore uma expedição e procure um baú perdido. A expedição usa sua posição atual como ponto de partida.</p><div class="text-xs mt-2">'+(adv.treasure?'Expedição ativa · procure o baú indicado no mapa':'Nenhuma expedição ativa')+'</div><button id="avx-treasure-hunt" class="avx-action mt-2">'+(adv.treasure?'Cancelar busca':'Iniciar busca · 60 Gold')+'</button></div>'+
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">🌟 Despertar de armas</b><p class="avx-muted mt-1">Desperte a arma equipada para liberar poder adicional e efeitos especiais.</p><div class="text-xs mt-2">Despertar: '+(s.equipment?.weapon?.awakening||0)+'/5</div><button id="avx-awaken" class="avx-action mt-2">Despertar · '+(250+((s.equipment?.weapon?.awakening||0)*250))+' Gold + 1 Diamante</button></div>'
  $('avx-content').insertAdjacentHTML('beforeend',advancedHtml);
+ // bind/spend precisam existir antes do primeiro uso (const não é içada: antes isso gerava ReferenceError
+ // e derrubava o painel inteiro, deixando vários NPCs sem funcionar)
+ const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{fn();persist();renderPanel();if(typeof updateUIStats==='function')updateUIStats()}};
+ const spend=(n)=>{if((s.gold||0)<n){notify('Gold insuficiente.');return false}s.gold-=n;return true};
  panel.querySelectorAll('[data-element]').forEach(b=>b.onclick=()=>{const id=b.dataset.element;if(adv.elements.includes(id))return notify('Esse elemento já foi aprendido.');if((s.resources?.iron||0)<4)return notify('Você precisa de 4 ferros.');s.resources.iron-=4;adv.elements.push(id);persist();notify('Elemento '+id+' aprendido!');renderPanel()});
  bind('avx-fusion',()=>{if(adv.elements.length<2){notify('Aprenda pelo menos dois elementos.');return}adv.fusion=adv.elements.slice(-2);adv.fusionBonus=(adv.fusionBonus||0)+1;notify('✨ Fusão '+adv.fusion.join(' + ')+' desbloqueada! Poder mágico aumentado.')});
  bind('avx-forge',()=>{const it=s.equipment?.weapon;if(!it){notify('Equipe uma arma primeiro.');return}it.forgeLevel=it.forgeLevel||0;if(it.forgeLevel>=10){notify('Sua arma já está no nível máximo de forja.');return}const cost=100+it.forgeLevel*90;if((s.resources?.iron||0)<3){notify('Você precisa de 3 ferros.');return}if(!spend(cost))return;s.resources.iron-=3;it.forgeLevel++;it.stats??={};it.stats.atk=(it.stats.atk||0)+3;notify('Forja concluída! Ataque +3.')});
@@ -103,8 +107,6 @@ function renderPanel(){
 
  const tabs=panel.querySelectorAll('[data-tab]');
  tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.toggle('active',x===t));const v=t.dataset.tab;panel.querySelectorAll('#avx-content>.avx-card').forEach(card=>{const sec=card.dataset.section||'growth';card.style.display=v==='all'||sec===v?'':'none'})});
- const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=()=>{fn();persist();renderPanel();if(typeof updateUIStats==='function')updateUIStats()}};
- const spend=(n)=>{if((s.gold||0)<n){notify('Gold insuficiente.');return false}s.gold-=n;return true};
  bind('avx-guild',()=>{if(w.guild){notify('Sua guilda local já está criada.');return}const name=(prompt('Escolha o nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('O nome precisa ter de 3 a 20 caracteres.');return}if(!spend(200))return;w.guild=name;w.guildLevel=1;w.guildRenown=0;w.seasonXp+=50;notify('🏰 '+name+' foi fundada! Sua guilda está salva neste personagem. Convites online ainda precisam do servidor.')});
 
  bind('avx-arena',()=>{if((s.level||1)<5){notify('Arena desbloqueada no nível 5.');return}if(!spend(25))return;const st=window.getRPGStats?window.getRPGStats():{atk:0,def:0,power:0};const power=(s.level||1)*12+(st.atk||0)*3+(st.def||0)*1.5+(st.power||0)*2+(w.gear||0)*8;const rival=(s.level||1)*13+35+Math.random()*70;const score=power+Math.random()*55;if(score>=rival){w.arenaWins++;w.seasonXp+=110;s.gold+=100+Math.floor((s.level||1)*4);notify('🏅 Vitória na arena! Sua build superou o rival. +Gold e 110 XP de temporada.')}else{w.seasonXp+=25;notify('Derrota honrosa! O rival venceu por '+Math.ceil(rival-score)+' pontos. Você ganhou 25 XP de temporada.')}});
@@ -122,6 +124,7 @@ function renderPanel(){
  $('avx-mount').onclick=()=>{if(!e.mount&&s.gold<500){notify('Você precisa de 500 Gold.');return}if(!e.mount)s.gold-=500;e.mount=!e.mount;persist();renderPanel();notify(e.mount?'Montaria invocada!':'Montaria guardada.')};
  const ach=[['Primeiros passos',s.level>=5],['Caçador',s.kills>=25],['Desbravador',Object.keys(s.visited||{}).length>=5],['Lenda das raids',(s.raidsCleared||0)>=5],['Mestre coletor',Object.values(s.resources||{}).reduce((a,b)=>a+(b||0),0)>=300]];
  $('avx-achievements').innerHTML=ach.map(([n,ok])=>'<div class="flex justify-between py-1 border-b border-slate-800"><span>'+n+'</span><b class="'+(ok?'text-emerald-300':'text-slate-500')+'">'+(ok?'✓ Concluída':'Bloqueada')+'</b></div>').join('');
+ refreshServiceWindow();
 }
 function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id);if(!q||q.progress<q.goal||e.claimed[id])return;s.gold+=q.reward;e.claimed[id]=true;persist();notify('Recompensa recebida: '+q.reward+' Gold!');renderPanel();if(typeof updateUIStats==='function')updateUIStats()}
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
@@ -159,15 +162,15 @@ function tick(){
  if(lastSeasonKills===null){lastSeasonKills=kills;lastSeasonRaids=raids}
  if(kills>lastSeasonKills){e.world.seasonXp+=(kills-lastSeasonKills)*5;lastSeasonKills=kills}
  if(raids>lastSeasonRaids){e.world.seasonXp+=(raids-lastSeasonRaids)*100;lastSeasonRaids=raids}
- for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,kills-(e.dayStartKills??(e.dayStartKills=kills)));if(x.type==='raid')x.progress=Math.min(x.goal,raids-(e.dayStartRaids??(e.dayStartRaids=raids)));}
- const gathered=Math.max(0,total-e.dayStartTotal);const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
+ if(e.dayStartDay!==e.daily.day||e.dayStartKills===undefined||e.dayStartRaids===undefined){e.dayStartDay=e.daily.day;e.dayStartKills=kills;e.dayStartRaids=raids}
+ for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,Math.max(0,kills-e.dayStartKills));if(x.type==='raid')x.progress=Math.min(x.goal,Math.max(0,raids-e.dayStartRaids))}
+ const gathered=Math.max(0,total-(e.dayStartTotal??(e.dayStartTotal=total)));const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
   const safeT=Number.isFinite(g.t)?g.t:Date.now()/1000;
   const phase=((safeT%360)+360)%360/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2-.2)+.12)/1.12));
   const weather=['Céu limpo','Chuva leve','Neblina','Vento forte'][Math.floor(g.t/150)%4];
   if(Math.floor(g.t/360)!==lastClock){lastClock=Math.floor(g.t/360);notify('O mundo entrou em um novo período do dia.')}
   const p=g.player;if(p){const base=p.baseSpd||p.speed||3.8;if(p.baseSpd){p.speed=p.baseSpd}}
-  if(e.petEquipped&&e.pet&&g.ctx&&Date.now()-lastDraw>80){lastDraw=Date.now();const c=g.ctx,W=g.canvas.width,H=g.canvas.height;c.save();c.font='18px serif';const em=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.fillText(em,W/2-30,H/2+17);c.restore()}
   const overlay=$('avx-world-overlay');if(overlay){overlay.style.background='rgba(7,12,35,'+(night*.24)+')';overlay.dataset.weather=weather}
   const clock=$('avx-world-clock');if(clock)clock.textContent=(night>.55?'🌙 Noite':'☀️ Dia')+' · '+weather;
   $('avx-expedition-exit')?.remove();
@@ -214,7 +217,6 @@ function leaveRealm(){
 }
 function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p?.realmId&&Math.hypot(p.x-2000,p.y-2000)<150){leaveRealm();return true}return false}
 
-function interactRealmPortal(g){const p=g.player,s=state(),r=window.AVENTURIA_REALM_AT(p.x,p.y);if(r&&Math.hypot(p.x-(r.x+r.w/2),p.y-(r.y+r.h/2))<100){teleportRealm(null,EXP_SAFE.x,EXP_SAFE.y+175);return true}const near=AVENTURIA_REALMS.find(x=>Math.hypot(p.x-(x.x+x.w/2),p.y-(x.y+x.h/2+110))<90);if(near){if((s.level||1)<near.level){notify('Este mundo exige nível '+near.level+'.');return true}teleportRealm(near,near.x+near.w/2,near.y+near.h/2+110);return true}return false}
 
 /* NPCs de cidade, montaria e mascote integrados ao mundo.
    SAFE/MAP são const locais do index.html; este script externo usa coordenadas equivalentes. */
@@ -254,8 +256,8 @@ function mountAndPetDraw(g){
    {x:650,y:0,w:150,h:112,roof:'#6c7848',label:'MASCOTES'},
    {x:0,y:-650,w:150,h:112,roof:'#66528a',label:'MAGIA'},
    {x:0,y:650,w:150,h:112,roof:'#94663a',label:'FORJA'},
-   {x:-650,y:-500,w:150,h:112,roof:'#705c50',label:'ESTILISTA'},
-   {x:650,y:-500,w:150,h:112,roof:'#5c6885',label:'DESPERTAR'}
+   {x:-515,y:-255,w:150,h:112,roof:'#705c50',label:'ESTILISTA'},
+   {x:515,y:-255,w:150,h:112,roof:'#5c6885',label:'DESPERTAR'}
   ];
   for(const b of buildings){
    const bx=cx+b.x,by=cy+b.y,w=b.w,h=b.h;
@@ -273,7 +275,7 @@ function mountAndPetDraw(g){
   for(const [dx,dy] of trees){const tx=cx+dx,ty=cy+dy;c.fillStyle='#76583c';c.fillRect(tx-5,ty+8,10,23);c.fillStyle='#35694c';c.beginPath();c.arc(tx,ty,24,0,Math.PI*2);c.fill();c.fillStyle='#54875a';c.beginPath();c.arc(tx-8,ty-8,13,0,Math.PI*2);c.fill();}
   const benches=[[-190,0],[190,0],[0,-190],[0,190]];
   for(const [dx,dy] of benches){c.fillStyle='#64452e';c.fillRect(cx+dx-24,cy+dy-6,48,12);c.fillStyle='#9c7447';c.fillRect(cx+dx-22,cy+7+dy,5,10);c.fillRect(cx+dx+17,cy+7+dy,5,10)}
-  c.fillStyle='#f8e6bd';c.font='900 25px Inter';c.textAlign='center';c.fillText('CIDADE SPAWN',cx,cy-235);
+  c.font='900 24px Inter';c.textAlign='center';c.lineJoin='round';c.lineWidth=5;c.strokeStyle='rgba(30,22,14,.75)';c.strokeText('CIDADE SPAWN',cx,cy-130);c.fillStyle='#f8e6bd';c.fillText('CIDADE SPAWN',cx,cy-130);
   c.fillStyle='#5d4b36';c.font='bold 12px Inter';c.fillText('PRAÇA CENTRAL',cx,cy+125);
  }
  if(!p.realmId)for(const n of townNPCs){
@@ -282,9 +284,16 @@ function mountAndPetDraw(g){
   c.fillStyle=n.color;c.fillRect(-10,-3,20,17);c.fillStyle='#e7bd91';c.beginPath();c.arc(0,-12,9,0,Math.PI*2);c.fill();
   c.fillStyle='#26342e';c.fillRect(-6,-14,3,2);c.fillRect(3,-14,3,2);
   c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);c.restore();
-  c.font='bold 10px Inter';c.textAlign='center';c.fillStyle='#071311';c.fillRect(n.x-65,n.y-49,130,16);c.fillStyle='#ffe3a0';c.fillText(n.name,n.x,n.y-37);
-  c.fillStyle='#fff';c.font='9px Inter';c.fillText('[ E ] '+n.role,n.x,n.y-25);
+  // nome sempre visível; função + [E] e um anel pulsante só para o NPC ao alcance
+  const near=Math.hypot(p.x-n.x,p.y-n.y)<230;
+  if(near){const pu=.5+.5*Math.sin(now/260);c.strokeStyle='rgba(255,227,160,'+(.45+.35*pu)+')';c.lineWidth=2;c.beginPath();c.ellipse(n.x,n.y+14,26+pu*4,10+pu*2,0,0,Math.PI*2);c.stroke()}
+  c.font='bold 10px Inter';c.textAlign='center';
+  const tw=Math.max(70,c.measureText(n.name).width+18);c.fillStyle='rgba(7,19,17,.85)';c.fillRect(n.x-tw/2,n.y-61,tw,16);c.fillStyle=near?'#fff3c4':'#ffe3a0';c.fillText(n.name,n.x,n.y-49);
+  if(near){const t='[ E ] '+n.role;c.font='9px Inter';const w2=c.measureText(t).width+14;c.fillStyle='rgba(7,19,17,.85)';c.fillRect(n.x-w2/2,n.y-79,w2,15);c.fillStyle='#fff';c.fillText(t,n.x,n.y-68)}
  }
+ // baú da caça ao tesouro: brilha quando você chega perto
+ const tr=e.advanced?.treasure;
+ if(tr&&!p.realmId){const dt=Math.hypot(p.x-tr.x,p.y-tr.y);if(dt<520){const k=1-dt/520,pu=.5+.5*Math.sin(now/220);c.save();c.translate(tr.x,tr.y);c.fillStyle='rgba(255,215,120,'+(.10+.22*k*pu)+')';c.beginPath();c.arc(0,0,40+22*k,0,Math.PI*2);c.fill();c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(0,14,18,6,0,0,Math.PI*2);c.fill();c.fillStyle='#6b4423';c.fillRect(-14,-6,28,18);c.fillStyle='#8b5a2b';c.fillRect(-14,-12,28,8);c.fillStyle='#e7bd5c';c.fillRect(-3,-4,6,8);c.fillRect(-14,-3,28,2);c.restore()}}
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
 }
@@ -359,6 +368,7 @@ function drawWeather(g){
  };
  proto.__avxTownHooks=true;
 }
+window.addEventListener('keydown',ev=>{if(ev.key!=='Escape')return;let any=false;for(const id of ['avx-merchant-modal','avx-armorer-modal','avx-magic-modal','avx-companion-modal','avx-npc-service','avx-style-modal']){const m=$(id);if(m){m.remove();any=true}}if(any)serviceKey=null});
 window.addEventListener('aventuria:game-ready',installGameHooks);
 window.addEventListener('load',installGameHooks);
 installGameHooks();
@@ -378,9 +388,9 @@ function openCompanionUI(){
  m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;background:radial-gradient(ellipse at 50% 20%,#253d4ddd,#050b13f2);backdrop-filter:blur(8px)';
  m.innerHTML='<section style="width:min(900px,100%);max-height:92vh;overflow:auto;border:1px solid #42d6a088;border-radius:22px;background:linear-gradient(145deg,#172b35,#0a121c);box-shadow:0 24px 90px #000b;color:#f8fafc;font-family:Inter,system-ui"><header style="padding:22px;background:linear-gradient(110deg,#123d38,#14232d);display:flex;justify-content:space-between;gap:12px"><div><small style="letter-spacing:3px;color:#42d6a0;font-weight:900">SANTUÁRIO DOS COMPANHEIROS</small><h2 style="font-size:28px;margin:6px 0">🐾 Galeria de Mascotes</h2><p style="font-size:12px;color:#b9c9d0;margin:0">Seu companheiro de aventura.</p></div><button id="avx-comp-close" style="background:#ffffff12;color:white;border:1px solid #ffffff33;border-radius:12px;width:42px;height:42px">✕</button></header><div style="padding:14px 20px;display:flex;justify-content:space-between;border-bottom:1px solid #ffffff18"><span>Coleção: '+owned.length+'/'+catalog.length+'</span><b style="color:#f5d58f">◈ '+Math.floor(s.gold||0)+' Gold</b></div><div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px">'+catalog.map(x=>{const has=owned.includes(x.id),locked=x.realm&&(s.level||1)<x.realm,active=equipped===x.id;return '<article style="border:1px solid '+(active?'#42d6a0':'#536875')+'88;border-radius:16px;overflow:hidden;background:#14232d"><div style="height:112px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#70cba455,#122d32);font-size:64px">'+x.emoji+'</div><div style="padding:13px"><b>'+x.name+'</b><p style="font-size:11px;color:#aebfc8;min-height:28px">'+x.desc+'</p><div style="font-size:11px;color:#e7ca8a;margin-bottom:10px">'+(x.bonus||'Companheiro fiel')+'</div>'+(has?'<button data-equip="'+x.id+'" style="width:100%;padding:9px;border-radius:9px;border:1px solid #42d6a0;background:'+(active?'#31534b':'#28664f')+';color:white;font-weight:800">'+(active?'Desequipar':'Equipar')+'</button><button data-sell="'+x.id+'" style="width:100%;margin-top:6px;padding:8px;border-radius:9px;background:#512d2b;color:#ffd6c9">Vender · '+Math.floor(x.price*.45)+' G</button>':'<button data-buy="'+x.id+'" '+(locked||s.gold<x.price?'disabled':'')+' style="width:100%;padding:9px;border-radius:9px;background:'+(locked||s.gold<x.price?'#38434a':'#28664f')+';color:white">'+(locked?'🔒 Nível '+x.realm+' necessário':s.gold<x.price?'Gold insuficiente':'Comprar · '+x.price+' G')+'</button>')+'</div></article>'}).join('')+'</div></section>';
  $('avx-comp-close').onclick=()=>m.remove();
- m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=catalog.find(v=>v.id===b.dataset.buy);if(!x||owned.includes(x.id)||s.gold<x.price)return;s.gold-=x.price;owned.push(x.id);persist();openCompanionUI()});
- m.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{const id=b.dataset.equip;if(ex.pet===id&&ex.petEquipped){ex.petEquipped=false;ex.pet=null;notify('Mascote desequipado.')}else{ex.pet=id;ex.petEquipped=true;ex.petData??={level:1,xp:0,bond:0,skillReady:0};notify('Mascote equipado!')}ex.petsOwned=owned;persist();openCompanionUI()});
- m.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const id=b.dataset.sell;if(ex.pet===id&&ex.petEquipped){notify('Desequipe o mascote antes de vender.');return}const i=owned.indexOf(id);if(i<0)return;owned.splice(i,1);s.gold+=Math.floor((catalog.find(v=>v.id===id)?.price||0)*.45);persist();openCompanionUI()});
+ m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=catalog.find(v=>v.id===b.dataset.buy);if(!x||owned.includes(x.id)||s.gold<x.price)return;s.gold-=x.price;owned.push(x.id);persist();if(typeof updateUIStats==='function')updateUIStats();openCompanionUI()});
+ m.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{const id=b.dataset.equip;if(ex.pet===id&&ex.petEquipped){ex.petEquipped=false;ex.pet=null;notify('Mascote desequipado.')}else{ex.pet=id;ex.petEquipped=true;ex.petData??={level:1,xp:0,bond:0,skillReady:0};notify('Mascote equipado!')}ex.petsOwned=owned;persist();if(typeof updateUIStats==='function')updateUIStats();openCompanionUI()});
+ m.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const id=b.dataset.sell;if(ex.pet===id&&ex.petEquipped){notify('Desequipe o mascote antes de vender.');return}const i=owned.indexOf(id);if(i<0)return;owned.splice(i,1);s.gold+=Math.floor((catalog.find(v=>v.id===id)?.price||0)*.45);persist();if(typeof updateUIStats==='function')updateUIStats();openCompanionUI()});
 }
 function openArmorerUI(){
  const s=state(),ex=ensure();if(!s||!ex)return;
@@ -421,21 +431,58 @@ function openMagicUI(){
 }
 window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
 window.AVENTURIA_SAFE_NPCS=townNPCs;
+window.AVENTURIA_NPC_RANGE=230;
+// bônus de mascote (aplicados em getRPGStats, no index.html)
+window.AVENTURIA_PET_BONUS={slime:{def:8},fox:{atk:6},wisp:{power:8},lume:{power:12},crystal:{def:12},root:{hp:40},drake:{atk:15}};
 function openMerchantUI(){
- const s=state();if(!s)return;
+ const s=state(),e=ensure();if(!s||!e)return;
+ s.items??={};s.resources??={};
  let m=$('avx-merchant-modal');if(!m){m=document.createElement('div');m.id='avx-merchant-modal';m.style.cssText='position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:14px';document.body.appendChild(m)}
- const offers=[{id:'potion',name:'Poção de Vida',emoji:'🧪',price:60,desc:'Recupera vida pelo inventário.'},{id:'egg',name:'Ovo de Mascote',emoji:'🥚',price:250,desc:'Receba um companheiro aleatório.'},{id:'kit',name:'Kit de Exploração',emoji:'🎒',price:120,desc:'5 madeiras e 2 ferros.'}];
- m.innerHTML='<div style="width:min(520px,100%);background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:20px;color:white"><div style="display:flex;justify-content:space-between"><h2>🛒 Loja de Aventuria</h2><button id="avx-merchant-close">✕</button></div><p style="color:#cbd5e1">Seu saldo: <b>'+Math.floor(s.gold||0)+' Gold</b></p><div style="display:grid;gap:9px">'+offers.map(x=>'<div style="padding:12px;border:1px solid #52656a;border-radius:10px;display:flex;align-items:center;gap:12px"><span style="font-size:26px">'+x.emoji+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#bdcbd0">'+x.desc+'</div></div><button data-offer="'+x.id+'" style="padding:8px;background:#456c57;border-radius:8px">Comprar · '+x.price+' G</button></div>').join('')+'</div></div>';
+ const offers=[
+  {id:'potion',name:'Poção de Vida',emoji:'🧪',price:60,desc:'Restaura 120 de vida. Beba aqui ou com a tecla H.'},
+  {id:'egg',name:'Ovo de Mascote',emoji:'🥚',price:250,desc:'Receba um companheiro que você ainda não tem.'},
+  {id:'kit',name:'Kit de Exploração',emoji:'🎒',price:120,desc:'5 madeiras e 2 ferros.'}
+ ];
+ const potions=s.items.potion||0;
+ m.innerHTML='<div style="width:min(520px,100%);background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:20px;color:white"><div style="display:flex;justify-content:space-between"><h2>🛒 Loja de Aventuria</h2><button id="avx-merchant-close">✕</button></div><p style="color:#cbd5e1">Seu saldo: <b>'+Math.floor(s.gold||0)+' Gold</b> · Poções: <b>'+potions+'</b> <button id="avx-drink" '+(potions<=0?'disabled':'')+' style="margin-left:6px;padding:4px 10px;border-radius:8px;background:'+(potions>0?'#2f6b4f':'#38434a')+'">🧪 Beber</button></p><div style="display:grid;gap:9px">'+offers.map(x=>'<div style="padding:12px;border:1px solid #52656a;border-radius:10px;display:flex;align-items:center;gap:12px"><span style="font-size:26px">'+x.emoji+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#bdcbd0">'+x.desc+'</div></div><button data-offer="'+x.id+'" '+((s.gold||0)<x.price?'disabled':'')+' style="padding:8px;background:'+((s.gold||0)<x.price?'#38434a':'#456c57')+';border-radius:8px">Comprar · '+x.price+' G</button></div>').join('')+'</div></div>';
  $('avx-merchant-close').onclick=()=>m.remove();
- m.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{const x=offers.find(v=>v.id===b.dataset.offer);if(!x||s.gold<x.price){notify('Gold insuficiente.');return}s.gold-=x.price;if(x.id==='potion')s.items.potion=(s.items.potion||0)+1;if(x.id==='egg'){e.petsOwned??=[];const id=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petsOwned.push(id);e.pet=id;e.petEquipped=true}if(x.id==='kit'){s.resources.wood=(s.resources.wood||0)+5;s.resources.iron=(s.resources.iron||0)+2}persist();notify(x.name+' comprado!');openMerchantUI()});
+ $('avx-drink').onclick=()=>{if(window.usePotion?.())openMerchantUI()};
+ m.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{
+  const x=offers.find(v=>v.id===b.dataset.offer);if(!x)return;
+  if((s.gold||0)<x.price){notify('Gold insuficiente.');return}
+  // valida primeiro, cobra depois: nada de perder Gold numa compra que não acontece
+  if(x.id==='egg'){
+   e.petsOwned??=(e.pet?[e.pet]:['slime']);
+   const pool=['slime','fox','wisp'].filter(id=>!e.petsOwned.includes(id));
+   if(!pool.length){notify('Você já tem todos os mascotes de ovo. Veja o Santuário para outros.');return}
+   const id=pool[Math.floor(Math.random()*pool.length)];
+   s.gold-=x.price;e.petsOwned.push(id);e.pet=id;e.petEquipped=true;e.petData={level:1,xp:0,bond:0,skillReady:0,lastKills:s.animalKills||0};
+   notify('🥚 Um novo mascote nasceu e já está com você!');
+  }else{
+   s.gold-=x.price;
+   if(x.id==='potion')s.items.potion=(s.items.potion||0)+1;
+   if(x.id==='kit'){s.resources.wood=(s.resources.wood||0)+5;s.resources.iron=(s.resources.iron||0)+2}
+   notify(x.name+' comprado!');
+  }
+  persist();if(typeof updateUIStats==='function')updateUIStats();openMerchantUI();
+ });
 }
-function openNPCServiceWindow(card){
+/* Janela de serviço: mostra o cartão do painel dentro de um modal. O painel é redesenhado a cada
+   ação, então o cartão exibido é trocado pelo novo (refreshServiceWindow) em vez de ficar velho. */
+let serviceKey=null;
+function refreshServiceWindow(){
+ const modal=$('avx-npc-service');if(!modal||!serviceKey)return;
+ const body=modal.querySelector('#avx-service-body');if(!body)return;
+ const card=[...document.querySelectorAll('#avx-content [data-section="'+serviceKey.section+'"]')].find(c=>c.textContent.includes(serviceKey.title));
+ if(card)body.replaceChildren(card);
+}
+function openNPCServiceWindow(card,key){
  let modal=$('avx-npc-service');if(!modal){modal=document.createElement('div');modal.id='avx-npc-service';document.body.appendChild(modal)}
- const parent=card.parentNode,next=card.nextSibling;
+ serviceKey=key||null;
  modal.style.cssText='position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:14px;background:#020914e8';
- modal.innerHTML='<section style="width:min(560px,100%);max-height:88vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);padding:16px;color:white"><header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:#f4d68e">SERVIÇO DA CIDADE</b><button id="avx-service-close" style="padding:7px 12px;border:1px solid #60747b;border-radius:8px">Fechar ✕</button></header><div id="avx-service-body"></div></section>';
- const body=modal.querySelector('#avx-service-body');body.appendChild(card);
- const close=()=>{if(parent){if(next&&next.parentNode===parent)parent.insertBefore(card,next);else parent.appendChild(card)}modal.remove()};
+ modal.innerHTML='<section style="width:min(560px,100%);max-height:88vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);padding:16px;color:white"><header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:#f4d68e">SERVIÇO DA CIDADE</b><button id="avx-service-close" style="padding:7px 12px;border:1px solid #60747b;border-radius:8px;cursor:pointer">Fechar ✕</button></header><div id="avx-service-body"></div></section>';
+ modal.querySelector('#avx-service-body').appendChild(card);
+ const close=()=>{serviceKey=null;modal.remove()};
  modal.querySelector('#avx-service-close').onclick=close;
  modal.onclick=ev=>{if(ev.target===modal)close()};
 }
@@ -467,13 +514,13 @@ function openAppearanceEditor(){
 }
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
- const openAdvanced=(section,title)=>{renderPanel();const cards=[...document.querySelectorAll('#avx-content [data-section="'+section+'"]')];const target=cards.find(c=>c.textContent.includes(title));if(!target){notify('Este serviço está sendo preparado.');return}openNPCServiceWindow(target)};
+ const openAdvanced=(section,title)=>{renderPanel();const cards=[...document.querySelectorAll('#avx-content [data-section="'+section+'"]')];const target=cards.find(c=>c.textContent.includes(title));if(!target){notify('Este serviço está indisponível no momento.');return}openNPCServiceWindow(target,{section,title})};
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
  magic:()=>openMagicUI(),
  pet:()=>openCompanionUI(),
- guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Criação de guildas e convites online precisam de servidor multiplayer.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
+ guild:()=>openAdvanced('social','Guildas, grupos e amizades'),
  element:()=>openAdvanced('combat','Combinação de elementos'),
  forge:()=>openAdvanced('growth','Forja de equipamentos'),
  contract:()=>openAdvanced('world','Contratos de caça'),

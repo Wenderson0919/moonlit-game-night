@@ -525,6 +525,10 @@ function getRPGStats(){
  if(s.race==='Elfo'){st.atk+=2;st.power+=1;st.speed+=5}else if(s.race==='Anão')st.def+=4;else if(s.race==='Ser mágico')st.power+=4;
  const k=s.skills||{};st.atk+=(k.strength||0)*2+(k.agility||0);st.def+=(k.vitality||0)*2;st.power+=(k.wisdom||0)*3;st.speed+=(k.agility||0)*.5;
  const ex=s.expansion||{},w=ex.world||{};st.atk+=Math.floor((w.skills?.power||0)*1.5)+(w.gear||0)*3;st.def+=Math.floor((w.skills?.vitality||0)*2)+(w.gear||0);st.speed+=(w.skills?.haste||0)*.8;st.crit+=(w.skills?.fortune||0)*.01;st.hp+=(w.skills?.vitality||0)*8;st.power+=(ex.advanced?.fusionBonus||0)*2;
+ // mascote equipado: bônus do catálogo, +5% por nível do mascote; habilidade da raposa/fada dá +dano temporário
+ if(ex.petEquipped&&ex.pet){const pb=window.AVENTURIA_PET_BONUS?.[ex.pet],pl=1+((ex.petData?.level||1)-1)*.05;if(pb)for(const k in pb)st[k]=(st[k]||0)+Math.round(pb[k]*pl);if((ex.petBuffUntil||0)>Date.now())st.atk+=8+Math.floor((ex.petData?.level||1)*1.5)}
+ // montaria: +30% de velocidade de deslocamento
+ if(ex.mount)st.speed+=30;
  return st;
 }
 window.getRPGStats=getRPGStats;
@@ -706,6 +710,16 @@ const SPELL_BOOK={
  frost_nova:{name:'Nova Congelante',cooldown:6,range:155,damage:1.7,color:'#7dd3fc'},
  healing_light:{name:'Luz Restauradora',cooldown:8,heal:true}
 };
+function usePotion(){
+ const s=S(),g=window.game;if(!g||!g.running||s.hp<=0)return false;
+ s.items??={};
+ if((s.items.potion||0)<=0){showNotification('Você não tem Poções de Vida. Compre no Mercador.','#fca5a5');return false}
+ if(s.hp>=effMaxHp()){showNotification('Sua vida já está cheia.');return false}
+ const amt=120;s.items.potion--;s.hp=Math.min(effMaxHp(),s.hp+amt);
+ g.floatText(g.player.x,g.player.y-28,'+'+amt,'#86efac');
+ showNotification('🧪 Poção de Vida: +'+amt+' HP ('+s.items.potion+' restantes)','#86efac');updateUIStats();return true;
+}
+window.usePotion=usePotion;
 function equipSpell(id){const s=S();s.learnedSpells??=[];if(!s.learnedSpells.includes(id)||!SPELL_BOOK[id])return;s.equippedSpell=id;showNotification(SPELL_BOOK[id].name+' equipada! Use Q para lançar.','#c4b5fd');renderRPGPanel()}
 function unequipSpell(){S().equippedSpell=null;showNotification('Magia removida do espaço.');renderRPGPanel()}
 function castEquippedSpell(){
@@ -1181,9 +1195,8 @@ class Game{
   if(p&&!p.realmId&&window.AVENTURIA_INTERACT_NPC){
    const np=window.AVENTURIA_SAFE_NPCS||[];
    const near=np.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   // The safe-zone merchants are clustered around the town center.
-   // Use a generous radius so the interaction works even with sprite/camera offsets.
-   if(near&&(near.d<420||p.inSafeZone)){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
+   // só interage com o NPC realmente ao alcance (mesmo raio usado no aviso "[ E ]" desenhado no mapa)
+   if(near&&near.d<(window.AVENTURIA_NPC_RANGE||230)){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
   }
   if(Math.hypot(p.x-this.npc.x,p.y-this.npc.y)<70){updateUIStats();$('shop-modal').classList.remove('hidden');return}
   const ch=this.structs.find(s=>s.type==='chest'&&Math.hypot(p.x-s.x,p.y-s.y)<60);
@@ -1223,7 +1236,7 @@ class Game{
     if(window.AVENTURIA_INTERACT_NPC&&this.player&&!this.player.realmId&&this.player.inSafeZone){
      const np=window.AVENTURIA_SAFE_NPCS||[];
      const near=np.map(n=>({n,d:Math.hypot(this.player.x-n.x,this.player.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-     if(near){window.AVENTURIA_INTERACT_NPC(near.n.id);e.preventDefault();return}
+     if(near&&near.d<(window.AVENTURIA_NPC_RANGE||230)){window.AVENTURIA_INTERACT_NPC(near.n.id);e.preventDefault();return}
     }
     this.interact();
    }
@@ -1231,6 +1244,7 @@ class Game{
    if(e.code==='KeyP'){$('rpg-modal').classList.contains('hidden')?openRPGPanel():closeRPGPanel()}
    if(e.code==='KeyT')activateRPGTransform();
    if(e.code==='KeyF')useClassSkill();
+   if(e.code==='KeyH')usePotion();
    if(e.code==='KeyQ'){castEquippedSpell();e.preventDefault()}
    if(e.code.startsWith('Digit')){const n=parseInt(e.code.slice(5));const i=n===0?9:n-1;if(HOTBAR_ITEMS[i])selectHotbar(HOTBAR_ITEMS[i].id)}
    if(e.code==='ShiftLeft'||e.code==='ShiftRight')this.dodge();
@@ -1366,7 +1380,7 @@ class Game{
   for(let v=-R;v<=R;v+=24){c.beginPath();c.moveTo(X-R,Y+v);c.lineTo(X+R,Y+v);c.stroke();c.beginPath();c.moveTo(X+v,Y-R);c.lineTo(X+v,Y+R);c.stroke()}
   // quatro avenidas principais até os portões
   for(const [ax,ay] of [[0,-1],[1,0],[0,1],[-1,0]]){
-   c.lineCap='butt';c.beginPath();c.moveTo(X,Y);c.lineTo(X+ax*R,Y+ay*R);
+   c.lineCap='butt';c.beginPath();c.moveTo(X,Y);c.lineTo(X+ax*(R-60),Y+ay*(R-60));
    c.strokeStyle='#5f5239';c.lineWidth=68;c.stroke();
    c.strokeStyle='#d0c19b';c.lineWidth=58;c.stroke();
    c.strokeStyle='rgba(255,255,255,.12)';c.lineWidth=2;c.setLineDash([14,18]);c.stroke();c.setLineDash([]);
@@ -1403,21 +1417,17 @@ class Game{
   c.strokeStyle='#a99d7e';c.lineWidth=7;c.beginPath();c.arc(X,Y,R-6,0,TAU);c.stroke();
   const QP=Math.PI/2;
   for(let a=0;a<TAU;a+=.055){
-   const m=((a%QP)+QP)%QP;if(Math.min(m,QP-m)<.115)continue;
+   const m=((a%QP)+QP)%QP;if(Math.min(m,QP-m)<.15)continue;
    const h=hash2(Math.round(a*100),5,33),r=R-27+Math.sin(a*9)*2,x=X+Math.cos(a)*r,y=Y+Math.sin(a)*r;
    c.fillStyle=h>.5?'#2f6a47':'#3d7d52';c.beginPath();c.arc(x,y,9+h*3,0,TAU);c.fill();
    if(h>.82){c.fillStyle=['#f9a8d4','#fde68a','#ffffff'][Math.floor(h*10)%3];c.beginPath();c.arc(x+3,y-3,2.2,0,TAU);c.fill()}
   }
-  // portões: dois pilares com lanterna por entrada
-  for(const [ax,ay] of [[0,-1],[1,0],[0,1],[-1,0]]){
-   const gx=X+ax*(R-12),gy=Y+ay*(R-12);
-   for(const s of [-1,1]){
-    const px=gx-ay*s*44,py=gy+ax*s*44;
-    c.fillStyle='rgba(0,0,0,.3)';c.fillRect(px-9,py-4,22,24);
-    c.fillStyle='#6b6350';c.fillRect(px-9,py-14,18,30);c.fillStyle='#d9ccaa';c.fillRect(px-11,py-17,22,6);
-    c.fillStyle='#3b3a30';c.fillRect(px-2,py-12,4,26);
-    lights.push([px-X,py-Y-24,lights.length*1.3]);
-   }
+  // lanternas ao longo da sebe (as entradas ficam nas casas-guarita dos quatro cardinais)
+  for(let k=0;k<8;k++){
+   const a=k*Math.PI/4+Math.PI/8,r=R-44,px=X+Math.cos(a)*r,py=Y+Math.sin(a)*r;
+   c.fillStyle='rgba(0,0,0,.25)';c.fillRect(px-3,py+14,12,5);
+   c.fillStyle='#49372a';c.fillRect(px-3,py-4,6,22);
+   lights.push([px-X,py-Y-8,lights.length*1.3]);
   }
   // fachadas de lojas em volta da praça (mantém livres os pontos dos NPCs)
   const houses=[
@@ -1425,7 +1435,7 @@ class Game{
    {x:X+112,y:Y-178,w:78,h:58,roof:'#3f7180',wall:'#d9c28d',sign:'MERCADO'},
    {x:X-188,y:Y+108,w:76,h:58,roof:'#78619a',wall:'#d8bd91',sign:'GUILDA'},
    {x:X+112,y:Y+108,w:78,h:58,roof:'#547c55',wall:'#d7c18d',sign:'MASCOTES'},
-   {x:X-38,y:Y-244,w:76,h:48,roof:'#554b80',wall:'#d7c18d',sign:'PORTAL'}
+   {x:X-38,y:Y-244,w:76,h:48,roof:'#554b80',wall:'#d7c18d',sign:'ESTALAGEM'}
   ];
   for(const h of houses){
    c.fillStyle='rgba(0,0,0,.28)';c.fillRect(h.x-3,h.y+9,h.w+6,h.h+5);
