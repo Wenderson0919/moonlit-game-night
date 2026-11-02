@@ -56,11 +56,12 @@ function avxCountdown(ms){
 }
 function avxSchedule(e){
  e.world??={};const w=e.world,now=Date.now();
- // Agenda curta de teste: migra também calendários antigos já salvos.
- if(w.scheduleVersion!==2){
+ // Reinicia uma única vez os calendários antigos para aplicar os tempos corretos.
+ if(w.scheduleVersion!==3){
   w.nextBossAt=now+60*1000;
   w.nextSeasonAt=now+40*1000;
-  w.scheduleVersion=2;
+  w.scheduleVersion=3;
+  persist();
  }
  w.nextBossAt??=now+60*1000;
  w.nextSeasonAt??=now+40*1000;
