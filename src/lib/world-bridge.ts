@@ -113,6 +113,12 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       .on("broadcast", { event: "chat" }, ({ payload }: { payload: Bag }) => {
         deliver({ t: "chat", id: num(payload?.id, 0), n: str(payload?.n, 24, "Jogador"), m: str(payload?.m, 120) });
       })
+      .on("broadcast", { event: "radio" }, ({ payload }: { payload: Bag }) => {
+        const channels = ["geral", "comercio", "guarda", "aventureiros", "emergencia"];
+        const channelName = str(payload?.channel, 20, "geral").toLowerCase();
+        if (!channels.includes(channelName)) return;
+        deliver({ t: "radio", id: num(payload?.id, 0), n: str(payload?.n, 24, "Jogador"), channel: channelName, m: str(payload?.m, 120) });
+      })
       .on("broadcast", { event: "sys" }, ({ payload }: { payload: Bag }) => deliver({ t: "sys", m: str(payload?.m, 160) }))
       .on("broadcast", { event: "hurt" }, ({ payload }: { payload: Bag }) => {
         if (num(payload?.to, 0) !== myId || !me) return;
@@ -223,6 +229,17 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         const payload = { id: myId, n: me.name, m: text };
         void channel?.send({ type: "broadcast", event: "chat", payload });
         deliver({ t: "chat", ...payload });
+        break;
+      }
+      case "radio": {
+        if (!me || !channel) return;
+        const channels = ["geral", "comercio", "guarda", "aventureiros", "emergencia"];
+        const channelName = str(m.channel, 20, "geral").toLowerCase();
+        const text = str(m.m, 120).trim();
+        if (!channels.includes(channelName) || !text) return;
+        const payload = { id: myId, n: me.name, channel: channelName, m: text };
+        void channel.send({ type: "broadcast", event: "radio", payload });
+        deliver({ t: "radio", ...payload });
         break;
       }
       case "hit": {
