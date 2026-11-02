@@ -131,6 +131,30 @@ function tick(){
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
 }
 
+
+const AVENTURIA_REALMS=[
+{id:'verdant',name:'Ruínas de Lúmen',level:3,x:430,y:430,w:760,h:760,theme:'Pradarias luminosas',desc:'Ruínas élficas, flores gigantes e rios cristalinos.',color:'#8cf0b2',pal:['#76b96d','#86c77a','#9bd88b','#6da66c','#b1d98a']},
+{id:'frost',name:'Cidadela de Cristal',level:8,x:2810,y:430,w:760,h:760,theme:'Vale congelado',desc:'Templos de gelo azul e cristais vivos.',color:'#8de4ff',pal:['#b9e8ed','#a4dce8','#8fc9dc','#d5f5f2','#9dc8e2']},
+{id:'mire',name:'Templo das Raízes',level:15,x:430,y:2810,w:760,h:760,theme:'Selva ancestral',desc:'Santuários tomados por raízes colossais.',color:'#b6ef70',pal:['#4c9b60','#5caf69','#70bd65','#39865a','#91c96b']},
+{id:'ember',name:'Domínio das Cinzas',level:22,x:2810,y:2810,w:760,h:760,theme:'Reino vulcânico',desc:'Catedrais de obsidiana e rios de magma.',color:'#ffad70',pal:['#80504a','#9b5542','#b76543','#6b4545','#d17b4b']}
+];
+window.AVENTURIA_REALM_PALETTES=Object.fromEntries(AVENTURIA_REALMS.map(r=>[r.id,r.pal]));
+window.AVENTURIA_REALM_AT=(x,y)=>AVENTURIA_REALMS.find(r=>x>=r.x&&y>=r.y&&x<=r.x+r.w&&y<=r.y+r.h)||null;
+window.AVENTURIA_DRAW_REALMS=(c,p,now)=>{
+ for(const r of AVENTURIA_REALMS){if(r.x>p.x+850||r.x+r.w<p.x-850||r.y>p.y+650||r.y+r.h<p.y-650)continue;c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();
+ c.strokeStyle=r.id==='ember'?'#d18b61':'#d9d2a2';c.lineWidth=54;c.lineCap='round';c.beginPath();c.moveTo(r.x+90,r.y+r.h/2);c.lineTo(r.x+r.w-90,r.y+r.h/2);c.moveTo(r.x+r.w/2,r.y+90);c.lineTo(r.x+r.w/2,r.y+r.h-90);c.stroke();
+ for(const [dx,dy] of [[130,130],[r.w-130,130],[130,r.h-130],[r.w-130,r.h-130]]){const x=r.x+dx,y=r.y+dy;c.fillStyle='rgba(0,0,0,.25)';c.fillRect(x-48,y-32,96,70);c.fillStyle=r.id==='frost'?'#9ccbd6':r.id==='ember'?'#654b47':'#aaa184';c.fillRect(x-40,y-28,80,55);c.fillStyle=r.color;for(let k=-1;k<=1;k++){c.fillRect(x+k*25-5,y-44,10,82);c.fillRect(x+k*25-9,y-48,18,8)}c.fillRect(x-47,y-51,94,9);c.fillStyle='#26353a';c.fillRect(x-16,y-10,32,37)}
+ for(let i=0;i<25;i++){const x=r.x+40+(i*137%(r.w-80)),y=r.y+40+(i*211%(r.h-80));c.globalAlpha=.4+.3*Math.sin(now/400+i);c.fillStyle=r.color;c.beginPath();c.moveTo(x,y-12);c.lineTo(x+8,y);c.lineTo(x,y+12);c.lineTo(x-8,y);c.fill()}c.globalAlpha=1;
+ const px=r.x+r.w/2,py=r.y+r.h/2;c.strokeStyle=r.color;c.lineWidth=8;c.beginPath();c.ellipse(px,py,30,42,0,0,6.283);c.stroke();c.fillStyle='rgba(80,150,180,.25)';c.beginPath();c.ellipse(px,py,22,33,0,0,6.283);c.fill();c.fillStyle=r.color;c.font='bold 16px Inter';c.textAlign='center';c.fillText(r.name,px,r.y+34);c.fillStyle='#fff';c.font='bold 11px Inter';c.fillText('PORTAL DE RETORNO',px,py+62);c.restore()}
+};
+function teleportRealm(r,x,y){const g=game(),s=state();if(!g?.player||!s)return;g.player.x=x;g.player.y=y;g.player.inSafeZone=false;s.x=x;s.y=y;g.player.invuln=1.5;persist();notify('🌌 Você chegou a '+(r?.name||'Vila de Aventuria')+'. Explore livremente!')}
+function openDungeonPortal(){
+ const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:16px';document.body.appendChild(m)}
+ m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Mundos além do véu</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal leva a um mundo aberto. Explore, lute, colete recursos e descubra ruínas no seu ritmo. Sem expedições ou salas instanciadas.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Viajar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
+ $('avx-world-close').onclick=()=>m.remove();m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(!r||(s.level||1)<r.level)return;teleportRealm(r,r.x+r.w/2,r.y+r.h/2+110);m.remove()});
+}
+function interactRealmPortal(g){const p=g.player,s=state(),r=window.AVENTURIA_REALM_AT(p.x,p.y);if(r&&Math.hypot(p.x-(r.x+r.w/2),p.y-(r.y+r.h/2))<100){teleportRealm(null,EXP_SAFE.x,EXP_SAFE.y+175);return true}const near=AVENTURIA_REALMS.find(x=>Math.hypot(p.x-(x.x+x.w/2),p.y-(x.y+x.h/2+110))<90);if(near){if((s.level||1)<near.level){notify('Este mundo exige nível '+near.level+'.');return true}teleportRealm(near,near.x+near.w/2,near.y+near.h/2+110);return true}return false}
+
 /* NPCs de cidade, montaria e mascote integrados ao mundo.
    SAFE/MAP são const locais do index.html; este script externo usa coordenadas equivalentes. */
 const EXP_MAP=32*125,EXP_CX=EXP_MAP/2,EXP_SAFE={x:EXP_CX,y:EXP_CX,radius:260};
@@ -192,6 +216,7 @@ function installGameHooks(){
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
  if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this)};
  if(originalInteract)proto.interact=function(){
+  if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
   if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
   if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
