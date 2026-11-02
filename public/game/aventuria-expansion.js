@@ -377,6 +377,23 @@ function drawWeather(g){
  if(snowy){c.fillStyle='rgba(240,248,255,.8)';for(const p of w.particles){p.y+=p.v*dt;p.x+=Math.sin(now/900+p.s)*18*dt;if(p.y>H+4){p.y=-4;p.x=Math.random()*W}if(p.x<0)p.x=W;if(p.x>W)p.x=0;c.beginPath();c.arc(p.x,p.y,p.s,0,Math.PI*2);c.fill()}}
  if(storm){c.fillStyle='rgba(10,18,32,.16)';c.fillRect(0,0,W,H);if(Math.sin(now/1700)>0.997){c.fillStyle='rgba(220,235,255,.3)';c.fillRect(0,0,W,H)}}
  if(w.kind==='blizzard'){c.fillStyle='rgba(210,230,245,.12)';c.fillRect(0,0,W,H)}
+ // Ciclo noturno cinematográfico: céu profundo, estrelas, lua, brilho e vinheta.
+ const clock=((Number(g.t)||0)%360+360)%360/360;
+ const night=Math.max(0,Math.min(1,(Math.cos(clock*Math.PI*2-.2)+.12)/1.12));
+ if(night>.08){
+  c.fillStyle='rgba(5,10,29,'+(night*.62)+')';c.fillRect(0,0,W,H);
+  c.globalAlpha=night*.9;
+  for(let i=0;i<58;i++){
+   const sx=((i*97+31)%997)/997*W,sy=((i*53+17)%613)/613*H;
+   const tw=.45+.55*Math.sin(now/500+i*2.1);
+   c.fillStyle='rgba(220,235,255,'+(tw*.85)+')';c.beginPath();c.arc(sx,sy,((i%3)+1)*.55,0,Math.PI*2);c.fill();
+  }
+  const mx=W*.82,my=H*.18,mr=Math.min(W,H)*.055;
+  c.shadowColor='#b9d7ff';c.shadowBlur=24*night;c.fillStyle='rgba(225,237,255,'+(night*.92)+')';c.beginPath();c.arc(mx,my,mr,0,Math.PI*2);c.fill();c.shadowBlur=0;
+  c.fillStyle='rgba(32,48,79,'+(night*.95)+')';c.beginPath();c.arc(mx+mr*.42,my-mr*.2,mr*.88,0,Math.PI*2);c.fill();
+  const vg=c.createRadialGradient(W/2,H/2,Math.min(W,H)*.18,W/2,H/2,Math.max(W,H)*.72);vg.addColorStop(0,'rgba(4,8,25,0)');vg.addColorStop(1,'rgba(2,5,20,'+(night*.42)+')');c.fillStyle=vg;c.fillRect(0,0,W,H);
+  c.globalAlpha=1;
+ }
  c.restore();
 }
  if(originalRender)proto.render=function(){
