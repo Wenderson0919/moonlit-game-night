@@ -330,10 +330,8 @@ function installGameHooks(){
  if(!window.__avxNpcPointerHook){
   window.__avxNpcPointerHook=true;
   const handleNpcPointer=ev=>{
-   // Toques na tela são usados pelo analógico virtual e pelos controles móveis.
-   // Nunca interpretar pointerdown touch como clique em NPC.
-   if(ev.pointerType!=='mouse')return;
-   if(ev.button!==undefined&&ev.button!==0)return;
+   // Aceita mouse, toque e caneta. Só intercepta quando o toque cai sobre um NPC.
+   if(ev.pointerType==='mouse'&&ev.button!==undefined&&ev.button!==0)return;
    if(ev.target?.closest?.('button,a,input,textarea,select,[role="dialog"]'))return;
    const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas)return;
    const rect=canvas.getBoundingClientRect();
@@ -341,7 +339,7 @@ function installGameHooks(){
    const wx=p.x+(ev.clientX-(rect.left+rect.width/2))*(canvas.width/rect.width);
    const wy=p.y+(ev.clientY-(rect.top+rect.height/2))*(canvas.height/rect.height);
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(wx-n.x,wy-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<68){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id)}
+   if(nearest&&nearest.d<105){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id)}
   };
   document.addEventListener('pointerdown',handleNpcPointer,true);
  }
