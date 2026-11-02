@@ -206,7 +206,8 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       }
       case "raid_sync":
       case "raid_hit":
-      case "raid_reward": {
+      case "raid_reward":
+      case "raid_hurt": {
         if (!me || !channel) return;
         const { t: _raidMessageType, ...body } = m;
         const payload = { ...body, from: myId };
