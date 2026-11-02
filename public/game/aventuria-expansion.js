@@ -55,17 +55,9 @@ function avxCountdown(ms){
  return h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
 }
 function avxSchedule(e){
- e.world??={};const w=e.world,now=Date.now();
- // Reinicia uma única vez os calendários antigos para aplicar os tempos corretos.
- if(w.scheduleVersion!==3){
-  w.nextBossAt=now+60*1000;
-  w.nextSeasonAt=now+40*1000;
-  w.scheduleVersion=3;
-  persist();
- }
- w.nextBossAt??=now+60*1000;
- w.nextSeasonAt??=now+40*1000;
- return w;
+ e.world??={};
+ // Mantém dados antigos para compatibilidade, mas não agenda chefes ou eventos automáticos.
+ return e.world;
 }
 function renderPanel(){
  const s=state(),e=ensure();if(!s||!e)return;
@@ -152,8 +144,8 @@ panel.addEventListener('click',ev=>{
  bind('avx-house',()=>{const cost=300+w.house*250;if(w.house>=10){notify('Sua casa já alcançou o nível máximo.');return}if(!spend(cost))return;w.house++;w.seasonXp+=60;notify('Sua propriedade evoluiu para o nível '+w.house+'!')});
  panel.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>{const key=b.dataset.skill,def=skillDefs.find(x=>x[0]===key);if((s.level||1)-1-w.spent<=0){notify('Você não tem pontos de habilidade disponíveis.');return}if((w.skills[key]||0)>=def[3]){notify('Essa habilidade já está no nível máximo.');return}w.skills[key]=(w.skills[key]||0)+1;w.spent++;w.seasonXp+=35;persist();renderPanel()});
  bind('avx-gear',()=>{if(w.gear>=10){notify('Equipamento no nível máximo.');return}if((s.resources?.iron||0)<2){notify('Você precisa de 2 minérios de ferro para aprimorar.');return}const cost=150+w.gear*100;if(!spend(cost))return;s.resources.iron-=2;w.gear++;w.seasonXp+=50;notify('Equipamento aprimorado para +'+w.gear+'!')});
- bind('avx-event',()=>notify(w.worldBoss.active?'O Colosso já está ativo no mapa!':'O próximo chefe aparecerá em '+avxCountdown(w.nextBossAt-Date.now())+'.'));
- bind('avx-season-event',()=>notify(w.seasonActive?'Festival ativo! Derrote 10 criaturas para concluir.':'Próximo festival em '+avxCountdown(w.nextSeasonAt-Date.now())+'.'));
+ // Contagens regressivas e atalhos de chefes/eventos removidos: não exibir nem agendar esses avisos.
+ $('avx-event')?.remove();$('avx-season-event')?.remove();
  panel.querySelectorAll('[data-prof-craft]').forEach(b=>b.onclick=()=>{const kind=b.dataset.profCraft,res=s.resources??={};const recipes={miner:{cost:{iron:4},give:{goldOre:1},xp:35,msg:'Lingote refinado!'},forager:{cost:{herb:5},give:{berry:3},xp:30,msg:'Tônico preparado!'},lumberjack:{cost:{wood:5},give:{pine:2},xp:30,msg:'Tábuas preparadas!'},fisher:{cost:{berry:3},give:{meat:2},xp:25,msg:'Isca e provisões preparadas!'}};const r=recipes[kind];if(!r)return;for(const [k,n] of Object.entries(r.cost))if((res[k]||0)<n){notify('Materiais insuficientes: precisa de '+n+' '+k+'.');return}for(const [k,n] of Object.entries(r.cost))res[k]-=n;for(const [k,n] of Object.entries(r.give))res[k]=(res[k]||0)+n;e.professions[kind].xp+=r.xp;w.seasonXp=(w.seasonXp||0)+10;persist();notify(r.msg+' Profissão +'+r.xp+' XP.');renderPanel();if(typeof updateUIStats==='function')updateUIStats()});
 
  bind('avx-treasure',()=>{if(!spend(40))return;w.treasures++;w.seasonXp+=45;const reward=80+Math.floor(Math.random()*121);s.gold+=reward;notify('Tesouro encontrado! Você recebeu '+reward+' Gold.')});
@@ -182,9 +174,9 @@ function updateMobileNPCButton(){
 }
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
- const schedule=avxSchedule(e);
+ avxSchedule(e);
  updateMobileNPCButton();
- $('avx-live-events')?.remove();
+ $('avx-live-events')?.remove();$('avx-event')?.remove();$('avx-season-event')?.remove();$('avx-dungeon-timer')?.remove();
  const treasureHud=$('avx-treasure-hud');
  if(e.advanced?.treasure&&g?.player){
   let hud=treasureHud;if(!hud){hud=document.createElement('div');hud.id='avx-treasure-hud';hud.style.cssText='position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:9998;padding:8px 13px;border:1px solid #d6ad62;border-radius:10px;background:#101d20ee;color:#ffe7ad;font:800 12px Inter,system-ui;pointer-events:none';document.body.appendChild(hud)}
