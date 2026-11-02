@@ -237,13 +237,26 @@ const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=to
    é carregado durante o parse, instalar os hooks imediatamente encontraria window.game vazio. */
 function installGameHooks(){
  const GameCtor=window.game?.constructor;
- if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
+ if(!GameCtor)return;
+ if(!window.__avxNpcKeyHook){
+  window.__avxNpcKeyHook=true;
+  window.addEventListener('keydown',ev=>{
+   if(ev.code!=='KeyE'||ev.repeat||!game()?.running)return;
+   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+   const g=game(),p=g.player;if(!p)return;
+   if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
+   if(p.realmId)return;
+   const nearby=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
+   if(nearby&&nearby.d<115){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearby.n.id);return}
+  },true);
+ }
+ if(GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
  if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this)};
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
-  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<115){openTownNPC(n.id);return}
   if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
   return originalInteract.call(this);
  };
