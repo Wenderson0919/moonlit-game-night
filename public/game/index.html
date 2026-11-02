@@ -706,6 +706,7 @@ function drawCharacter(ctx,x,y,o){
  const t=performance.now()/150,walk=o.moving?Math.sin(t)*2.2:0,dir=o.dir||'down';
  const basePal={Guerreiro:['#8b3430','#9a3831'],Mago:['#493b91','#5846b0'],Arqueiro:['#245c43','#3c8a5b'],Assassino:['#292d3a','#3b4055'],Curandeiro:['#397b83','#4c9a9c']}[o.cls]||['#245c43','#3c8a5b'];
  const pal=o.outfit?[o.outfit,o.outfit]:basePal;
+ const skin=o.skin||(o.race==='Anão'?'#bd895f':o.race==='Elfo'?'#e0bd9b':o.race==='Ser mágico'?'#9c8bd0':'#b9784d');
  ctx.save();ctx.translate(Math.round(x),Math.round(y));if(o.alpha!=null)ctx.globalAlpha=o.alpha;
  ctx.fillStyle='rgba(5,13,10,.34)';ctx.beginPath();ctx.ellipse(0,13,15,6,0,0,6.283);ctx.fill();
  if(o.local){ctx.strokeStyle='rgba(244,205,112,.35)';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(0,13,19,8,0,0,6.283);ctx.stroke()}
@@ -717,7 +718,6 @@ function drawCharacter(ctx,x,y,o){
  ctx.fillStyle='#d7b45f';ctx.fillRect(-2,-5,4,13);ctx.fillRect(-9,2,18,2);
  ctx.fillStyle=skin;
  if(dir==='left'){ctx.fillRect(-14,-4,5,10);ctx.fillRect(8,-3,4,8)}else if(dir==='right'){ctx.fillRect(9,-4,5,10);ctx.fillRect(-12,-3,4,8)}else{ctx.fillRect(-13,-3,5,9);ctx.fillRect(8,-3,5,9)}
- const skin=o.skin||(o.race==='Anão'?'#bd895f':o.race==='Elfo'?'#e0bd9b':o.race==='Ser mágico'?'#9c8bd0':'#b9784d');
  ctx.fillStyle=skin;ctx.fillRect(-9,-20,18,16);ctx.fillStyle=skin;ctx.fillRect(-8,-19,16,13);
  if(o.race==='Ser mágico'){ctx.fillStyle='#c4b5fd';ctx.fillRect(-8,-19,16,13)}
  ctx.fillStyle=skin;ctx.fillRect(-11,-15,3,5);ctx.fillRect(8,-15,3,5);
@@ -1329,7 +1329,7 @@ class Game{
   const dr=[];
   for(const n of this.nodesNear(p.x,p.y,Math.max(W,H)/2+90))dr.push({y:n.y,f:()=>drawNode(c,n)});
   for(const a of this.animals)if(Math.abs(a.x-p.x)<W/2+60&&Math.abs(a.y-p.y)<H/2+60)dr.push({y:a.y,f:()=>drawAnimal(c,a,now)});
-  for(const r of this.raids)if(!r.remoteShared&&r.state!=='cleared'&&Math.abs(r.boss.x-p.x)<W/2+120&&Math.abs(r.boss.y-p.y)<H/2+120)dr.push({y:r.boss.y,f:()=>this.drawBoss(c,r,now)});
+  for(const r of this.raids)if(r.state!=='cleared'&&r.boss&&Math.abs(r.boss.x-p.x)<W/2+120&&Math.abs(r.boss.y-p.y)<H/2+120)dr.push({y:r.boss.y,f:()=>this.drawBoss(c,r,now)});
   dr.push({y:this.npc.y,f:()=>this.drawMerchant(c)});
   const s=S();
   dr.push({y:p.y,f:()=>{
