@@ -16,11 +16,13 @@ const STALE_MS = 6000;
 
 type Remote = {
   id: number; name: string; cls: string; race: string; hair: string; eye: string;
+  skin: string; hairStyle: string; beard: string; outfit: string; outfitStyle: string; cloak: string; accessory: string; mark: string;
   x: number; y: number; dir: string; m: boolean; lvl: number; hp: number; mh: number; pv: boolean; last: number;
 };
 
 type Bag = {
   t?: unknown; id?: unknown; name?: unknown; cls?: unknown; race?: unknown; hair?: unknown; eye?: unknown;
+  skin?: unknown; hairStyle?: unknown; beard?: unknown; outfit?: unknown; outfitStyle?: unknown; cloak?: unknown; accessory?: unknown; mark?: unknown;
   x?: unknown; y?: unknown; dir?: unknown; d?: unknown; m?: unknown; lvl?: unknown; hp?: unknown; mh?: unknown;
   pv?: unknown; k?: unknown; l?: unknown; by?: unknown; n?: unknown; to?: unknown; from?: unknown; raw?: unknown;
 };
@@ -58,7 +60,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
   function toRemote(id: number, a: Bag): Remote {
     return {
       id, name: str(a.name, 24, "Herói"), cls: str(a.cls, 24), race: str(a.race, 24),
-      hair: str(a.hair, 16), eye: str(a.eye, 16), x: num(a.x, CX), y: num(a.y, CX + 110),
+      hair: str(a.hair, 16), eye: str(a.eye, 16), skin: str(a.skin,16), hairStyle: str(a.hairStyle,16), beard: str(a.beard,16), outfit: str(a.outfit,16), outfitStyle: str(a.outfitStyle,16), cloak: str(a.cloak,16), accessory: str(a.accessory,16), mark: str(a.mark,16), x: num(a.x, CX), y: num(a.y, CX + 110),
       dir: str(a.dir, 8, "down"), m: !!a.m, lvl: Math.max(1, Math.min(60, num(a.lvl, 1) | 0)),
       hp: num(a.hp, 100), mh: num(a.mh, 100), pv: !!a.pv, last: Date.now(),
     };
@@ -75,7 +77,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
     const p: unknown[] = [];
     for (const o of others.values()) {
       if (now - o.last > STALE_MS) { others.delete(o.id); continue; }
-      p.push([o.id, o.name, o.cls, o.race, o.hair, o.eye, o.x, o.y, o.dir, o.m ? 1 : 0, o.lvl, o.hp, o.mh, o.pv ? 1 : 0]);
+      p.push([o.id, o.name, o.cls, o.race, o.hair, o.eye, o.x, o.y, o.dir, o.m ? 1 : 0, o.lvl, o.hp, o.mh, o.pv ? 1 : 0, o.skin, o.hairStyle, o.beard, o.outfit, o.outfitStyle, o.cloak, o.accessory, o.mark]);
     }
     const raidHost = Math.min(myId, ...others.keys());
     deliver({ t: "snap", p, b: [], m: [], n: p.length + 1, rh: raidHost });
