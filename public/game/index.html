@@ -673,7 +673,7 @@ function renderRPGPanel(){
  const s=S(),st=getRPGStats(),ci=CLASS_INFO[s.className];
  const eq=SLOTS.map(sl=>{const it=s.equipment[sl];return `<div class="flex items-center justify-between border-b border-slate-700/60 py-1.5 text-xs"><div><span class="text-slate-400">${SLOT_DEFS[sl].ic} ${SLOT_DEFS[sl].n}:</span> ${it?`<b style="color:${RARITY[it.rar].c}">${it.name}</b><div class="text-[10px] text-slate-400">Nív ${it.ilvl} · ${itemStatsText(it)}</div>`:'<span class="text-slate-500">vazio</span>'}</div>${it?`<button class="btn-sm" onclick="unequipItem('${sl}')">Remover</button>`:''}</div>`}).join('');
  const inv=[...s.inventory].sort((a,b)=>b.rar-a.rar||b.ilvl-a.ilvl).map(it=>`<div class="flex items-center justify-between border-b border-slate-800 py-1.5 text-xs gap-2"><div class="min-w-0"><b style="color:${RARITY[it.rar].c}">${SLOT_DEFS[it.slot].ic} ${it.name}</b><div class="text-[10px] text-slate-400">${RARITY[it.rar].n} · Nív ${it.ilvl} · ${itemStatsText(it)}</div></div><div class="flex gap-1 shrink-0"><button class="btn-sm" onclick="equipItem('${it.id}')">Equipar</button><button class="btn-sm" style="background:#4b2a2a" onclick="sellItem('${it.id}')">${it.sell}g</button></div></div>`).join('')||'<div class="text-xs text-slate-500">Nenhum item. Derrote chefes de raid ou use as forjas!</div>';
- const spellNames={arcane_bolt:'Projétil Arcano',frost_nova:'Nova Congelante',healing_light:'Luz Restauradora'};
+ const spellNames=Object.fromEntries(Object.entries(SPELL_BOOK).map(([id,sp])=>[id,sp.name]));
  const learned=s.learnedSpells||[],equippedSpell=s.equippedSpell;
  const spellPanel='<section class="rounded-xl bg-slate-950/50 border border-violet-700/60 p-3"><div class="flex justify-between"><h3 class="font-bold text-violet-200">✨ Magia equipada</h3><span class="text-[10px] text-violet-300">Tecla Q</span></div>'+(equippedSpell?'<div class="text-sm mt-2">'+(spellNames[equippedSpell]||equippedSpell)+' <button class="btn-sm" onclick="unequipSpell()">Remover</button></div>':'<p class="text-xs text-slate-400 mt-2">Nenhuma magia equipada.</p>')+'<div class="mt-3 text-xs text-slate-300">Magias aprendidas</div>'+(learned.length?learned.map(id=>'<div class="flex justify-between border-b border-slate-700 py-2 text-xs"><span>'+(spellNames[id]||id)+'</span><button class="btn-sm" '+(equippedSpell===id?'disabled':'')+' onclick="equipSpell(\''+id+'\')">'+(equippedSpell===id?'Equipada':'Equipar')+'</button></div>').join(''):'<p class="text-xs text-slate-500 mt-1">Aprenda magias com o Mestre das Magias.</p>')+'</section>';
  const hasAch=s.achievements.length?s.achievements.join(' • '):'Nenhuma conquista ainda.';
@@ -706,9 +706,18 @@ function sellItem(id){const s=S(),i=s.inventory.findIndex(x=>x.id===id);if(i<0)r
 function unlockRPGAchievement(n){const s=S();if(!s.achievements.includes(n)){s.achievements.push(n);showNotification('Conquista desbloqueada: '+n+'!','#fde68a')}}
 function activateRPGTransform(){const s=S();if(Date.now()<s.transformUntil){showNotification('Transformação já ativa!');return}if(Date.now()<s.transformCooldown){showNotification('Transformação recarregando…');return}s.transformUntil=Date.now()+8000;s.transformCooldown=Date.now()+25000;showNotification('TRANSFORMAÇÃO: poder ancestral despertado!','#c4b5fd');updateUIStats()}
 const SPELL_BOOK={
- arcane_bolt:{name:'Projétil Arcano',cooldown:2,range:300,damage:1.25,color:'#a78bfa'},
- frost_nova:{name:'Nova Congelante',cooldown:6,range:155,damage:1.7,color:'#7dd3fc'},
- healing_light:{name:'Luz Restauradora',cooldown:8,heal:true}
+ arcane_bolt:{name:'Projétil Arcano',cooldown:2,range:360,damage:1.25,color:'#a78bfa',mode:'cone',desc:'Disparo arcano de longo alcance.'},
+ frost_nova:{name:'Nova Congelante',cooldown:6,range:190,damage:1.7,color:'#7dd3fc',mode:'area',desc:'Explosão de gelo ao redor.'},
+ healing_light:{name:'Luz Restauradora',cooldown:8,heal:true,color:'#86efac',desc:'Recupera vida.'},
+ fireball:{name:'Bola de Fogo',cooldown:4,range:390,damage:2,color:'#fb923c',mode:'cone',desc:'Projétil flamejante.'},
+ thunder_strike:{name:'Raio Celestial',cooldown:7,range:310,damage:2.35,color:'#fde047',mode:'cone',desc:'Descarga elétrica.'},
+ nature_roots:{name:'Raízes Prisioneiras',cooldown:9,range:210,damage:1.35,color:'#84cc16',mode:'area',desc:'Raízes atingem inimigos próximos.'},
+ shadow_burst:{name:'Explosão Sombria',cooldown:8,range:230,damage:2.1,color:'#8b5cf6',mode:'area',desc:'Energia sombria em área.'},
+ arcane_lance:{name:'Lança Astral',cooldown:5,range:470,damage:2.4,color:'#c4b5fd',mode:'cone',desc:'Perfura inimigos distantes.'},
+ wind_blades:{name:'Lâminas de Vento',cooldown:3,range:330,damage:1.45,color:'#67e8f9',mode:'cone',desc:'Corte veloz de vento.'},
+ holy_smite:{name:'Julgamento Sagrado',cooldown:10,range:250,damage:2.8,color:'#fef3c7',mode:'area',desc:'Impacto sagrado.'},
+ poison_cloud:{name:'Nuvem Venenosa',cooldown:11,range:200,damage:1.15,color:'#4ade80',mode:'area',desc:'Nuvem tóxica.'},
+ meteor:{name:'Chuva de Meteoros',cooldown:16,range:280,damage:3.4,color:'#f97316',mode:'area',desc:'Explosão elemental.'}
 };
 function usePotion(){
  const s=S(),g=window.game;if(!g||!g.running||s.hp<=0)return false;
@@ -723,21 +732,24 @@ window.usePotion=usePotion;
 function equipSpell(id){const s=S();s.learnedSpells??=[];if(!s.learnedSpells.includes(id)||!SPELL_BOOK[id])return;s.equippedSpell=id;showNotification(SPELL_BOOK[id].name+' equipada! Use Q para lançar.','#c4b5fd');renderRPGPanel()}
 function unequipSpell(){S().equippedSpell=null;showNotification('Magia removida do espaço.');renderRPGPanel()}
 function castEquippedSpell(){
- const g=window.game,s=S(),id=s.equippedSpell,sp=SPELL_BOOK[id];if(!g||!g.running)return;
+ const g=window.game,s=S(),id=s.equippedSpell,sp=SPELL_BOOK[id];
+ if(!g||!g.running||!g.player){showNotification('Entre no mundo para lançar magias.');return}
  if(!sp){showNotification('Equipe uma magia no Personagem (P) primeiro.');return}
- s.spellCooldowns??={};if(g.t<(s.spellCooldowns[id]||0)){showNotification('Magia recarregando…');return}
- s.spellCooldowns[id]=g.t+sp.cooldown;const st=getRPGStats(),weapon=s.equipment?.weapon;
- const damage=Math.round((24+st.power*2+s.level*1.5)*sp.damage*(weapon?1.15:1));
- if(sp.heal){const amount=Math.round(35+st.power*2+s.level);s.hp=Math.min(effMaxHp(),s.hp+amount);g.floatText(g.player.x,g.player.y-28,'+'+amount,'#86efac');g.fx.push({x:g.player.x,y:g.player.y,r:12,max:85,t:.45,col:'#86efac'});showNotification('Luz Restauradora: +'+amount+' vida!');updateUIStats();return}
+ s.spellCooldowns??={};const now=Date.now(),readyAt=Number(s.spellCooldowns[id])||0;
+ if(now<readyAt){showNotification('Magia recarregando: '+Math.ceil((readyAt-now)/1000)+'s');return}
+ s.spellCooldowns[id]=now+sp.cooldown*1000;
+ const st=getRPGStats(),weapon=s.equipment?.weapon,damage=Math.round((24+st.power*2+s.level*1.5)*(sp.damage||1)*(weapon?1.15:1));
+ if(sp.heal){const amount=Math.round(35+st.power*2+s.level);s.hp=Math.min(effMaxHp(),s.hp+amount);g.floatText(g.player.x,g.player.y-28,'+'+amount,'#86efac');g.fx.push({x:g.player.x,y:g.player.y,r:12,max:85,t:.55,col:sp.color||'#86efac'});showNotification(sp.name+': +'+amount+' vida!');updateUIStats();return}
  const ang=g.aimAngle();let hits=0;
- g.eachTarget(t=>{const dx=t.x-g.player.x,dy=t.y-g.player.y,dist=Math.hypot(dx,dy);if(id==='frost_nova'?dist<=sp.range:(dist<=sp.range&&Math.cos(Math.atan2(dy,dx)-ang)>.82)){g.damageTarget(t,damage,Math.atan2(dy,dx),true);hits++}});
- g.fx.push({x:g.player.x,y:g.player.y,r:12,max:sp.range,t:.42,col:sp.color});
- showNotification(hits?sp.name+': '+hits+' alvo(s) atingido(s)!'+(weapon?' Combinação arma+magia!':''):'A magia não acertou nenhum inimigo.');
+ g.eachTarget(t=>{const dx=t.x-g.player.x,dy=t.y-g.player.y,dist=Math.hypot(dx,dy);const inArc=sp.mode==='area'||Math.cos(Math.atan2(dy,dx)-ang)>.62;if(dist<=(sp.range||200)&&inArc){g.damageTarget(t,damage,Math.atan2(dy,dx),true);hits++}});
+ g.fx.push({x:g.player.x,y:g.player.y,r:sp.mode==='area'?24:12,max:sp.range||200,t:.55,col:sp.color||'#a78bfa'});
+ showNotification(hits?sp.name+': '+hits+' alvo(s) atingido(s)!':'Magia lançada, mas nenhum inimigo foi atingido.');
 }
 function useClassSkill(){
  const g=window.game;if(!g||!g.running)return;const s=S(),c=s.className,st=getRPGStats();
- if(g.t<s.skillCd){showNotification('Habilidade recarregando…');return}
- s.skillCd=g.t+6;
+ const now=Date.now();s.skillReadyAt=Number(s.skillReadyAt)||0;
+ if(now<s.skillReadyAt){showNotification('Habilidade recarregando: '+Math.ceil((s.skillReadyAt-now)/1000)+'s');return}
+ s.skillReadyAt=now+6000;
  if(c==='Curandeiro'){const h=45+st.power;s.hp=Math.min(effMaxHp(),s.hp+h);g.floatText(g.player.x,g.player.y-30,`+${h}`,'#34d399');showNotification('Luz Restauradora!');updateUIStats();return}
  const dmg=32+st.power+st.atk+s.level*2;let hit=0;
  g.eachTarget(t=>{if(Math.hypot(t.x-g.player.x,t.y-g.player.y)<135){g.damageTarget(t,dmg,Math.atan2(t.y-g.player.y,t.x-g.player.x),true);hit++}});
