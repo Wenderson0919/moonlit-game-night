@@ -418,6 +418,59 @@ const BOSS_ART={
   c.fillStyle=b.enr?'#ff2a2a':'#fde047';c.fillRect(sz*1.5,-sz*1.0+bob,5,5);
   if(b.atk&&b.atk.kind!=='charge'){c.fillStyle='rgba(255,140,30,.75)';c.beginPath();c.moveTo(sz*1.95,-sz*.9+bob);c.lineTo(sz*2.8,-sz*1.15+bob);c.lineTo(sz*2.6,-sz*.75+bob);c.fill()}}
 };
+
+// Cada chefe de raid recebe uma silhueta própria. Mantém o sistema de combate,
+// níveis e recompensas existente; altera somente a apresentação dos bosses.
+(()=>{
+ const allBossNames=Object.values(BOSS_NAMES).flat();
+ allBossNames.forEach((name,index)=>{
+  if(BOSS_ART[name])return;
+  const variant=index%10;
+  BOSS_ART[name]=(c,sz,bob,lg,col,T,b,now)=>{
+   const flash=col==='#fff',base=flash?'#fff':col;
+   const dark=flash?'#fff':'#20212b',accent=flash?'#fff':T.c;
+   const eye=b.enr?'#ff3030':'#fff0a6';
+   c.lineJoin='round';c.lineCap='round';
+   // Silhuetas distintas: fera, cavaleiro, serpente, voador, inseto,
+   // titã, espectro, bestial, construto e criatura de múltiplas cabeças.
+   if(variant===0||variant===7){
+    c.fillStyle=dark;c.fillRect(-sz*.72,sz*.25,sz*.42,sz*.65+lg);c.fillRect(sz*.25,sz*.25,sz*.42,sz*.65-lg);
+    c.fillStyle=base;c.beginPath();c.ellipse(-sz*.05,bob,sz*1.05,sz*.65,0,0,6.283);c.fill();
+    c.beginPath();c.arc(sz*.75,-sz*.35+bob,sz*.48,0,6.283);c.fill();
+    c.strokeStyle=base;c.lineWidth=sz*.2;c.beginPath();c.moveTo(-sz*.8,bob);c.quadraticCurveTo(-sz*1.5,sz*.2+bob,-sz*1.35,sz*.7+bob+lg);c.stroke();
+    c.fillStyle=accent;for(let i=0;i<3+(variant===7?2:0);i++){const x=-sz*.55+i*sz*.48;c.beginPath();c.moveTo(x,-sz*.35+bob);c.lineTo(x+sz*.12,-sz*.9-(i%2)*sz*.2+bob);c.lineTo(x+sz*.28,-sz*.3+bob);c.fill()}
+   }else if(variant===1||variant===5){
+    c.fillStyle=dark;c.fillRect(-sz*.55,sz*.15,sz*.42,sz*.9+lg);c.fillRect(sz*.15,sz*.15,sz*.42,sz*.9-lg);
+    c.fillStyle=base;c.fillRect(-sz*.62,-sz*.55+bob,sz*1.24,sz*1.0);
+    c.fillRect(-sz*1.05,-sz*.42+bob,sz*.45,sz*.82+lg);c.fillRect(sz*.6,-sz*.42+bob,sz*.45,sz*.82-lg);
+    c.beginPath();c.arc(0,-sz*.78+bob,sz*.42,0,6.283);c.fill();
+    c.fillStyle=accent;c.fillRect(-sz*.55,-sz*.1+bob,sz*1.1,sz*.12);
+    c.beginPath();c.moveTo(-sz*.3,-sz*.95+bob);c.lineTo(-sz*.65,-sz*1.55+bob);c.lineTo(-sz*.05,-sz*1.12+bob);c.moveTo(sz*.3,-sz*.95+bob);c.lineTo(sz*.65,-sz*1.55+bob);c.lineTo(sz*.05,-sz*1.12+bob);c.fill();
+   }else if(variant===2||variant===8){
+    c.fillStyle=base;c.beginPath();c.ellipse(0,sz*.35+bob,sz*.72,sz*.5,0,0,6.283);c.fill();
+    for(let i=0;i<4;i++){const x=(i-1.5)*sz*.38,wig=Math.sin(now/190+i)*sz*.12;c.strokeStyle=base;c.lineWidth=sz*.2;c.beginPath();c.moveTo(x,sz*.2+bob);c.quadraticCurveTo(x+wig,-sz*.45,x+wig*1.4,-sz*.95-(i%2)*sz*.25+bob);c.stroke();c.fillStyle=base;c.beginPath();c.arc(x+wig*1.4,-sz*.98-(i%2)*sz*.25+bob,sz*.2,0,6.283);c.fill();c.fillStyle=eye;c.fillRect(x+wig*1.4-4,-sz*1.02-(i%2)*sz*.25+bob,4,4)}
+    c.fillStyle=dark;c.fillRect(-sz*.55,sz*.55,sz*.2,sz*.35);c.fillRect(sz*.35,sz*.55,sz*.2,sz*.35);
+   }else if(variant===3||variant===6){
+    c.fillStyle=base;c.beginPath();c.ellipse(0,bob,sz*.62,sz*.78,0,0,6.283);c.fill();
+    c.fillStyle=dark;c.beginPath();c.moveTo(-sz*.35,-sz*.25+bob);c.lineTo(-sz*1.65,-sz*1.15+Math.sin(now/130)*8+bob);c.lineTo(-sz*1.0,sz*.1+bob);c.lineTo(-sz*.3,sz*.35+bob);c.fill();
+    c.beginPath();c.moveTo(sz*.35,-sz*.25+bob);c.lineTo(sz*1.65,-sz*1.15-Math.sin(now/130)*8+bob);c.lineTo(sz,sz*.1+bob);c.lineTo(sz*.3,sz*.35+bob);c.fill();
+    c.strokeStyle=base;c.lineWidth=sz*.16;c.beginPath();c.moveTo(0,sz*.45+bob);c.lineTo(sz*.2,sz*1.15+bob+lg);c.stroke();
+    c.fillStyle=accent;c.beginPath();c.arc(0,-sz*.65+bob,sz*.32,0,6.283);c.fill();
+   }else{
+    c.fillStyle=dark;c.fillRect(-sz*.75,sz*.25,sz*.5,sz*.75+lg);c.fillRect(sz*.25,sz*.25,sz*.5,sz*.75-lg);
+    c.fillStyle=base;c.beginPath();c.moveTo(-sz*.85,-sz*.5+bob);c.lineTo(-sz*.55,-sz*.95+bob);c.lineTo(-sz*.15,-sz*.72+bob);c.lineTo(sz*.2,-sz*1.05+bob);c.lineTo(sz*.65,-sz*.7+bob);c.lineTo(sz*.9,-sz*.25+bob);c.lineTo(sz*.75,sz*.55+bob);c.lineTo(-sz*.7,sz*.55+bob);c.closePath();c.fill();
+    c.fillStyle=accent;for(let i=0;i<5;i++){const x=-sz*.65+i*sz*.32;c.beginPath();c.moveTo(x,-sz*.55+bob);c.lineTo(x+sz*.12,-sz*1.15-(i%2)*sz*.18+bob);c.lineTo(x+sz*.25,-sz*.5+bob);c.fill()}
+   }
+   // Máscara facial e marcas exclusivas por chefe.
+   c.fillStyle=dark;c.fillRect(sz*.18,-sz*.42+bob,sz*.12,sz*.1);c.fillRect(sz*.48,-sz*.38+bob,sz*.1,sz*.1);
+   c.fillStyle=eye;c.fillRect(sz*.2,-sz*.4+bob,5,5);c.fillRect(sz*.5,-sz*.36+bob,5,5);
+   c.fillStyle=accent;
+   if(variant%2===0){c.fillRect(-sz*.18,sz*.05+bob,sz*.55,4);c.fillRect(-sz*.08,sz*.18+bob,sz*.35,3)}
+   else{c.beginPath();c.moveTo(-sz*.2,-sz*.2+bob);c.lineTo(0,sz*.12+bob);c.lineTo(sz*.18,-sz*.2+bob);c.fill()}
+   c.lineCap='butt';
+  };
+ });
+})();
 const BOSS_PROFILE={forest:{hp:1.1,spd:1.2,dmg:.95,pool:['slam','charge','charge','fan']},desert:{hp:.9,spd:1.0,dmg:1.15,pool:['rain','rain','charge','slam']},snow:{hp:1.3,spd:.85,dmg:1.0,pool:['nova','fan','slam']},swamp:{hp:1.2,spd:.9,dmg:.9,pool:['rain','fan','slam','slam']},volcano:{hp:1.0,spd:1.1,dmg:1.25,pool:['nova','charge','rain','fan']}};
 const MINION_KIND={forest:'lobo',desert:'escorpiao',snow:'lobo_gelo',swamp:'slime',volcano:'lobo_infernal'};
 
