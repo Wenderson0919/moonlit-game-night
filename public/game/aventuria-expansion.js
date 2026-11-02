@@ -181,16 +181,22 @@ function mountAndPetDraw(g){
  c.restore();
 }
 const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
-const GameCtor=window.game?.constructor;
-const originalRender=GameCtor?.prototype?.render;
-if(originalRender){GameCtor.prototype.render=function(){originalRender.call(this);mountAndPetDraw(this)}}
-const originalInteract=GameCtor?.prototype?.interact;
-if(originalInteract){GameCtor.prototype.interact=function(){
- const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
- if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
- if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
- return originalInteract.call(this);
-}}
+/* O jogo é instanciado no evento load do index.html. Como este arquivo externo
+   é carregado durante o parse, instalar os hooks imediatamente encontraria window.game vazio. */
+function installGameHooks(){
+ const GameCtor=window.game?.constructor;
+ if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
+ const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
+ if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this)};
+ if(originalInteract)proto.interact=function(){
+  const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
+  if(ensure()?.dungeon?.active&&Math.hypot(p.x-(EXP_MAP-380),p.y-(EXP_MAP-430))<75){advanceDungeon();return}
+  return originalInteract.call(this);
+ };
+ proto.__avxTownHooks=true;
+}
+window.addEventListener('load',installGameHooks);
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
