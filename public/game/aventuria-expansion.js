@@ -105,7 +105,7 @@ function renderPanel(){
 function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id);if(!q||q.progress<q.goal||e.claimed[id])return;s.gold+=q.reward;e.claimed[id]=true;persist();notify('Recompensa recebida: '+q.reward+' Gold!');renderPanel();if(typeof updateUIStats==='function')updateUIStats()}
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
 function persist(){try{if(typeof saveGame==='function')saveGame(false)}catch{}}
-let lastResources=null,lastClock=0,lastDraw=0;
+let lastResources=null,lastClock=0,lastDraw=0,lastSeasonKills=null,lastSeasonRaids=null;
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
@@ -113,6 +113,9 @@ function tick(){
  lastResources={...res};
  const q=e.daily?.quests||[];
  const kills=s.animalKills||0,raids=s.raidsCleared||0;
+ if(lastSeasonKills===null){lastSeasonKills=kills;lastSeasonRaids=raids}
+ if(kills>lastSeasonKills){e.world.seasonXp+=(kills-lastSeasonKills)*5;lastSeasonKills=kills}
+ if(raids>lastSeasonRaids){e.world.seasonXp+=(raids-lastSeasonRaids)*100;lastSeasonRaids=raids}
  for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,kills-(e.dayStartKills??(e.dayStartKills=kills)));if(x.type==='raid')x.progress=Math.min(x.goal,raids-(e.dayStartRaids??(e.dayStartRaids=raids)));}
  const gathered=Math.max(0,total-e.dayStartTotal);const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
