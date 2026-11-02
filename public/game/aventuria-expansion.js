@@ -70,7 +70,6 @@ function renderPanel(){
  const skillHtml=skillDefs.map(x=>'<div class="flex items-center justify-between gap-2 py-1"><div><b>'+x[1]+'</b><div class="text-[10px] text-slate-400">'+x[2]+'</div></div><button class="avx-action" data-skill="'+x[0]+'">Evoluir ('+(w.skills[x[0]]||0)+'/'+x[3]+')</button></div>').join('');
  const featureHtml=
  '<div class="avx-card" data-section="social"><b class="text-amber-100">🛡 Guildas, grupos e amizades</b><p class="text-[11px] text-slate-400 mt-1">'+(w.guild?'Guilda local: '+esc(w.guild):'Crie a identidade da sua guilda. Convites e membros online serão conectados na etapa de servidor.')+'</p><button id="avx-guild" class="avx-action mt-2">'+(w.guild?'Guilda criada':'Fundar guilda · 200 Gold')+'</button><div class="text-[10px] text-slate-500 mt-2">Grupo cooperativo e lista de amigos preparados para integração multiplayer.</div></div>'+
- '<div class="avx-card" data-section="combat"><b class="text-amber-100">🏰 Masmorras cooperativas</b><p class="text-[11px] text-slate-400 mt-1">Expedição de teste: 3 salas, inimigos e recompensa. Requer nível 3 e 50 Gold para suprimentos.</p><button id="avx-dungeon" class="avx-action mt-2">Entrar na masmorra</button><div class="text-[10px] text-slate-500">Vitórias: '+w.dungeonWins+'</div></div>'+
  '<div class="avx-card" data-section="combat"><b class="text-amber-100">⚔ Arena PvP e torneios</b><p class="text-[11px] text-slate-400 mt-1">Treino contra adversário simulado para testar sua build. PvP entre jogadores exige conexão de servidor.</p><button id="avx-arena" class="avx-action mt-2">Participar do desafio</button><div class="text-[10px] text-slate-500">Vitórias de treino: '+w.arenaWins+'</div></div>'+
  '<div class="avx-card" data-section="social"><b class="text-amber-100">🛒 Mercado</b><p class="text-[11px] text-slate-400 mt-1">Banca de comerciante NPC com consumíveis e materiais. Negociação entre jogadores será ativada com backend seguro.</p><button id="avx-market" class="avx-action mt-2">Comprar kit de aventura · 120 Gold</button><div class="text-[10px] text-slate-500">Compras registradas: '+w.marketLog.length+'</div></div>'+
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">🏡 Casas e construção de vilas</b><p class="text-[11px] text-slate-400 mt-1">Melhore sua propriedade e desbloqueie níveis de construção.</p><button id="avx-house" class="avx-action mt-2">Melhorar casa · '+(300+w.house*250)+' Gold</button><div class="text-[10px] text-slate-500">Nível da casa: '+w.house+'</div></div>'+
@@ -119,7 +118,7 @@ function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  updateMobileNPCButton();
 
- if(e.dungeon?.active&&e.dungeon.deadline){const left=Math.max(0,Math.ceil((e.dungeon.deadline-Date.now())/1000));if(left===0){exitDungeon('⏳ O tempo acabou! A masmorra expulsou você.');}else{let hud=$('avx-dungeon-timer');if(!hud){hud=document.createElement('div');hud.id='avx-dungeon-timer';hud.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9998;padding:9px 15px;border:1px solid #d7b66e;border-radius:12px;background:#101a27ed;color:#ffe3a0;font:900 14px system-ui;pointer-events:none';document.body.appendChild(hud)}hud.textContent='⏳ MASMORRA '+String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0')+' · SALA '+e.dungeon.room+'/4';}}else $('avx-dungeon-timer')?.remove();
+ $('avx-dungeon-timer')?.remove();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
  if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
  lastResources={...res};
@@ -184,21 +183,8 @@ function leaveRealm(){
  restoreRealmWorld(g,realmReturnSnapshot);realmReturnSnapshot=null;
  s.x=g.player.x;s.y=g.player.y;persist();notify('Você voltou ao mundo principal.');
 }
-function openDungeonPortal(){
- const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:16px';document.body.appendChild(m)}
- m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Dimensões desconhecidas</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal abre um mundo independente, com terreno, criaturas e exploração próprios. O nível mínimo protege os aventureiros despreparados.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div><div style="font-size:10px;color:#9cc">Criaturas: '+r.creatures.join(', ')+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Entrar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
- $('avx-world-close').onclick=()=>m.remove();m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(r&&(s.level||1)>=r.level){enterRealm(r);m.remove()}});
-}
 function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p?.realmId&&Math.hypot(p.x-2000,p.y-2000)<150){leaveRealm();return true}return false}
 
-function openDungeonPortal(){
- const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';document.body.appendChild(m)}
- m.style.cssText='position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;padding:clamp(8px,3vw,28px);background:radial-gradient(ellipse at 50% 20%,#1d3550ed,#030812f5);backdrop-filter:blur(9px)';
- const art={verdant:'linear-gradient(145deg,#163d36,#78ba79 52%,#e2d49a)',frost:'linear-gradient(145deg,#102d4b,#62b6d7 55%,#e0f6ff)',mire:'linear-gradient(145deg,#142f28,#678a43 55%,#c0a76b)',ember:'linear-gradient(145deg,#351b24,#c45b36 55%,#f0a45c)'},icon={verdant:'🌳',frost:'❄️',mire:'🌿',ember:'🌋'};
- m.innerHTML='<section style="width:min(920px,100%);max-height:92vh;overflow:auto;border:1px solid #b8a16b99;border-radius:22px;background:linear-gradient(145deg,#172735,#080e18);box-shadow:0 24px 90px #000b;color:#f8fafc;font-family:Inter,system-ui"><header style="padding:22px 24px;background:linear-gradient(110deg,#283d50,#111d2b);border-bottom:1px solid #c7a96a66;display:flex;justify-content:space-between;gap:12px"><div><div style="font-size:10px;letter-spacing:3px;color:#e6c77f;font-weight:900">MAPA ASTRAL · AVENTURIA</div><h2 style="font-size:clamp(23px,4vw,32px);margin:6px 0">🌌 Portais entre dimensões</h2><p style="font-size:12px;color:#b8c7d2;margin:0">Cada portal conduz a uma região independente, com criaturas e ambiente próprios.</p></div><button id="avx-world-close" style="height:42px;width:42px;border-radius:12px;background:#ffffff12;border:1px solid #ffffff33;color:white;font-size:20px;cursor:pointer">✕</button></header><div style="padding:17px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<article style="overflow:hidden;border:1px solid '+r.color+'88;border-radius:17px;background:#111e2a"><div style="height:116px;background:'+art[r.id]+';display:flex;align-items:center;justify-content:center;position:relative"><span style="font-size:66px;filter:drop-shadow(0 8px 8px #0008)">'+icon[r.id]+'</span><span style="position:absolute;right:10px;top:10px;background:#07131bbd;border:1px solid #ffffff55;border-radius:20px;padding:5px 9px;font-size:10px;color:white">NÍVEL '+r.level+'+</span></div><div style="padding:14px"><div style="font-size:10px;letter-spacing:2px;color:'+r.color+'">'+r.theme+'</div><h3 style="margin:5px 0;font-size:18px">'+r.name+'</h3><p style="font-size:11px;color:#b7c6ce;min-height:32px;margin:6px 0">'+r.desc+'</p><div style="font-size:10px;color:#d6e1e6;margin-bottom:12px">Criaturas: '+r.creatures.map(x=>x.replaceAll('_',' ')).join(' · ')+'</div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="width:100%;padding:10px;border-radius:10px;border:1px solid '+r.color+'88;background:'+(ok?'#315f59':'#39434a')+';color:white;font-weight:900;cursor:pointer">'+(ok?'Atravessar portal →':'🔒 Alcance o nível '+r.level)+'</button></div></article>'}).join('')+'</div><footer style="padding:0 18px 18px"><div style="font-size:11px;color:#91a5b3;margin-bottom:10px">Ao entrar, sua posição e o mundo atual são preservados. Use o portal de retorno na dimensão para voltar.</div><button id="avx-world-close2" style="padding:9px 18px;border-radius:9px;background:#263c4c;border:1px solid #ffffff22;color:white;cursor:pointer">Voltar</button></footer></section>';
- const close=()=>m.remove();$('avx-world-close').onclick=close;$('avx-world-close2').onclick=close;
- m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(r&&(s.level||1)>=r.level){enterRealm(r);close()}});
-}
 function interactRealmPortal(g){const p=g.player,s=state(),r=window.AVENTURIA_REALM_AT(p.x,p.y);if(r&&Math.hypot(p.x-(r.x+r.w/2),p.y-(r.y+r.h/2))<100){teleportRealm(null,EXP_SAFE.x,EXP_SAFE.y+175);return true}const near=AVENTURIA_REALMS.find(x=>Math.hypot(p.x-(x.x+x.w/2),p.y-(x.y+x.h/2+110))<90);if(near){if((s.level||1)<near.level){notify('Este mundo exige nível '+near.level+'.');return true}teleportRealm(near,near.x+near.w/2,near.y+near.h/2+110);return true}return false}
 
 /* NPCs de cidade, montaria e mascote integrados ao mundo.
@@ -209,13 +195,7 @@ const townNPCs=[
  {id:'stable',name:'Armeiro de Aventuria',role:'Armas e Armaduras',x:EXP_SAFE.x-105,y:EXP_SAFE.y-75,icon:'⚒️',color:'#d6a45e'},
  {id:'pet',name:'Cuidadora de Mascotes',role:'Mascotes',x:EXP_SAFE.x+105,y:EXP_SAFE.y+75,icon:'🐾',color:'#8bcf9a'},
  {id:'guild',name:'Mestre das Guildas',role:'Guildas',x:EXP_SAFE.x-105,y:EXP_SAFE.y+75,icon:'🛡️',color:'#9cb9d8'},
- {id:'dungeon',name:'Guardião do Portal',role:'Masmorras',x:EXP_SAFE.x,y:EXP_SAFE.y-175,icon:'🌀',color:'#b99aff'}
-];
-const dungeonRooms=[
- {name:'Entrada das Catacumbas',x:EXP_MAP-650,y:EXP_MAP-650,w:420,h:260,enemy:'Rato das Catacumbas',hp:130,reward:70},
- {name:'Galeria dos Ossos',x:EXP_MAP-650,y:EXP_MAP-360,w:420,h:260,enemy:'Cavaleiro Espectral',hp:220,reward:110},
- {name:'Covil das Criaturas',x:EXP_MAP-650,y:EXP_MAP-70,w:420,h:260,enemy:'Hidra das Profundezas',hp:340,reward:160},
- {name:'Câmara do Chefe',x:EXP_MAP-650,y:EXP_MAP+220,w:420,h:300,enemy:'☠ DRAGÃO ANCESTRAL · CHEFÃO',hp:650,reward:500,boss:true}
+ {id:'magic',name:'Mestre das Magias',role:'Magias',x:EXP_SAFE.x,y:EXP_SAFE.y-175,icon:'✨',color:'#a78bfa'}
 ];
 function mountAndPetDraw(g){
  if(!g?.running||!g.player)return;
@@ -244,16 +224,7 @@ function mountAndPetDraw(g){
   const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';
   c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob);
  }
- if(e.dungeon?.active){
-  const d=e.dungeon,room=dungeonRooms[Math.max(0,Math.min(2,d.room-1))];
-  c.fillStyle='rgba(7,10,20,.18)';c.fillRect(room.x,room.y,room.w,room.h);
-  c.strokeStyle='#a78bfa';c.lineWidth=8;c.strokeRect(room.x,room.y,room.w,room.h);
-  c.fillStyle='#ddd6fe';c.font='bold 15px Inter';c.textAlign='center';c.fillText(room.name,room.x+room.w/2,room.y+28);
-  c.fillStyle='#1f2937';c.fillRect(room.x+room.w/2-48,room.y+room.h/2-28,96,56);
-  c.fillStyle='#a78bfa';c.fillRect(room.x+room.w/2-36,room.y+room.h/2-18,72,36);
-  c.fillStyle='#fff';c.font='11px Inter';c.fillText(d.enemyName||room.enemy,room.x+room.w/2,room.y+room.h/2+54);
- }
- c.restore();
+  c.restore();
 }
 const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
@@ -331,12 +302,40 @@ function openCompanionUI(){
 }
 function openArmorerUI(){
  const s=state(),ex=ensure();if(!s||!ex)return;
- const stock=[{id:'bronze_sword',name:'Espada de Bronze',icon:'⚔️',price:180,desc:'Lâmina simples para aventureiros.'},{id:'iron_sword',name:'Espada de Ferro',icon:'🗡️',price:520,desc:'Mais resistente e afiada.'},{id:'crystal_blade',name:'Lâmina de Cristal',icon:'💎',price:1250,desc:'Arma rara de energia arcana.',level:8},{id:'guardian_armor',name:'Armadura do Guardião',icon:'🛡️',price:850,desc:'Proteção reforçada.',level:5}];
+ const stock=[
+  {id:'bronze_sword',name:'Espada de Bronze',icon:'⚔️',price:180,slot:'weapon',ilvl:1,rar:0,stats:{atk:8,crit:1},sell:45,desc:'Lâmina simples para aventureiros.'},
+  {id:'iron_sword',name:'Espada de Ferro',icon:'🗡️',price:520,slot:'weapon',ilvl:5,rar:1,stats:{atk:19,crit:2},sell:130,desc:'Mais resistente e afiada.',level:4},
+  {id:'crystal_blade',name:'Lâmina de Cristal',icon:'💎',price:1250,slot:'weapon',ilvl:9,rar:2,stats:{atk:30,power:12},sell:310,desc:'Arma rara de energia arcana.',level:8},
+  {id:'guardian_armor',name:'Armadura do Guardião',icon:'🛡️',price:850,slot:'armor',ilvl:6,rar:1,stats:{def:22,hp:25},sell:210,desc:'Proteção reforçada.',level:5}
+ ];
  let m=$('avx-armorer-modal');if(!m){m=document.createElement('div');m.id='avx-armorer-modal';document.body.appendChild(m)}
  m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;background:#061018dd';
- m.innerHTML='<section style="width:min(620px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#26313b,#101923);border:1px solid #c6a66a;border-radius:18px;padding:20px;color:white"><header style="display:flex;justify-content:space-between"><div><small style="letter-spacing:2px;color:#e7bd79">FORJA DE AVENTURIA</small><h2 style="margin:5px 0 12px">⚒️ Armeiro</h2></div><button id="avx-arm-close">✕</button></header><p>Gold disponível: <b>'+Math.floor(s.gold||0)+'</b></p><div style="display:grid;gap:9px">'+stock.map(x=>'<article style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff08"><span style="font-size:30px">'+x.icon+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#b9c8d1">'+x.desc+'</div><small style="color:#e7bd79">'+x.price+' Gold · '+(x.level?'Nível '+x.level:'Sem requisito')+'</small></div><button data-weapon="'+x.id+'" '+((s.level||1)<(x.level||1)||s.gold<x.price?'disabled':'')+' style="padding:9px;border-radius:8px;background:#315c49;color:white">'+((s.level||1)<(x.level||1)?'Bloqueado':s.gold<x.price?'Sem Gold':'Comprar')+'</button></article>').join('')+'</div></section>';
+ m.innerHTML='<section style="width:min(620px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#26313b,#101923);border:1px solid #c6a66a;border-radius:18px;padding:20px;color:white"><header style="display:flex;justify-content:space-between"><div><small style="letter-spacing:2px;color:#e7bd79">FORJA DE AVENTURIA</small><h2 style="margin:5px 0 12px">⚒️ Armeiro</h2></div><button id="avx-arm-close">✕</button></header><p>Gold disponível: <b>'+Math.floor(s.gold||0)+'</b></p><div style="display:grid;gap:9px">'+stock.map(x=>'<article style="display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff08"><span style="font-size:30px">'+x.icon+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#b9c8d1">'+x.desc+'</div><small style="color:#e7bd79">'+x.price+' Gold · '+(x.level?'Nível '+x.level:'Sem requisito')+'</small></div><button data-weapon="'+x.id+'" '+((s.level||1)<(x.level||1)||s.gold<x.price?'disabled':'')+' style="padding:9px;border-radius:8px;background:#315c49;color:white">'+((s.level||1)<(x.level||1)?'Bloqueado':s.gold<x.price?'Sem Gold':'Comprar')+'</button></article>').join('')+'</div><p style="font-size:11px;color:#b9c8d1;margin-top:12px">Após comprar, abra Personagem (P), vá até Bolsa e clique em Equipar.</p></section>';
  $('avx-arm-close').onclick=()=>m.remove();
- m.querySelectorAll('[data-weapon]').forEach(b=>b.onclick=()=>{const x=stock.find(v=>v.id===b.dataset.weapon);if(!x||s.gold<x.price||(s.level||1)<(x.level||1))return;s.gold-=x.price;ex.armory??={};ex.armory[x.id]=(ex.armory[x.id]||0)+1;ex.equippedWeapon=x.id;persist();notify(x.name+' comprado e registrado na coleção!');openArmorerUI()});
+ m.querySelectorAll('[data-weapon]').forEach(b=>b.onclick=()=>{
+  const x=stock.find(v=>v.id===b.dataset.weapon);if(!x||s.gold<x.price||(s.level||1)<(x.level||1))return;
+  if(!Array.isArray(s.inventory))s.inventory=[];
+  if(s.inventory.length>=60){notify('Sua bolsa está cheia. Libere espaço antes de comprar.');return}
+  s.gold-=x.price;
+  s.inventory.push({id:'shop_'+x.id+'_'+Date.now().toString(36),slot:x.slot,name:x.name,rar:x.rar,ilvl:x.ilvl,stats:{...x.stats},sell:x.sell});
+  persist();if(typeof updateUIStats==='function')updateUIStats();
+  notify(x.name+' foi para sua Bolsa! Abra Personagem (P) e clique em Equipar.');
+  openArmorerUI();
+ });
+}
+function openMagicUI(){
+ const s=state();if(!s)return;
+ const stock=[
+  {id:'arcane_bolt',name:'Projétil Arcano',icon:'🔮',price:220,desc:'Aprenda um disparo mágico.'},
+  {id:'frost_nova',name:'Nova Congelante',icon:'❄️',price:480,desc:'Uma explosão de gelo ao seu redor.'},
+  {id:'healing_light',name:'Luz Restauradora',icon:'✨',price:650,desc:'Aprenda uma magia de cura.'}
+ ];
+ s.learnedSpells??=[];
+ let m=$('avx-magic-modal');if(!m){m=document.createElement('div');m.id='avx-magic-modal';document.body.appendChild(m)}
+ m.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;background:#061018dd';
+ m.innerHTML='<section style="width:min(560px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#30264c,#101923);border:1px solid #a78bfa;border-radius:18px;padding:20px;color:white"><header style="display:flex;justify-content:space-between"><div><small style="letter-spacing:2px;color:#c4b5fd">SANTUÁRIO ARCANO</small><h2 style="margin:5px 0 12px">✨ Mestre das Magias</h2></div><button id="avx-magic-close">✕</button></header><p>Gold disponível: <b>'+Math.floor(s.gold||0)+'</b></p>'+stock.map(x=>'<article style="display:flex;gap:12px;align-items:center;padding:12px;margin:8px 0;border:1px solid #ffffff22;border-radius:12px"><span style="font-size:28px">'+x.icon+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#cbd5e1">'+x.desc+'</div><small style="color:#c4b5fd">'+x.price+' Gold</small></div><button data-spell="'+x.id+'" '+(s.learnedSpells.includes(x.id)||s.gold<x.price?'disabled':'')+' style="padding:8px;border-radius:8px;background:#514078">'+(s.learnedSpells.includes(x.id)?'Aprendida':s.gold<x.price?'Sem Gold':'Aprender')+'</button></article>').join('')+'</section>';
+ $('avx-magic-close').onclick=()=>m.remove();
+ m.querySelectorAll('[data-spell]').forEach(b=>b.onclick=()=>{const x=stock.find(v=>v.id===b.dataset.spell);if(!x||s.learnedSpells.includes(x.id)||s.gold<x.price)return;s.gold-=x.price;s.learnedSpells.push(x.id);persist();updateUIStats?.();notify('Magia aprendida: '+x.name+'!');openMagicUI()});
 }
 window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
 window.AVENTURIA_SAFE_NPCS=townNPCs;
@@ -354,40 +353,12 @@ function openTownNPC(id){
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
+ magic:()=>openMagicUI(),
  pet:()=>openCompanionUI(),
  guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Estamos preparando criação de guildas, convites e batalhas cooperativas.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
  dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:dungeonRooms[0].hp,enemyName:dungeonRooms[0].enemy,deadline:Date.now()+8*60*1000,startedAt:Date.now(),timeLimit:480};const g=game();if(g?.player){g.player.x=dungeonRooms[0].x+60;g.player.y=dungeonRooms[0].y+130;s.x=g.player.x;s.y=g.player.y}notify('⚔ Masmorra iniciada! Você tem 8 minutos para derrotar o chefão.');persist()}
  };
  actions[id]?.();if(panel.style.display==='block')renderPanel();
-}
-function openDungeonPortal(){
- const s=state(),e=ensure();if(!s||!e)return;
- let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#02090ddd;padding:16px';document.body.appendChild(m)}
- const opts=[['crypt','Cripta Esquecida',3,50,'Mortos-vivos e relíquias',1],['ember','Catacumbas Ígneas',8,100,'Guardião flamejante e tesouros',1.7],['abyss','Abismo dos Ecos',15,180,'Desafio extremo e itens raros',2.5]];
- m.innerHTML='<div style="width:min(540px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172b32,#080f18);border:1px solid #b68b48;border-radius:18px;padding:20px;color:#fff"><div style="display:flex;justify-content:space-between"><div><small style="color:#e5bc70;letter-spacing:2px">SANTUÁRIO DOS PORTAIS</small><h2 style="font-size:24px;font-weight:900">🌀 Escolha sua masmorra</h2></div><button id="avx-dm-close">✕</button></div><p style="font-size:12px;color:#a9bbc3;margin:8px 0">Cada expedição possui três salas. Derrote os guardiões para avançar e conquistar recompensas.</p>'+(e.dungeon?.active?'<div style="padding:12px;border:1px solid #c59b55;border-radius:10px;margin:10px 0"><b>Expedição em andamento · Sala '+e.dungeon.room+'/3</b><p style="font-size:12px">Vida: '+Math.ceil(e.dungeon.hp)+' · '+e.dungeon.enemyName+'</p><button id="avx-dm-resume" style="background:#926b32;padding:8px;border-radius:7px">Retomar</button> <button id="avx-dm-abandon" style="background:#713d3d;padding:8px;border-radius:7px">Abandonar</button></div>':'')+opts.map(d=>'<div style="padding:12px;margin:9px 0;border:1px solid #40545b;border-radius:10px"><b style="color:#f6d79b">'+d[1]+'</b><p style="font-size:11px;color:#a9bbc3">'+d[4]+' · Nível '+d[2]+'+ · Entrada '+d[3]+' Gold · Recompensa x'+d[5]+'</p><button data-dun="'+d[0]+'" style="background:#315c59;padding:8px 12px;border-radius:7px" '+((s.level||1)<d[2]||e.dungeon?.active?'disabled':'')+'>Entrar no portal</button></div>').join('')+'</div>';
- $('avx-dm-close').onclick=()=>m.remove();const resume=$('avx-dm-resume');if(resume)resume.onclick=()=>m.remove();const abandon=$('avx-dm-abandon');if(abandon)abandon.onclick=()=>{exitDungeon('Expedição abandonada. Você voltou à Área Safe.');m.remove()};
- m.querySelectorAll('[data-dun]').forEach(b=>b.onclick=()=>{const d=opts.find(x=>x[0]===b.dataset.dun);if((s.gold||0)<d[3]){notify('Gold insuficiente.');return}s.gold-=d[3];e.dungeon={active:true,type:d[0],name:d[1],mult:d[5],room:1,hp:s.maxHp||100,maxHp:s.maxHp||100,enemyHp:Math.round((100+(s.level||1)*18)*d[5]),enemyName:'Guardião da '+d[1]};const g=game();if(g?.player){g.player.x=EXP_MAP-380;g.player.y=EXP_MAP-430;s.x=g.player.x;s.y=g.player.y}persist();m.remove();notify('Portal aberto! Pressione E perto do guardião para atacar.')});
-}
-function exitDungeon(reason='Você saiu da expedição.'){
- const ex=ensure(),s=state(),g=game(),d=ex?.dungeon;
- if(!d?.active){notify('Você não está em uma expedição.');return}
- d.active=false;$('avx-dungeon-timer')?.remove();d.abandonedAt=Date.now();d.exitReason=reason;
- if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y;g.player.inSafeZone=true;delete g.player.realmId}
- if(s){s.x=EXP_SAFE.x;s.y=EXP_SAFE.y}
- persist();notify(reason);if(panel.style.display==='block')renderPanel();
- const modal=$('avx-dungeon-modal');if(modal)modal.remove();
-}
-window.AVENTURIA_EXIT_DUNGEON=()=>exitDungeon('Expedição encerrada. Você voltou à Área Safe.');
-function advanceDungeon(){
- const e=ensure(),s=state(),d=e?.dungeon;if(!d?.active)return;
- const room=dungeonRooms[d.room-1],st=window.getRPGStats?.()||{atk:10,power:5,def:3};
- const hit=30+(s.level||1)*5+(st.atk||0)*2+(st.power||0)*2+(e.gear||0)*5+Math.random()*24+(e.petEquipped?8:0);
- d.enemyHp=Math.max(0,(d.enemyHp??room.hp)-hit);d.hp-=Math.max(2,10+d.room*3-(st.def||0)*.35);
- if(d.hp<=0){d.active=false;$('avx-dungeon-timer')?.remove();const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
- if(d.enemyHp>0){notify('⚔ '+d.enemyName+' recebeu '+Math.floor(hit)+' de dano. HP restante: '+Math.ceil(d.enemyHp)+' · Sua vida: '+Math.ceil(d.hp));persist();return}
- if(d.room<4){d.room++;const next=dungeonRooms[d.room-1];d.enemyName=next.enemy;d.enemyHp=Math.round(next.hp*(d.mult||1));d.hp=Math.min(d.maxHp,d.hp+25);const g=game();if(g?.player){g.player.x=next.x+next.w/2;g.player.y=next.y+next.h/2;s.x=g.player.x;s.y=g.player.y}notify('Sala '+d.room+'/3 concluída! Você avançou para '+next.name+'.');}
- else{d.active=false;$('avx-dungeon-timer')?.remove();e.world.dungeonWins++;e.world.seasonXp+=Math.round(200*(d.mult||1));s.gold+=Math.round((room.reward+150)*(d.mult||1));s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=EXP_SAFE.x;g.player.y=EXP_SAFE.y}s.x=EXP_SAFE.x;s.y=EXP_SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
- persist();if(panel.style.display==='block')renderPanel();
 }
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
 document.body.appendChild(overlay);
