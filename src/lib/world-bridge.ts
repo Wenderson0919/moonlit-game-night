@@ -22,7 +22,7 @@ type Remote = {
 type Bag = {
   t?: unknown; id?: unknown; name?: unknown; cls?: unknown; race?: unknown; hair?: unknown; eye?: unknown;
   x?: unknown; y?: unknown; dir?: unknown; d?: unknown; m?: unknown; lvl?: unknown; hp?: unknown; mh?: unknown;
-  pv?: unknown; k?: unknown; by?: unknown; n?: unknown; to?: unknown; from?: unknown; raw?: unknown;
+  pv?: unknown; k?: unknown; l?: unknown; by?: unknown; n?: unknown; to?: unknown; from?: unknown; raw?: unknown;
 };
 
 const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
@@ -112,9 +112,14 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         const from = others.get(num(payload?.from, 0));
         // Validação local: PvP só vale se os dois estiverem com PvP ligado e fora da Área Safe.
         if (!from || !from.pv || !me.pv || !outsideSafe(me) || !outsideSafe(from)) return;
-        if (Math.hypot(from.x - me.x, from.y - me.y) > 260) return;
+        if (Math.hypot(from.x - me.x, from.y - me.y) > 560) return;
         const raw = Math.max(0, Math.min(500, num(payload?.raw, 0)));
         deliver({ t: "hurt", raw, src: from.name, from: from.id, kind: "pvp" });
+      })
+      .on("broadcast", { event: "fx" }, ({ payload }: { payload: Bag }) => {
+        const id = num(payload?.id, 0);
+        if (!id || id === myId || !Array.isArray(payload?.l)) return;
+        deliver({ t: "fx", id, l: (payload.l as unknown[]).slice(0, 24) });
       })
       .on("broadcast", { event: "kill" }, ({ payload }: { payload: Bag }) => {
         if (num(payload?.to, 0) !== myId) return;
@@ -189,6 +194,11 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         broadcastState();
         break;
       }
+      case "fx": {
+        if (!me || !channel || !Array.isArray(m.l)) return;
+        void channel.send({ type: "broadcast", event: "fx", payload: { id: myId, l: (m.l as unknown[]).slice(0, 24) } });
+        break;
+      }
       case "chat": {
         if (!me) return;
         const text = str(m.m, 120).trim();
@@ -209,7 +219,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         };
         if (!me.pv || !target.pv) return warn("Os dois jogadores precisam estar com PvP ligado.");
         if (!outsideSafe(me) || !outsideSafe(target)) return warn("PvP não funciona na Área Safe.");
-        if (Math.hypot(me.x - target.x, me.y - target.y) > 260) return;
+        if (Math.hypot(me.x - target.x, me.y - target.y) > 560) return;
         void channel?.send({ type: "broadcast", event: "hurt", payload: { to: target.id, from: myId, raw: num(m.d, 0) } });
         break;
       }
