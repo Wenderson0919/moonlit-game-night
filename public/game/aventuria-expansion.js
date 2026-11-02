@@ -577,10 +577,11 @@ function refreshServiceWindow(){
 function openNPCServiceWindow(card,key){
  let modal=$('avx-npc-service');if(!modal){modal=document.createElement('div');modal.id='avx-npc-service';document.body.appendChild(modal)}
  serviceKey=key||null;
+ const originalParent=card?.parentNode||null,originalNext=card?.nextSibling||null;
  modal.style.cssText='position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:14px;background:#020914e8';
  modal.innerHTML='<section style="width:min(560px,100%);max-height:88vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);padding:16px;color:white"><header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:#f4d68e">SERVIÇO DA CIDADE</b><button id="avx-service-close" style="padding:7px 12px;border:1px solid #60747b;border-radius:8px;cursor:pointer">Fechar ✕</button></header><div id="avx-service-body"></div></section>';
  modal.querySelector('#avx-service-body').appendChild(card);
- const close=()=>{serviceKey=null;modal.remove()};
+ const close=()=>{if(card&&originalParent){if(originalNext&&originalNext.parentNode===originalParent)originalParent.insertBefore(card,originalNext);else originalParent.appendChild(card)}serviceKey=null;modal.remove()};
  modal.querySelector('#avx-service-close').onclick=close;
  modal.onclick=ev=>{if(ev.target===modal)close()};
 }
