@@ -76,7 +76,7 @@ function renderPanel(){
  '<div class="avx-card"><b class="text-amber-100 text-sm">🏆 Conquistas de aventura</b><div id="avx-achievements" class="text-[11px] text-slate-300 mt-2"></div></div>';
 
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
- w.worldBoss??={hp:0,active:false,phase:0};w.seasonStarted??=Date.now();
+ // Chefes mundiais e festivais automáticos não são inicializados.
  const skillDefs=[['power','Força','+5% de dano por nível',5],['vitality','Vitalidade','+8 de vida máxima por nível',5],['haste','Agilidade','+3% de velocidade por nível',5],['fortune','Fortuna','+4% de ouro em recompensas por nível',5]];
  const skillHtml=skillDefs.map(x=>'<div class="flex items-center justify-between gap-2 py-1"><div><b>'+x[1]+'</b><div class="text-[10px] text-slate-400">'+x[2]+'</div></div><button class="avx-action" data-skill="'+x[0]+'">Evoluir ('+(w.skills[x[0]]||0)+'/'+x[3]+')</button></div>').join('');
  const featureHtml=
@@ -177,6 +177,8 @@ function tick(){
  avxSchedule(e);
  updateMobileNPCButton();
  $('avx-live-events')?.remove();$('avx-event')?.remove();$('avx-season-event')?.remove();$('avx-dungeon-timer')?.remove();
+ // Remove também qualquer badge legado de contagem regressiva que tenha sido criado por versões anteriores.
+ document.querySelectorAll('#avx-event,#avx-season-event,#avx-live-events,#avx-dungeon-timer,[data-avx-countdown]').forEach(el=>el.remove());
  const treasureHud=$('avx-treasure-hud');
  if(e.advanced?.treasure&&g?.player){
   let hud=treasureHud;if(!hud){hud=document.createElement('div');hud.id='avx-treasure-hud';hud.style.cssText='position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:9998;padding:8px 13px;border:1px solid #d6ad62;border-radius:10px;background:#101d20ee;color:#ffe7ad;font:800 12px Inter,system-ui;pointer-events:none';document.body.appendChild(hud)}
