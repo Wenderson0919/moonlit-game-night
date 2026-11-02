@@ -44,32 +44,15 @@ const css=`
 const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
 // O menu global foi substituído por NPCs físicos no centro da cidade.
 const panel=document.createElement('section');panel.id='av-exp-panel';panel.className='glass-panel rounded-2xl p-3';
-panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200 text-base">✦ CRÔNICAS DE AVENTURIA</b><div class="text-[10px] text-slate-400">Central de aventura · progressão · desafios</div></div><button class="avx-action" id="avx-close">✕</button></header><div class="avx-tabs" id="avx-tabs"><button class="avx-tab active" data-tab="all">Tudo</button><button class="avx-tab" data-tab="social">Social</button><button class="avx-tab" data-tab="combat">Combate</button><button class="avx-tab" data-tab="growth">Progressão</button><button class="avx-tab" data-tab="world">Mundo</button><button class="avx-tab" data-tab="talents">🌳 Talentos</button><button class="avx-tab" data-tab="boss">🐉 Chefes</button><button class="avx-tab" data-tab="season">🎉 Eventos</button></div><div id="avx-content"></div>';
+panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200 text-base">✦ CRÔNICAS DE AVENTURIA</b><div class="text-[10px] text-slate-400">Central de aventura · progressão · desafios</div></div><button class="avx-action" id="avx-close">✕</button></header><div class="avx-tabs" id="avx-tabs"><button class="avx-tab active" data-tab="all">Tudo</button><button class="avx-tab" data-tab="social">Social</button><button class="avx-tab" data-tab="combat">Combate</button><button class="avx-tab" data-tab="growth">Progressão</button><button class="avx-tab" data-tab="world">Mundo</button><button class="avx-tab" data-tab="talents">🌳 Talentos</button></div><div id="avx-content"></div>';
 document.body.appendChild(panel);$('avx-close').onclick=()=>panel.style.display='none';
 // A navegação de serviços acontece exclusivamente pelos NPCs físicos da cidade.
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function professionLevel(p){return Math.min(20,1+Math.floor(Math.sqrt((p.xp||0)/80)))}
 function professionName(k){return ({miner:'Minerador',lumberjack:'Lenhador',forager:'Coletor',fisher:'Pescador'})[k]}
-function avxCountdown(ms){
- const n=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(n/3600),m=Math.floor(n%3600/60),s=n%60;
- return h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
-}
-function avxSchedule(e){
- e.world??={};const w=e.world,now=Date.now();
- // Reinicia uma única vez os calendários antigos para aplicar os tempos corretos.
- if(w.scheduleVersion!==3){
-  w.nextBossAt=now+60*1000;
-  w.nextSeasonAt=now+40*1000;
-  w.scheduleVersion=3;
-  persist();
- }
- w.nextBossAt??=now+60*1000;
- w.nextSeasonAt??=now+40*1000;
- return w;
-}
+function avxSchedule(e){ e.world??={}; return e.world; }
 function renderPanel(){
  const s=state(),e=ensure();if(!s||!e)return;
- avxSchedule(e);
  const q=e.daily.quests;
  const pets=[{id:'slime',name:'Slime companheiro',emoji:'🟢',desc:'Um pequeno aliado que segue você.'},{id:'fox',name:'Raposa mística',emoji:'🦊',desc:'Uma companheira ágil e curiosa.'},{id:'wisp',name:'Fada luminosa',emoji:'✨',desc:'Uma luz mágica que acompanha suas jornadas.'}];
  const pet=pets.find(x=>x.id===e.pet);
@@ -84,7 +67,7 @@ function renderPanel(){
  '<div class="avx-card"><b class="text-amber-100 text-sm">🏆 Conquistas de aventura</b><div id="avx-achievements" class="text-[11px] text-slate-300 mt-2"></div></div>';
 
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
- w.worldBoss??={hp:0,active:false,phase:0};w.seasonStarted??=Date.now();
+ // Chefes mundiais e festivais automáticos removidos.
  const skillDefs=[['power','Força','+5% de dano por nível',5],['vitality','Vitalidade','+8 de vida máxima por nível',5],['haste','Agilidade','+3% de velocidade por nível',5],['fortune','Fortuna','+4% de ouro em recompensas por nível',5]];
  const skillHtml=skillDefs.map(x=>'<div class="flex items-center justify-between gap-2 py-1"><div><b>'+x[1]+'</b><div class="text-[10px] text-slate-400">'+x[2]+'</div></div><button class="avx-action" data-skill="'+x[0]+'">Evoluir ('+(w.skills[x[0]]||0)+'/'+x[3]+')</button></div>').join('');
  const featureHtml=
@@ -94,8 +77,7 @@ function renderPanel(){
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">🏡 Casas e construção de vilas</b><p class="text-[11px] text-slate-400 mt-1">Melhore sua propriedade e desbloqueie níveis de construção.</p><button id="avx-house" class="avx-action mt-2">Melhorar casa · '+(300+w.house*250)+' Gold</button><div class="text-[10px] text-slate-500">Nível da casa: '+w.house+'</div></div>'+
  '<div class="avx-card" data-section="talents"><b class="text-amber-100">🌟 Árvore de habilidades e subclasses</b><p class="text-[11px] text-slate-400 mt-1">Pontos disponíveis: '+Math.max(0,(s.level||1)-1-w.spent)+'</p>'+skillHtml+'<div class="text-[10px] text-slate-500">Subclasses serão liberadas após a progressão avançada.</div></div>'+
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">⚒ Equipamentos evolutivos</b><p class="text-[11px] text-slate-400 mt-1">Aprimore seu equipamento em até +10. Cada nível custa Gold e materiais.</p><button id="avx-gear" class="avx-action mt-2">Aprimorar equipamento +'+w.gear+' · '+(150+w.gear*100)+' Gold</button></div>'+
- '<div class="avx-card" data-section="boss"><b class="text-amber-100">🐉 Chefe mundial: Colosso Ancestral</b><p class="text-[11px] text-slate-400 mt-1">Modelo: Golem de Cristal ancestral. Chefe de alto nível, com muita vida e ataques perigosos.</p><div class="text-xs text-amber-200 mt-2">'+(w.worldBoss.active?'⚔️ CHEFE ATIVO · procure-o no mapa':'Próxima aparição em: <b id="avx-boss-countdown">'+avxCountdown(w.nextBossAt-Date.now())+'</b>')+'</div><div class="text-[10px] text-slate-400 mt-1">Recompensas: Núcleo Ancestral, diamantes e equipamento lendário.</div><div class="text-[10px] text-slate-500">Vitórias: '+(w.eventWins||0)+'</div></div>'+
- '<div class="avx-card" data-section="season"><b class="text-amber-100">🎉 Festival das Quatro Estações</b><p class="text-[11px] text-slate-400 mt-1">Evento global local recorrente: criaturas especiais invadem o mapa e deixam fichas sazonais.</p><div class="text-xs text-amber-200 mt-2">'+esc(w.seasonName||'Festival da Aurora')+' · '+(w.eventPoints||0)+' pontos</div><div class="text-xs text-amber-100 mt-1">'+(w.seasonActive?'🎊 EVENTO ATIVO · '+Math.max(0,10-(s.animalKills||0)-(w.seasonStartKills||0))+' eliminações restantes':'Próximo festival em: <b id="avx-season-countdown">'+avxCountdown(w.nextSeasonAt-Date.now())+'</b>')+'</div><div class="avx-bar"><i style="width:'+Math.min(100,(w.eventPoints||0)%100)+'%"></i></div><div class="text-[10px] text-slate-500">Conclua 10 eliminações durante o festival para ganhar fichas, ouro e XP. Eventos concluídos: '+(w.eventChallenges||0)+'</div></div>'+
+
  '<div class="avx-card" data-section="talents"><b class="text-amber-100">🌳 Árvore de talentos</b><p class="text-[11px] text-slate-400 mt-1">Pontos livres: '+Math.max(0,(s.level||1)-1-w.spent)+'. Escolha uma especialização e monte sua build.</p>'+skillHtml+'<div class="text-[10px] text-slate-500">Força aumenta dano, vitalidade aumenta vida, agilidade acelera movimento e fortuna melhora recompensas.</div></div>'+
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">🧰 Profissões e especializações</b><p class="text-[11px] text-slate-400 mt-1">Colete recursos para subir de nível, desbloquear receitas e fabricar materiais úteis.</p>'+Object.entries(e.professions).map(([k,v])=>'<div class="mt-2"><div class="flex justify-between text-xs"><b>'+professionName(k)+'</b><span>Nv. '+professionLevel(v)+' · '+(v.xp||0)+' XP</span></div><div class="avx-bar"><i style="width:'+((v.xp||0)%80)/80*100+'%"></i></div></div>').join('')+'<div class="flex flex-wrap gap-2 mt-3"><button class="avx-action" data-prof-craft="miner">Fundir lingote · 4 minério</button><button class="avx-action" data-prof-craft="forager">Preparar tônico · 5 ervas</button><button class="avx-action" data-prof-craft="lumberjack">Fazer tábuas · 5 madeira</button><button class="avx-action" data-prof-craft="fisher">Isca de pesca · 3 frutas</button></div><div class="text-[10px] text-slate-500 mt-2">As profissões evoluem ao reunir recursos; receitas consomem materiais reais do inventário.</div></div>'+
  '<div class="avx-card" data-section="world"><b class="text-amber-100">🗺 Tesouros, ilhas secretas e exploração</b><p class="text-[11px] text-slate-400 mt-1">Procure um esconderijo antigo e encontre recompensas aleatórias.</p><button id="avx-treasure" class="avx-action mt-2">Explorar região · 40 Gold</button><div class="text-[10px] text-slate-500">Tesouros encontrados: '+w.treasures+'</div></div>'+
@@ -144,7 +126,7 @@ panel.addEventListener('click',ev=>{
  const tabs=panel.querySelectorAll('[data-tab]');
  tabs.forEach(t=>{if(t.dataset.tab==='all'){t.classList.add('active');t.click();}});
 
- tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.toggle('active',x===t));const v=t.dataset.tab;panel.querySelectorAll('#avx-content>.avx-card').forEach(card=>{const sec=card.dataset.section||'growth';card.style.display=(v==='all'||sec===v||(v==='growth'&&sec==='talents')||(v==='world'&&(sec==='boss'||sec==='season')))?'':'none'})});
+ tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.toggle('active',x===t));const v=t.dataset.tab;panel.querySelectorAll('#avx-content>.avx-card').forEach(card=>{const sec=card.dataset.section||'growth';card.style.display=(v==='all'||sec===v||(v==='growth'&&sec==='talents')||false)?'':'none'})});
  bind('avx-guild',()=>{if(w.guild){notify('Sua guilda local já está criada.');return}const name=(prompt('Escolha o nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('O nome precisa ter de 3 a 20 caracteres.');return}if(!spend(200))return;w.guild=name;w.guildLevel=1;w.guildRenown=0;w.seasonXp+=50;notify('🏰 '+name+' foi fundada! Sua guilda está salva neste personagem. Convites online ainda precisam do servidor.')});
 
  bind('avx-arena',()=>{if((s.level||1)<5){notify('Arena desbloqueada no nível 5.');return}if(!spend(25))return;const st=window.getRPGStats?window.getRPGStats():{atk:0,def:0,power:0};const power=(s.level||1)*12+(st.atk||0)*3+(st.def||0)*1.5+(st.power||0)*2+(w.gear||0)*8;const rival=(s.level||1)*13+35+Math.random()*70;const score=power+Math.random()*55;if(score>=rival){w.arenaWins++;w.seasonXp+=110;s.gold+=100+Math.floor((s.level||1)*4);notify('🏅 Vitória na arena! Sua build superou o rival. +Gold e 110 XP de temporada.')}else{w.seasonXp+=25;notify('Derrota honrosa! O rival venceu por '+Math.ceil(rival-score)+' pontos. Você ganhou 25 XP de temporada.')}});
@@ -152,8 +134,6 @@ panel.addEventListener('click',ev=>{
  bind('avx-house',()=>{const cost=300+w.house*250;if(w.house>=10){notify('Sua casa já alcançou o nível máximo.');return}if(!spend(cost))return;w.house++;w.seasonXp+=60;notify('Sua propriedade evoluiu para o nível '+w.house+'!')});
  panel.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>{const key=b.dataset.skill,def=skillDefs.find(x=>x[0]===key);if((s.level||1)-1-w.spent<=0){notify('Você não tem pontos de habilidade disponíveis.');return}if((w.skills[key]||0)>=def[3]){notify('Essa habilidade já está no nível máximo.');return}w.skills[key]=(w.skills[key]||0)+1;w.spent++;w.seasonXp+=35;persist();renderPanel()});
  bind('avx-gear',()=>{if(w.gear>=10){notify('Equipamento no nível máximo.');return}if((s.resources?.iron||0)<2){notify('Você precisa de 2 minérios de ferro para aprimorar.');return}const cost=150+w.gear*100;if(!spend(cost))return;s.resources.iron-=2;w.gear++;w.seasonXp+=50;notify('Equipamento aprimorado para +'+w.gear+'!')});
- bind('avx-event',()=>notify(w.worldBoss.active?'O Colosso já está ativo no mapa!':'O próximo chefe aparecerá em '+avxCountdown(w.nextBossAt-Date.now())+'.'));
- bind('avx-season-event',()=>notify(w.seasonActive?'Festival ativo! Derrote 10 criaturas para concluir.':'Próximo festival em '+avxCountdown(w.nextSeasonAt-Date.now())+'.'));
  panel.querySelectorAll('[data-prof-craft]').forEach(b=>b.onclick=()=>{const kind=b.dataset.profCraft,res=s.resources??={};const recipes={miner:{cost:{iron:4},give:{goldOre:1},xp:35,msg:'Lingote refinado!'},forager:{cost:{herb:5},give:{berry:3},xp:30,msg:'Tônico preparado!'},lumberjack:{cost:{wood:5},give:{pine:2},xp:30,msg:'Tábuas preparadas!'},fisher:{cost:{berry:3},give:{meat:2},xp:25,msg:'Isca e provisões preparadas!'}};const r=recipes[kind];if(!r)return;for(const [k,n] of Object.entries(r.cost))if((res[k]||0)<n){notify('Materiais insuficientes: precisa de '+n+' '+k+'.');return}for(const [k,n] of Object.entries(r.cost))res[k]-=n;for(const [k,n] of Object.entries(r.give))res[k]=(res[k]||0)+n;e.professions[kind].xp+=r.xp;w.seasonXp=(w.seasonXp||0)+10;persist();notify(r.msg+' Profissão +'+r.xp+' XP.');renderPanel();if(typeof updateUIStats==='function')updateUIStats()});
 
  bind('avx-treasure',()=>{if(!spend(40))return;w.treasures++;w.seasonXp+=45;const reward=80+Math.floor(Math.random()*121);s.gold+=reward;notify('Tesouro encontrado! Você recebeu '+reward+' Gold.')});
@@ -182,13 +162,9 @@ function updateMobileNPCButton(){
 }
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
- const schedule=avxSchedule(e);
+ const schedule=e.world??(e.world={});
  updateMobileNPCButton();
- let eventHud=$('avx-live-events');if(!eventHud){eventHud=document.createElement('div');eventHud.id='avx-live-events';eventHud.style.cssText='position:fixed;left:12px;top:12px;z-index:99990;max-width:min(310px,calc(100vw - 24px));padding:10px 13px;border:1px solid #d6ad62;border-radius:12px;background:#10151eee;color:#fff0c5;font:800 12px/1.55 system-ui;box-shadow:0 5px 22px #0009;pointer-events:none';document.body.appendChild(eventHud)}
- const bossLine=schedule.worldBoss?.active?'🐉 COLOSSO ATIVO · procure no mapa':'🐉 Próximo chefe: '+avxCountdown(schedule.nextBossAt-Date.now());
- const seasonLine=schedule.seasonActive?'🎉 FESTIVAL ATIVO · '+Math.max(0,10-((s.animalKills||0)-(schedule.seasonStartKills||0)))+'/10 abates':'🎉 Próximo evento: '+avxCountdown(schedule.nextSeasonAt-Date.now());
- eventHud.innerHTML='<div>'+bossLine+'</div><div>'+seasonLine+'</div>';
- for(const [id,at,active] of [['avx-boss-countdown',schedule.nextBossAt,schedule.worldBoss?.active],['avx-season-countdown',schedule.nextSeasonAt,schedule.seasonActive]]){const el=$(id);if(el&&!active)el.textContent=avxCountdown(at-Date.now())}
+ $('avx-live-events')?.remove();$('avx-event')?.remove();$('avx-season-event')?.remove();
  const treasureHud=$('avx-treasure-hud');
  if(e.advanced?.treasure&&g?.player){
   let hud=treasureHud;if(!hud){hud=document.createElement('div');hud.id='avx-treasure-hud';hud.style.cssText='position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:9998;padding:8px 13px;border:1px solid #d6ad62;border-radius:10px;background:#101d20ee;color:#ffe7ad;font:800 12px Inter,system-ui;pointer-events:none';document.body.appendChild(hud)}
@@ -205,34 +181,7 @@ function tick(){
  const q=e.daily?.quests||[];
  if(e.advanced?.contracts?.active){const c=e.advanced.contracts;c.progress=Math.min(c.goal,Math.max(0,(s.animalKills||0)-(c.startKills||0)))}
  const now=Date.now();
- if(!schedule.worldBoss.active&&now>=schedule.nextBossAt&&g?.running&&g.player&&!g.player.realmId){
-  const angle=Math.random()*Math.PI*2,distance=680;
-  const boss=g.spawnAnimal('golem_cristal',g.player.x+Math.cos(angle)*distance,g.player.y+Math.sin(angle)*distance,{mult:3.8,raid:'world-boss'});
-  if(boss){
-   const original=boss.def||{};
-   boss.bossType='colossus';
-   boss.def={...original,n:'Colosso Ancestral',hp:18000+(s.level||1)*2200,dmg:68,spd:1.45,sz:52,col:'#d18aee',beh:'hostile',xp:12000,drops:[['diamond',8,14],['crystal',15,25],['obsidian',12,20],['iron',20,35]]};
-   boss.hp=boss.maxHp=boss.def.hp;boss.aggroT=999;
-   schedule.worldBoss={active:true,hp:boss.hp,maxHp:boss.hp,spawnedAt:now};
-   persist();notify('🚨 O COLOSSO ANCESTRAL surgiu! Um chefe lendário apareceu a 680m. Prepare-se!');
-  }else schedule.nextBossAt=now+60000;
- }
- if(!schedule.seasonActive&&now>=schedule.nextSeasonAt){
-  schedule.seasonActive=true;schedule.seasonStartKills=s.animalKills||0;
-  notify('🎉 O FESTIVAL DAS QUATRO ESTAÇÕES começou! Derrote 10 criaturas para receber recompensas.');
-  persist();
- }
- if(schedule.seasonActive){
-  const seasonKills=Math.max(0,(s.animalKills||0)-(schedule.seasonStartKills||0));
-  if(seasonKills>=10){
-   schedule.seasonActive=false;schedule.eventChallenges=(schedule.eventChallenges||0)+1;
-   schedule.eventPoints=(schedule.eventPoints||0)+250;schedule.seasonXp=(schedule.seasonXp||0)+500;
-   s.gold=(s.gold||0)+1200;s.resources??={};s.resources.crystal=(s.resources.crystal||0)+8;s.resources.diamond=(s.resources.diamond||0)+3;
-   schedule.nextSeasonAt=now+40*1000;persist();
-   notify('🏆 Festival concluído! +1200 Gold, 8 cristais, 3 diamantes e 500 XP de temporada!');
-   if(typeof updateUIStats==='function')updateUIStats();
-  }
- }
+ // Agendamento automático de chefes e festivais removido.
  const kills=s.animalKills||0,raids=s.raidsCleared||0;
  if(e.petEquipped&&e.pet){e.petData??={level:1,xp:0,bond:0,skillReady:0};const pd=e.petData;pd.lastKills??=kills;const gained=Math.max(0,kills-pd.lastKills);if(gained){pd.xp+=gained*20;pd.bond+=gained;pd.lastKills=kills;const need=100+(pd.level-1)*75;if(pd.xp>=need){pd.xp-=need;pd.level++;notify('🐾 Seu mascote evoluiu para o nível '+pd.level+'!')}}}
  if(lastSeasonKills===null){lastSeasonKills=kills;lastSeasonRaids=raids}
@@ -412,15 +361,7 @@ function installGameHooks(){
  const g=game(),GameCtor=g?.constructor;
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked,originalDamage=proto.damageTarget;
- if(originalDamage&&!proto.__avxBossRewardHook){
-  proto.damageTarget=function(target,...args){
-   const wasBoss=target?.bossType==='colossus',result=originalDamage.call(this,target,...args);
-   if(wasBoss&&target.hp<=0){
-    const s=state(),e=ensure();if(s&&e&&!target.__avxRewarded){target.__avxRewarded=true;e.world??={};e.world.worldBoss={active:false,hp:0,maxHp:0};e.world.nextBossAt=Date.now()+60*1000;e.world.eventWins=(e.world.eventWins||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+220;e.world.eventPoints=(e.world.eventPoints||0)+60;s.gold=(s.gold||0)+350+(s.level||1)*8;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+12;s.resources.crystal=(s.resources.crystal||0)+25;s.resources.obsidian=(s.resources.obsidian||0)+18;s.resources.ancientCore=(s.resources.ancientCore||0)+1;e.world.seasonXp+=500;persist();notify('🏆 COLOSSO DERROTADO! +Gold, 12 diamantes, 25 cristais, 18 obsidianas e 1 Núcleo Ancestral LENDÁRIO!');if(typeof updateUIStats==='function')updateUIStats()}
-   }
-   return result;
-  };proto.__avxBossRewardHook=true;
- }
+ // Recompensas automáticas do Colosso removidas.
  if(originalBlocked&&!proto.__avxHouseCollision){
   proto.blocked=function(x,y){
    if(originalBlocked.call(this,x,y))return true;
