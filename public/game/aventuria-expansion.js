@@ -133,21 +133,46 @@ function tick(){
 
 
 const AVENTURIA_REALMS=[
-{id:'verdant',name:'Ruínas de Lúmen',level:3,x:430,y:430,w:760,h:760,theme:'Pradarias luminosas',desc:'Ruínas élficas, flores gigantes e rios cristalinos.',color:'#8cf0b2',pal:['#76b96d','#86c77a','#9bd88b','#6da66c','#b1d98a']},
-{id:'frost',name:'Cidadela de Cristal',level:8,x:2810,y:430,w:760,h:760,theme:'Vale congelado',desc:'Templos de gelo azul e cristais vivos.',color:'#8de4ff',pal:['#b9e8ed','#a4dce8','#8fc9dc','#d5f5f2','#9dc8e2']},
-{id:'mire',name:'Templo das Raízes',level:15,x:430,y:2810,w:760,h:760,theme:'Selva ancestral',desc:'Santuários tomados por raízes colossais.',color:'#b6ef70',pal:['#4c9b60','#5caf69','#70bd65','#39865a','#91c96b']},
-{id:'ember',name:'Domínio das Cinzas',level:22,x:2810,y:2810,w:760,h:760,theme:'Reino vulcânico',desc:'Catedrais de obsidiana e rios de magma.',color:'#ffad70',pal:['#80504a','#9b5542','#b76543','#6b4545','#d17b4b']}
+{id:'verdant',name:'Ruínas de Lúmen',level:3,seed:31031,theme:'Pradarias luminosas',desc:'Ruínas élficas, flores gigantes e rios cristalinos.',color:'#8cf0b2',creatures:['lume_wisp','cervo_lunar']},
+{id:'frost',name:'Cidadela de Cristal',level:8,seed:81081,theme:'Vale congelado',desc:'Templos de gelo azul e cristais vivos.',color:'#8de4ff',creatures:['raposa_cristal','golem_cristal']},
+{id:'mire',name:'Templo das Raízes',level:15,seed:151515,theme:'Selva ancestral',desc:'Santuários tomados por raízes colossais.',color:'#b6ef70',creatures:['lince_raiz','tartaruga_ancestral']},
+{id:'ember',name:'Domínio das Cinzas',level:22,seed:222222,theme:'Catedrais de obsidiana e rios de magma.',desc:'Fortalezas vulcânicas e criaturas de fogo.',color:'#ffad70',creatures:['salamandra_igne','draco_obsidiana']}
+
 ];
-window.AVENTURIA_REALM_PALETTES=Object.fromEntries(AVENTURIA_REALMS.map(r=>[r.id,r.pal]));
-window.AVENTURIA_REALM_AT=(x,y)=>AVENTURIA_REALMS.find(r=>x>=r.x&&y>=r.y&&x<=r.x+r.w&&y<=r.y+r.h)||null;
-window.AVENTURIA_DRAW_REALMS=(c,p,now)=>{
- for(const r of AVENTURIA_REALMS){if(r.x>p.x+850||r.x+r.w<p.x-850||r.y>p.y+650||r.y+r.h<p.y-650)continue;c.save();c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();
- c.strokeStyle=r.id==='ember'?'#d18b61':'#d9d2a2';c.lineWidth=54;c.lineCap='round';c.beginPath();c.moveTo(r.x+90,r.y+r.h/2);c.lineTo(r.x+r.w-90,r.y+r.h/2);c.moveTo(r.x+r.w/2,r.y+90);c.lineTo(r.x+r.w/2,r.y+r.h-90);c.stroke();
- for(const [dx,dy] of [[130,130],[r.w-130,130],[130,r.h-130],[r.w-130,r.h-130]]){const x=r.x+dx,y=r.y+dy;c.fillStyle='rgba(0,0,0,.25)';c.fillRect(x-48,y-32,96,70);c.fillStyle=r.id==='frost'?'#9ccbd6':r.id==='ember'?'#654b47':'#aaa184';c.fillRect(x-40,y-28,80,55);c.fillStyle=r.color;for(let k=-1;k<=1;k++){c.fillRect(x+k*25-5,y-44,10,82);c.fillRect(x+k*25-9,y-48,18,8)}c.fillRect(x-47,y-51,94,9);c.fillStyle='#26353a';c.fillRect(x-16,y-10,32,37)}
- for(let i=0;i<25;i++){const x=r.x+40+(i*137%(r.w-80)),y=r.y+40+(i*211%(r.h-80));c.globalAlpha=.4+.3*Math.sin(now/400+i);c.fillStyle=r.color;c.beginPath();c.moveTo(x,y-12);c.lineTo(x+8,y);c.lineTo(x,y+12);c.lineTo(x-8,y);c.fill()}c.globalAlpha=1;
- const px=r.x+r.w/2,py=r.y+r.h/2;c.strokeStyle=r.color;c.lineWidth=8;c.beginPath();c.ellipse(px,py,30,42,0,0,6.283);c.stroke();c.fillStyle='rgba(80,150,180,.25)';c.beginPath();c.ellipse(px,py,22,33,0,0,6.283);c.fill();c.fillStyle=r.color;c.font='bold 16px Inter';c.textAlign='center';c.fillText(r.name,px,r.y+34);c.fillStyle='#fff';c.font='bold 11px Inter';c.fillText('PORTAL DE RETORNO',px,py+62);c.restore()}
-};
-function teleportRealm(r,x,y){const g=game(),s=state();if(!g?.player||!s)return;g.player.x=x;g.player.y=y;g.player.inSafeZone=false;s.x=x;s.y=y;g.player.invuln=1.5;persist();notify('🌌 Você chegou a '+(r?.name||'Vila de Aventuria')+'. Explore livremente!')}
+
+let realmReturnSnapshot=null;
+const REALM_KEYS=['seed','rng','tb','miniBase','ponds','nodes','ng','structs','crops','animals','loot','projs','hazards','fx','raids','npc','player','respawnT','raidT','raidInfoT','miniT','saveT'];
+function saveRealmWorld(g){const o={};for(const k of REALM_KEYS)o[k]=g[k];return o}
+function restoreRealmWorld(g,o){for(const k of REALM_KEYS)g[k]=o[k];g.player.inSafeZone=true;renderHotbar();updateUIStats()}
+function populateRealmCreatures(g,r){
+ if(!g?.animals)return;
+ for(const kind of r.creatures){const d=window.AVENTURIA_CREATURE_DEFS?.[kind];if(!d)continue;
+  for(let i=0;i<d.cap;i++){let x=250+Math.random()*3500,y=250+Math.random()*3500;if(Math.hypot(x-2000,y-2000)<500){x+=700}
+   g.spawnAnimal(kind,x,y,{mult:1.15})}
+ }
+}
+function enterRealm(r){
+ const g=game(),s=state();if(!g||!s||!r)return;
+ if(realmReturnSnapshot){notify('Você já está em outra dimensão.');return}
+ realmReturnSnapshot=saveRealmWorld(g);
+ g.start(r.seed,{});
+ g.player.x=2000;g.player.y=2000;g.player.inSafeZone=false;g.player.realmId=r.id;
+ populateRealmCreatures(g,r);
+ s.x=2000;s.y=2000;s.seed=r.seed;persist();
+ notify('🌌 Dimensão '+r.name+' carregada! Explore livremente.');
+}
+function leaveRealm(){
+ const g=game(),s=state();if(!g||!realmReturnSnapshot)return;
+ restoreRealmWorld(g,realmReturnSnapshot);realmReturnSnapshot=null;
+ s.x=g.player.x;s.y=g.player.y;persist();notify('Você voltou ao mundo principal.');
+}
+function openDungeonPortal(){
+ const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:16px';document.body.appendChild(m)}
+ m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Dimensões desconhecidas</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal abre um mundo independente, com terreno, criaturas e exploração próprios. O nível mínimo protege os aventureiros despreparados.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div><div style="font-size:10px;color:#9cc">Criaturas: '+r.creatures.join(', ')+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Entrar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
+ $('avx-world-close').onclick=()=>m.remove();m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(r&&(s.level||1)>=r.level){enterRealm(r);m.remove()}});
+}
+function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p.x>1850&&p.x<2150&&p.y>1850&&p.y<2150){leaveRealm();return true}return false}
+
 function openDungeonPortal(){
  const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:16px';document.body.appendChild(m)}
  m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Mundos além do véu</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal leva a um mundo aberto. Explore, lute, colete recursos e descubra ruínas no seu ritmo. Sem expedições ou salas instanciadas.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Viajar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
@@ -225,13 +250,37 @@ function installGameHooks(){
  proto.__avxTownHooks=true;
 }
 window.addEventListener('load',installGameHooks);
+const PET_CATALOG=[
+{id:'slime',name:'Slime',emoji:'🟢',price:250,desc:'Companheiro resistente',bonus:'Defesa +8'},
+{id:'fox',name:'Raposa Mística',emoji:'🦊',price:450,desc:'Ágil e companheira',bonus:'Ataque +6'},
+{id:'wisp',name:'Fagulha Arcana',emoji:'✨',price:600,desc:'Espírito de energia',bonus:'Poder +8'},
+{id:'lume',name:'Vagalume de Lúmen',emoji:'🌟',price:900,desc:'Nativo de Lúmen',bonus:'Poder +12',realm:3},
+{id:'crystal',name:'Raposa Cristalina',emoji:'💠',price:1400,desc:'Nativa da Cidadela',bonus:'Defesa +12',realm:8},
+{id:'root',name:'Filhote das Raízes',emoji:'🌱',price:1900,desc:'Guardião da selva',bonus:'Vida +40',realm:15},
+{id:'drake',name:'Draco Jovem',emoji:'🐉',price:3000,desc:'Dragão de estimação',bonus:'Ataque +15',realm:22}];
+const MOUNT_CATALOG=[
+{id:'horse',name:'Cavalo',emoji:'🐎',price:500,speed:1.3,desc:'Montaria equilibrada'},
+{id:'deer',name:'Cervo Élfico',emoji:'🦌',price:1200,speed:1.4,desc:'Montaria de Lúmen',realm:3},
+{id:'wolf',name:'Lobo Glacial',emoji:'🐺',price:1800,speed:1.5,desc:'Montaria da Cidadela',realm:8},
+{id:'boar',name:'Javali de Guerra',emoji:'🐗',price:2400,speed:1.45,desc:'Montaria das Raízes',realm:15},
+{id:'drake',name:'Draco de Sela',emoji:'🐲',price:4000,speed:1.65,desc:'Montaria vulcânica',realm:22}];
+function openCompanionUI(type){
+ const s=state(),e=ensure(),pets=type==='pet',catalog=pets?PET_CATALOG:MOUNT_CATALOG;if(!s||!e)return;
+ const owned=pets?(e.petsOwned??=(e.pet? [e.pet]:['slime'])):(e.mountsOwned??=(e.mount?['horse']:[]));
+ let m=$('avx-companion-modal');if(!m){m=document.createElement('div');m.id='avx-companion-modal';m.style.cssText='position:fixed;inset:0;z-index:110;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:14px';document.body.appendChild(m)}
+ m.innerHTML='<div style="width:min(760px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#182f36,#101522);border:1px solid #c6a66a;border-radius:18px;padding:18px;color:#fff"><div style="display:flex;justify-content:space-between"><div><small style="color:#e5bd72;letter-spacing:2px">COLEÇÃO DE AVENTURIA</small><h2 style="font-size:24px;font-weight:900">'+(pets?'🐾 Santuário de Mascotes':'🐎 Estábulo Real')+'</h2></div><button id="avx-comp-close">✕</button></div><p style="font-size:12px;color:#b6c6ca;margin:7px 0 13px">Compre, equipe, guarde ou venda. Companheiros dimensionais só podem ser adquiridos após alcançar o nível de seu mundo.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">'+catalog.map(x=>{const has=owned.includes(x.id),locked=x.realm&&(s.level||1)<x.realm;return '<div style="border:1px solid '+(has?'#6dbb91':'#42565e')+';border-radius:12px;padding:12px;background:#1b2b32"><div style="font-size:28px">'+x.emoji+'</div><b>'+x.name+'</b><div style="font-size:11px;color:#afc0c5;margin:4px 0">'+x.desc+'</div><div style="font-size:11px;color:#e9cc8d">'+x.bonus+'</div><div style="font-size:10px;color:#9daeb5;margin:4px 0">'+(x.realm?'Nível '+x.realm+'+':'Cidade')+'</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">'+(has?'<button data-equip="'+x.id+'" style="background:#356a58;padding:7px 9px;border-radius:7px">Equipar</button><button data-sell="'+x.id+'" style="background:#714b3e;padding:7px 9px;border-radius:7px">Vender · '+Math.floor(x.price*.45)+' G</button>':'<button data-buy="'+x.id+'" '+(locked||s.gold<x.price?'disabled':'')+' style="background:#356a58;padding:7px 9px;border-radius:7px">Comprar · '+x.price+' G</button>')+'</div></div>'}).join('')+'</div></div>';
+ $('avx-comp-close').onclick=()=>m.remove();
+ m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const x=catalog.find(z=>z.id===b.dataset.buy);if(!x||s.gold<x.price)return;s.gold-=x.price;owned.push(x.id);persist();openCompanionUI(type)});
+ m.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{if(pets){e.pet=b.dataset.equip;e.petEquipped=true;e.petData??={level:1,xp:0,bond:0,skillReady:0}}else{e.mountType=b.dataset.equip;e.mount=true}persist();openCompanionUI(type)});
+ m.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const id=b.dataset.sell;if((pets?e.pet:e.mountType)===id){notify('Desequipe antes de vender.');return}const i=owned.indexOf(id);if(i<0)return;owned.splice(i,1);s.gold+=Math.floor(catalog.find(z=>z.id===id).price*.45);persist();openCompanionUI(type)});
+}
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
  const actions={
  merchant:()=>{const choice=prompt('LOJA DE AVENTURIA\\n1 - Poção (+vida) · 60 Gold\\n2 - Ovo de mascote · 250 Gold\\n3 - Kit de exploração · 120 Gold');if(choice==='1'&&s.gold>=60){s.gold-=60;s.items.potion=(s.items.potion||0)+1;notify('Poção adicionada ao inventário!')}else if(choice==='2'&&s.gold>=250){s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Novo mascote!')}else if(choice==='3'&&s.gold>=120){s.gold-=120;s.resources.wood+=5;s.resources.iron+=2;notify('Kit de exploração comprado!')}else notify('Opção inválida ou Gold insuficiente.');persist()},
- stable:()=>{if(!e.mount){if(s.gold<500){notify('Você precisa de 500 Gold para comprar uma montaria.');return}s.gold-=500;e.mount=true;e.mountType='cavalo';notify('🐎 Cavalo comprado! Pressione E perto do Mestre para montar ou desmontar.')}else{e.mount=!e.mount;notify(e.mount?'Você montou!':'Você desmontou.')}persist()},
- pet:()=>{if(!e.pet){if(s.gold<250){notify('O ovo custa 250 Gold.');return}s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Um companheiro nasceu!')}else{e.petEquipped=!e.petEquipped;notify(e.petEquipped?'Mascote invocado!':'Mascote guardado.')}persist()},
+ stable:()=>openCompanionUI('mount'),
+ pet:()=>openCompanionUI('pet'),
  guild:()=>{if(!w.guild){const name=(prompt('Nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('Nome inválido.');return}if(s.gold<200){notify('Fundar uma guilda custa 200 Gold.');return}s.gold-=200;w.guild=name;w.members=[{name:s.name||'Líder',role:'Líder',joined:Date.now()}];notify('Guilda '+name+' fundada!')}else{const online=window.AVENTURIA_ONLINE?.players||[];const list=online.filter(x=>x.name!==s.name).map(x=>x.name).join(', ');const who=prompt('Guilda: '+w.guild+'\\nMembros: '+w.members.map(m=>m.name).join(', ')+'\\nJogadores visíveis: '+(list||'nenhum detectado')+'\\nDigite nome de membro para registrar convite local:');if(who){w.members.push({name:who,role:'Recruta',joined:Date.now(),pending:true});notify('Convite anotado. Para convite real entre contas precisamos persistir guildas no servidor.')}}persist()},
  dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:100,enemyName:dungeonRooms[0].enemy};const g=game();if(g?.player){g.player.x=EXP_MAP-380;g.player.y=EXP_MAP-430;s.x=g.player.x;s.y=g.player.y}notify('🌀 Você atravessou o portal! Derrote o guardião e avance pelas três salas.');persist()}
  };
