@@ -832,7 +832,7 @@ function drawAnimal(c,a,t){
 /* ============================ JOGO ============================ */
 class Game{
  constructor(){
-  window.game=this;this.canvas=$('game-canvas');this.ctx=this.canvas.getContext('2d');this.running=false;this.keys={};this.t=0;
+  window.game=this;window.dispatchEvent(new Event('aventuria:game-ready'));this.canvas=$('game-canvas');this.ctx=this.canvas.getContext('2d');this.running=false;this.keys={};this.t=0;
   this.mouse={cx:0,cy:0,down:false};this.mini=$('minimap').getContext('2d');
   this.resize();window.addEventListener('resize',()=>this.resize());this.bind();
   this.lastTime=performance.now();requestAnimationFrame(t=>this.loop(t));
