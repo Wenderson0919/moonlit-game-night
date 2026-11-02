@@ -50,10 +50,6 @@ document.body.appendChild(panel);$('avx-close').onclick=()=>panel.style.display=
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function professionLevel(p){return Math.min(20,1+Math.floor(Math.sqrt((p.xp||0)/80)))}
 function professionName(k){return ({miner:'Minerador',lumberjack:'Lenhador',forager:'Coletor',fisher:'Pescador'})[k]}
-function avxCountdown(ms){
- const n=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(n/3600),m=Math.floor(n%3600/60),s=n%60;
- return h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
-}
 function avxSchedule(e){
  e.world??={};
  // Mantém dados antigos para compatibilidade, mas não agenda chefes ou eventos automáticos.
@@ -376,15 +372,7 @@ function installGameHooks(){
  const g=game(),GameCtor=g?.constructor;
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked,originalDamage=proto.damageTarget;
- if(originalDamage&&!proto.__avxBossRewardHook){
-  proto.damageTarget=function(target,...args){
-   const wasBoss=target?.bossType==='colossus',result=originalDamage.call(this,target,...args);
-   if(wasBoss&&target.hp<=0){
-    const s=state(),e=ensure();if(s&&e&&!target.__avxRewarded){target.__avxRewarded=true;e.world??={};e.world.worldBoss={active:false,hp:0,maxHp:0};e.world.nextBossAt=Date.now()+60*1000;e.world.eventWins=(e.world.eventWins||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+220;e.world.eventPoints=(e.world.eventPoints||0)+60;s.gold=(s.gold||0)+350+(s.level||1)*8;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+12;s.resources.crystal=(s.resources.crystal||0)+25;s.resources.obsidian=(s.resources.obsidian||0)+18;s.resources.ancientCore=(s.resources.ancientCore||0)+1;e.world.seasonXp+=500;persist();notify('🏆 COLOSSO DERROTADO! +Gold, 12 diamantes, 25 cristais, 18 obsidianas e 1 Núcleo Ancestral LENDÁRIO!');if(typeof updateUIStats==='function')updateUIStats()}
-   }
-   return result;
-  };proto.__avxBossRewardHook=true;
- }
+ // Recompensa e ciclo de chefes mundiais automáticos desativados.
  if(originalBlocked&&!proto.__avxHouseCollision){
   proto.blocked=function(x,y){
    if(originalBlocked.call(this,x,y))return true;
