@@ -237,30 +237,64 @@ function mountAndPetDraw(g){
  const c=g.ctx,p=g.player,s=state(),e=ensure();if(!s||!e)return;
  const camX=Math.round(p.x-g.canvas.width/2),camY=Math.round(p.y-g.canvas.height/2),now=performance.now();
  c.save();c.translate(-camX,-camY);
- // A cidade e seus prédios são renderizados pelo mapa principal antes das entidades.
- if(p.realmId){c.save();c.translate(2000,2000);c.fillStyle='rgba(125,211,252,.2)';c.beginPath();c.arc(0,0,58,0,Math.PI*2);c.fill();c.strokeStyle='#a5f3fc';c.lineWidth=7;c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.stroke();c.fillStyle='#e0f2fe';c.font='bold 13px Inter';c.textAlign='center';c.fillText('PORTAL DE RETORNO',0,-72);c.fillText('[ E ] Voltar',0,78);c.restore();}
+ if(p.realmId){
+  c.save();c.translate(2000,2000);c.fillStyle='rgba(125,211,252,.2)';c.beginPath();c.arc(0,0,58,0,Math.PI*2);c.fill();c.strokeStyle='#a5f3fc';c.lineWidth=7;c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.stroke();c.fillStyle='#e0f2fe';c.font='bold 13px Inter';c.textAlign='center';c.fillText('PORTAL DE RETORNO',0,-72);c.fillText('[ E ] Voltar',0,78);c.restore();
+ }else{
+  // Elementos de ambientação desenhados depois do mapa, sem cobrir o jogador.
+  const cx=EXP_SAFE.x,cy=EXP_SAFE.y;
+  c.fillStyle='#c9b58a';c.fillRect(cx-145,cy-145,290,290);
+  c.fillStyle='#b8a27d';c.fillRect(cx-1200,cy-1200,2400,2400);
+  // Caminhos largos em cruz e pequenos caminhos até cada serviço.
+  c.fillStyle='#d7c59c';c.fillRect(cx-38,cy-1100,76,2200);c.fillRect(cx-1100,cy-38,2200,76);
+  c.fillRect(cx-520,cy-38,1040,76);c.fillRect(cx-38,cy-520,76,1040);
+  // Praça e fonte.
+  c.fillStyle='#a98d62';c.beginPath();c.arc(cx,cy,88,0,Math.PI*2);c.fill();
+  c.fillStyle='#477f7a';c.beginPath();c.arc(cx,cy,68,0,Math.PI*2);c.fill();
+  c.fillStyle='#8dd9cb';c.beginPath();c.arc(cx,cy,48,0,Math.PI*2);c.fill();
+  c.fillStyle='#e6d39e';c.fillRect(cx-7,cy-57,14,114);c.fillRect(cx-57,cy-7,114,14);
+  // Casas estilizadas com sombra, fundação, paredes, telhado, porta, janelas e letreiro.
+  const buildings=[
+   {x:-360,y:-360,w:150,h:112,roof:'#865a3a',label:'MERCADO'},
+   {x:360,y:-360,w:150,h:112,roof:'#557b63',label:'ELEMENTOS'},
+   {x:-360,y:360,w:150,h:112,roof:'#78694c',label:'CARTÓGRAFO'},
+   {x:360,y:360,w:150,h:112,roof:'#75516f',label:'GUARDA'},
+   {x:-650,y:0,w:150,h:112,roof:'#526b83',label:'GUILDAS'},
+   {x:650,y:0,w:150,h:112,roof:'#6c7848',label:'MASCOTES'},
+   {x:0,y:-650,w:150,h:112,roof:'#66528a',label:'MAGIA'},
+   {x:0,y:650,w:150,h:112,roof:'#94663a',label:'FORJA'},
+   {x:-650,y:-500,w:150,h:112,roof:'#705c50',label:'ESTILISTA'},
+   {x:650,y:-500,w:150,h:112,roof:'#5c6885',label:'DESPERTAR'}
+  ];
+  for(const b of buildings){
+   const bx=cx+b.x,by=cy+b.y,w=b.w,h=b.h;
+   c.fillStyle='rgba(35,27,20,.25)';c.fillRect(bx-w/2+8,by-h/2+14,w,h);
+   c.fillStyle='#554334';c.fillRect(bx-w/2-5,by-h/2,w+10,h+9);
+   c.fillStyle='#d8c49b';c.fillRect(bx-w/2,by-h/2+7,w,h-7);
+   c.fillStyle=b.roof;c.beginPath();c.moveTo(bx-w/2-13,by-h/2+9);c.lineTo(bx,by-h/2-42);c.lineTo(bx+w/2+13,by-h/2+9);c.closePath();c.fill();
+   c.fillStyle='#493629';c.fillRect(bx-15,by+12,30, h/2-5);
+   c.fillStyle='#9dd4d1';c.fillRect(bx-w/2+14,by-h/2+28,26,24);c.fillRect(bx+w/2-40,by-h/2+28,26,24);
+   c.fillStyle='#3d3025';c.fillRect(bx-w/2+4,by-h/2+7,w-8,5);
+   c.fillStyle='#f4e4bf';c.font='bold 11px Inter';c.textAlign='center';c.fillText(b.label,bx,by-h/2-48);
+  }
+  // Jardins, árvores, bancos e postes decorativos fora dos corredores.
+  const trees=[[-850,-780],[-850,780],[850,-780],[850,780],[-920,300],[920,-300],[-280,-850],[280,850]];
+  for(const [dx,dy] of trees){const tx=cx+dx,ty=cy+dy;c.fillStyle='#76583c';c.fillRect(tx-5,ty+8,10,23);c.fillStyle='#35694c';c.beginPath();c.arc(tx,ty,24,0,Math.PI*2);c.fill();c.fillStyle='#54875a';c.beginPath();c.arc(tx-8,ty-8,13,0,Math.PI*2);c.fill();}
+  const benches=[[-190,0],[190,0],[0,-190],[0,190]];
+  for(const [dx,dy] of benches){c.fillStyle='#64452e';c.fillRect(cx+dx-24,cy+dy-6,48,12);c.fillStyle='#9c7447';c.fillRect(cx+dx-22,cy+7+dy,5,10);c.fillRect(cx+dx+17,cy+7+dy,5,10)}
+  c.fillStyle='#f8e6bd';c.font='900 25px Inter';c.textAlign='center';c.fillText('CIDADE SPAWN',cx,cy-235);
+  c.fillStyle='#5d4b36';c.font='bold 12px Inter';c.fillText('PRAÇA CENTRAL',cx,cy+125);
+ }
  if(!p.realmId)for(const n of townNPCs){
   c.save();c.translate(n.x,n.y);
   c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,14,17,6,0,0,Math.PI*2);c.fill();
   c.fillStyle=n.color;c.fillRect(-10,-3,20,17);c.fillStyle='#e7bd91';c.beginPath();c.arc(0,-12,9,0,Math.PI*2);c.fill();
   c.fillStyle='#26342e';c.fillRect(-6,-14,3,2);c.fillRect(3,-14,3,2);
-  c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);
-  c.restore();
+  c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);c.restore();
   c.font='bold 10px Inter';c.textAlign='center';c.fillStyle='#071311';c.fillRect(n.x-65,n.y-49,130,16);c.fillStyle='#ffe3a0';c.fillText(n.name,n.x,n.y-37);
   c.fillStyle='#fff';c.font='9px Inter';c.fillText('[ E ] '+n.role,n.x,n.y-25);
  }
- if(false&&e.mount){
-  c.save();c.translate(p.x-20,p.y+12);
-  c.fillStyle='#573b27';c.beginPath();c.ellipse(0,0,18,10,0,0,Math.PI*2);c.fill();
-  c.fillStyle='#9b6b42';c.fillRect(-11,-14,20,15);c.beginPath();c.arc(9,-14,8,0,Math.PI*2);c.fill();
-  c.fillStyle='#3d2a1c';c.beginPath();c.moveTo(10,-20);c.lineTo(7,-29);c.lineTo(14,-22);c.fill();
-  c.fillStyle='#d8b47a';c.fillRect(-8,-4,4,15);c.fillRect(5,-4,4,15);c.restore();
- }
- if(e.petEquipped&&e.pet){
-  const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';
-  c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob);
- }
-  c.restore();
+ if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
+ c.restore();
 }
 const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
@@ -319,7 +353,12 @@ function drawWeather(g){
  if(w.kind==='blizzard'){c.fillStyle='rgba(210,230,245,.12)';c.fillRect(0,0,W,H)}
  c.restore();
 }
- if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this);drawWeather(this)};
+ if(originalRender)proto.render=function(){
+  originalRender.call(this);
+  // NPCs/efeitos ficam em camada própria; a praça central permanece livre para o spawn.
+  mountAndPetDraw(this);
+  drawWeather(this);
+ };
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
