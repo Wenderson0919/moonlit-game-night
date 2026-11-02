@@ -53,15 +53,17 @@
   const elapsed=Math.max(0,t-(world.lastSimAt||t));
   world.day+=(elapsed/DAY_MS);
   world.lastSimAt=t;
-  if(t>=world.nextEventAt){
-   const template=eventTemplates[(world.history.length+world.day|0)%eventTemplates.length];
-   const duration=template.duration+(Math.floor(world.day)%2);
-   const event={id:'event-'+Math.floor(t/1000),...template,startAt:t,endAt:t+duration*DAY_MS,status:'active'};
-   world.events.push(event);world.history.unshift({title:event.title,at:t,desc:event.desc});
+  let catchup=0;
+  while(t>=world.nextEventAt&&catchup++<20){
+   const startAt=world.nextEventAt;
+   const template=eventTemplates[(world.history.length+Math.floor(world.day)+catchup)%eventTemplates.length];
+   const duration=template.duration+(Math.floor(world.day+catchup)%2);
+   const event={id:'event-'+Math.floor(startAt/1000),...template,startAt,endAt:startAt+duration*DAY_MS,status:t>=startAt+duration*DAY_MS?'finished':'active'};
+   world.events.push(event);world.history.unshift({title:event.title,at:startAt,desc:event.desc});
    world.history=world.history.slice(0,20);
-   world.nextEventAt=t+(6+Math.floor((world.day*7)%5))*DAY_MS;
+   world.nextEventAt=startAt+(6+Math.floor(((world.day+catchup)*7)%5))*DAY_MS;
    if(event.kind==='festival')world.festivalCount++;
-   announce('📣 '+event.title+' começou! '+event.desc);
+   if(event.status==='active')announce('📣 '+event.title+' começou! '+event.desc);
   }
   world.events=world.events.filter(e=>e.endAt>t- DAY_MS);
   for(const e of world.events)if(e.status==='active'&&t>=e.endAt){e.status='finished';announce('🏁 '+e.title+' terminou. A cidade guarda as lembranças desses dias.')}
