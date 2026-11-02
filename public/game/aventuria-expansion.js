@@ -381,6 +381,16 @@ function openMerchantUI(){
  $('avx-merchant-close').onclick=()=>m.remove();
  m.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{const x=offers.find(v=>v.id===b.dataset.offer);if(!x||s.gold<x.price){notify('Gold insuficiente.');return}s.gold-=x.price;if(x.id==='potion')s.items.potion=(s.items.potion||0)+1;if(x.id==='egg'){e.petsOwned??=[];const id=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petsOwned.push(id);e.pet=id;e.petEquipped=true}if(x.id==='kit'){s.resources.wood=(s.resources.wood||0)+5;s.resources.iron=(s.resources.iron||0)+2}persist();notify(x.name+' comprado!');openMerchantUI()});
 }
+function openNPCServiceWindow(card){
+ let modal=$('avx-npc-service');if(!modal){modal=document.createElement('div');modal.id='avx-npc-service';document.body.appendChild(modal)}
+ const parent=card.parentNode,next=card.nextSibling;
+ modal.style.cssText='position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:14px;background:#020914e8';
+ modal.innerHTML='<section style="width:min(560px,100%);max-height:88vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);padding:16px;color:white"><header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:#f4d68e">SERVIÇO DA CIDADE</b><button id="avx-service-close" style="padding:7px 12px;border:1px solid #60747b;border-radius:8px">Fechar ✕</button></header><div id="avx-service-body"></div></section>';
+ const body=modal.querySelector('#avx-service-body');body.appendChild(card);
+ const close=()=>{if(parent){if(next&&next.parentNode===parent)parent.insertBefore(card,next);else parent.appendChild(card)}modal.remove()};
+ modal.querySelector('#avx-service-close').onclick=close;
+ modal.onclick=ev=>{if(ev.target===modal)close()};
+}
 function openAppearanceEditor(){
  const s=state();if(!s)return;
  const d={cls:s.className,race:s.race,hair:s.hairColor,eye:s.eyeColor,skin:s.skinColor,hairStyle:s.hairStyle||'Curto',beardStyle:s.beardStyle||'Nenhuma',outfitColor:s.outfitColor||'#8b3430',outfitStyle:s.outfitStyle||'Armadura',cloakColor:s.cloakColor||'#252b45',accessory:s.accessory||'Nenhum',faceMark:s.faceMark||'Nenhuma'};
@@ -409,18 +419,18 @@ function openAppearanceEditor(){
 }
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
- const openAdvanced=(section)=>{const target=document.querySelector('#avx-content [data-section="'+section+'"]');if(!target){notify('Este serviço está sendo preparado.');return}target.scrollIntoView({behavior:'smooth',block:'center'});target.style.outline='2px solid #e4b85c';setTimeout(()=>target.style.outline='',1300)};
+ const openAdvanced=(section,title)=>{renderPanel();const cards=[...document.querySelectorAll('#avx-content [data-section="'+section+'"]')];const target=cards.find(c=>c.textContent.includes(title));if(!target){notify('Este serviço está sendo preparado.');return}openNPCServiceWindow(target)};
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
  magic:()=>openMagicUI(),
  pet:()=>openCompanionUI(),
  guild:()=>{let m=$('avx-guild-soon');if(!m){m=document.createElement('div');m.id='avx-guild-soon';document.body.appendChild(m)}m.style.cssText='position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:#020914dd;padding:18px';m.innerHTML='<div style="width:min(390px,100%);padding:28px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);color:white;text-align:center"><div style="font-size:42px">🛡️</div><h2>Guildas de Aventuria</h2><p style="color:#f2cf87;font-weight:900;letter-spacing:2px">EM BREVE</p><p style="color:#b9c8d1;font-size:12px">Criação de guildas e convites online precisam de servidor multiplayer.</p><button id="avx-guild-soon-close" style="padding:10px 22px;border-radius:9px;background:#315c59;color:white">Entendi</button></div>';$('avx-guild-soon-close').onclick=()=>m.remove()},
- element:()=>openAdvanced('combat'),
- forge:()=>openAdvanced('growth'),
- contract:()=>openAdvanced('world'),
- treasure:()=>openAdvanced('world'),
- awakening:()=>openAdvanced('growth'),
+ element:()=>openAdvanced('combat','Combinação de elementos'),
+ forge:()=>openAdvanced('growth','Forja de equipamentos'),
+ contract:()=>openAdvanced('world','Contratos de caça'),
+ treasure:()=>openAdvanced('world','Caça ao tesouro'),
+ awakening:()=>openAdvanced('growth','Despertar de armas'),
  stylist:()=>openAppearanceEditor()
  };
  actions[id]?.();
