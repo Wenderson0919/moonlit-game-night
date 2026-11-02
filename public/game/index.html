@@ -253,6 +253,8 @@ input,textarea,select,[contenteditable="true"]{user-select:text;-webkit-user-sel
 /* ============================ CONSTANTES ============================ */
 const TILE=32, MT=125, MAP=TILE*MT, CX=MAP/2;
 const SAFE={x:CX,y:CX,radius:680};
+/* Distância ao centro da Área Safe; `pad` aumenta (ou reduz, se negativo) o raio considerado. */
+const inSafe=(x,y,pad=0)=>Math.hypot(x-SAFE.x,y-SAFE.y)<=SAFE.radius+pad;
 const $=id=>document.getElementById(id);
 const rand=(a,b)=>a+Math.random()*(b-a);
 const ri=(a,b)=>Math.floor(rand(a,b+1));
@@ -930,7 +932,7 @@ class Game{
  trySpawnWild(kind){
   const d=ANIMALS[kind];
   for(let i=0;i<30;i++){const x=100+Math.random()*(MAP-200),y=100+Math.random()*(MAP-200);const b=this.biomeAt(x,y);
-   if(!d.biomes.includes(b))continue;if(Math.hypot(x-CX,y-CX)<SAFE.radius+120)continue;if(this.pondAt(x,y,20))continue;
+   if(!d.biomes.includes(b))continue;if(inSafe(x,y,120))continue;if(this.pondAt(x,y,20))continue;
    if(this.player&&Math.hypot(x-this.player.x,y-this.player.y)<450&&this.running&&this.t>1)continue;
    if(d.pack){for(let k=0;k<ri(1,2);k++)this.spawnAnimal(kind,x+rand(-40,40),y+rand(-40,40));return true}
    this.spawnAnimal(kind,x,y);return true}
@@ -938,7 +940,7 @@ class Game{
  }
  stepEntity(e,vx,vy){
   const nx=Math.max(40,Math.min(MAP-40,e.x+vx)),ny=Math.max(40,Math.min(MAP-40,e.y+vy));
-  if(!this.player?.realmId&&Math.hypot(nx-SAFE.x,ny-SAFE.y)<SAFE.radius+10)return false;
+  if(!this.player?.realmId&&inSafe(nx,ny,10))return false;
   const p=this.pondAt(nx,ny);if(p&&(p.kind==='water'||p.kind==='lava'))return false;
   e.x=nx;e.y=ny;return true;
  }
@@ -1104,9 +1106,18 @@ class Game{
   if(s.hp<=0){
    s.hp=0;this.lastDeathAt=Date.now();this.lastDeathBy=o.from||0;const lost=o.pvp?0:Math.floor(s.gold*.1);s.gold-=lost;
    showNotification(`Você foi derrotado${o.src?' por '+o.src:''}! ${o.pvp?'Você renasceu':'Perdeu '+lost+' Gold e voltou'} na Área Safe.`,'#fca5a5');
-   p.x=SAFE.x;p.y=SAFE.y+110;s.hp=effMaxHp();p.invuln=2;
+   const sp=this.safeSpawnPoint();p.x=sp.x;p.y=sp.y;s.hp=effMaxHp();p.invuln=2;p.dashT=0;p.dvx=p.dvy=0;
   }
   updateUIStats();
+ }
+ /* Ponto de renascimento dentro da Área Safe: sorteia um lugar livre em volta da fonte
+    (evita empilhar jogadores no mesmo pixel e nascer dentro de obstáculos). */
+ safeSpawnPoint(){
+  for(let i=0;i<24;i++){
+   const a=rand(0,6.283),r=rand(135,235),x=SAFE.x+Math.cos(a)*r,y=SAFE.y+Math.sin(a)*r;
+   if(!this.blocked(x,y))return{x,y};
+  }
+  return{x:SAFE.x,y:SAFE.y+110};
  }
  gainExp(a){
   const s=S();if(s.race==='Humano')a=Math.round(a*1.1);s.exp+=a;
@@ -1261,14 +1272,23 @@ class Game{
   let mvx=dx*sp*dt*60,mvy=dy*sp*dt*60;
   if(p.dashT>0){p.dashT-=dt;mvx+=p.dvx*dt*60;mvy+=p.dvy*dt*60}
   if(s.hp>0){const nx=Math.max(30,Math.min(MAP-30,p.x+mvx));if(!this.blocked(nx,p.y))p.x=nx;const ny=Math.max(30,Math.min(MAP-30,p.y+mvy));if(!this.blocked(p.x,ny))p.y=ny}
-  p.inSafeZone=Math.hypot(p.x-SAFE.x,p.y-SAFE.y)<=SAFE.radius;
+  p.inSafeZone=inSafe(p.x,p.y);
+  // aviso ao cruzar a borda da Área Safe (sem avisar durante teleportes para reinos)
+  if(p.wasSafe===undefined)p.wasSafe=p.inSafeZone;
+  if(p.wasSafe!==p.inSafeZone){
+   if(!p.realmId&&s.hp>0)showNotification(p.inSafeZone?'🛡 Você entrou na Área Safe — regeneração acelerada.':'⚔ Você saiu da Área Safe. Cuidado!',p.inSafeZone?'#34d399':'#fbbf24');
+   p.wasSafe=p.inSafeZone;
+  }
   // lava
-  if(pd&&pd.kind==='lava'){s.hp-=0;this.hurtPlayer(9*dt,{dot:true,src:'Lava'});p.lavaT-=dt;if(p.lavaT<=0){p.lavaT=.5;this.floatText(p.x,p.y-30,'🔥','#fb923c')}}
+  if(pd&&pd.kind==='lava'){this.hurtPlayer(9*dt,{dot:true,src:'Lava'});p.lavaT-=dt;if(p.lavaT<=0){p.lavaT=.5;this.floatText(p.x,p.y-30,'🔥','#fb923c')}}
   // regen / fogueira
   if(s.hp>0&&s.hp<effMaxHp()){let reg=p.inSafeZone?3:.4;if(this.structs.some(q=>q.type==='campfire'&&Math.hypot(q.x-p.x,q.y-p.y)<110))reg+=4;s.hp=Math.min(effMaxHp(),s.hp+reg*dt)}
   // zona
   const zb=$('zone-badge'),zt=$('zone-text');
-  if(p.inSafeZone){zt.textContent='ÁREA SAFE';zb.style.color='#34d399'}else{zt.textContent=BIOMES[bio].name.toUpperCase()+' · Nív '+BIOME_REC[bio]+'+';zb.style.color=BIOMES[bio].color}
+  // só mexe no DOM quando o texto muda (evita reflow a cada frame)
+  const zLabel=p.inSafeZone?'ÁREA SAFE':BIOMES[bio].name.toUpperCase()+' · Nív '+BIOME_REC[bio]+'+',zColor=p.inSafeZone?'#34d399':BIOMES[bio].color;
+  if(this._zLabel!==zLabel){this._zLabel=zLabel;zt.textContent=zLabel}
+  if(this._zColor!==zColor){this._zColor=zColor;zb.style.color=zColor}
   // ataque contínuo
   if(this.mouse.down&&!s.buildMode&&!anyModalOpen())this.attack();
   // lavouras
@@ -1319,10 +1339,144 @@ class Game{
  }
  drawMinimap(){
   const m=this.mini,W=160,k=W/MAP;m.clearRect(0,0,W,W);m.imageSmoothingEnabled=false;m.drawImage(this.miniBase,0,0,W,W);
-  m.strokeStyle='#10b981';m.lineWidth=1.5;m.beginPath();m.arc(SAFE.x*k,SAFE.y*k,SAFE.radius*k,0,6.283);m.stroke();
+  m.fillStyle='rgba(16,185,129,.16)';m.strokeStyle='#34d399';m.lineWidth=1.5;m.beginPath();m.arc(SAFE.x*k,SAFE.y*k,SAFE.radius*k,0,6.283);m.fill();m.stroke();
   for(const q of this.ponds){m.fillStyle=q.kind==='lava'?'#f97316':q.kind==='ice'?'#bae6fd':'#38bdf8';m.beginPath();m.arc(q.x*k,q.y*k,Math.max(1.5,q.r*k),0,6.283);m.fill()}
   for(const r of this.raids){if(r.state==='cleared')continue;const T=TIERS[r.tier];m.fillStyle=T.c;m.strokeStyle='#000';m.lineWidth=1;const x=r.x*k,y=r.y*k;m.beginPath();m.moveTo(x,y-5);m.lineTo(x+5,y);m.lineTo(x,y+5);m.lineTo(x-5,y);m.closePath();m.fill();m.stroke()}
   m.fillStyle='#fff';m.strokeStyle='#000';m.beginPath();m.arc(this.player.x*k,this.player.y*k,3.5,0,6.283);m.fill();m.stroke();
+ }
+ /* ---------- Área Safe (spawn) ----------
+    A parte estática (chão, avenidas, sebe, portões, casas) é pré-renderizada uma única vez
+    num canvas offscreen; por frame só são desenhados os efeitos animados (fonte, lanternas,
+    anel rúnico, aura e vaga-lumes). Isso evita centenas de chamadas de desenho por frame. */
+ buildSafeLayer(){
+  const R=SAFE.radius,pad=34,S=Math.ceil((R+pad)*2),cv=document.createElement('canvas');cv.width=cv.height=S;
+  const c=cv.getContext('2d'),X=S/2,Y=S/2,TAU=Math.PI*2,lights=[];
+  const disk=(x,y,r,fill)=>{c.fillStyle=fill;c.beginPath();c.arc(x,y,r,0,TAU);c.fill()};
+  // chão de pedra: centro claro, borda mais escura
+  const g=c.createRadialGradient(X,Y,40,X,Y,R);g.addColorStop(0,'#aa9d7e');g.addColorStop(.7,'#8d8063');g.addColorStop(1,'#6f6650');
+  disk(X,Y,R,g);
+  c.save();c.beginPath();c.arc(X,Y,R-2,0,TAU);c.clip();
+  // lajotas com variação determinística de tom
+  for(let ty=-R;ty<R;ty+=24)for(let tx=-R;tx<R;tx+=24){
+   const h=hash2((tx/24)|0,(ty/24)|0,91);
+   if(h>.8){c.fillStyle='rgba(255,246,214,.07)';c.fillRect(X+tx,Y+ty,24,24)}
+   else if(h<.12){c.fillStyle='rgba(20,22,20,.10)';c.fillRect(X+tx,Y+ty,24,24)}
+  }
+  c.strokeStyle='rgba(40,46,40,.22)';c.lineWidth=1;
+  for(let v=-R;v<=R;v+=24){c.beginPath();c.moveTo(X-R,Y+v);c.lineTo(X+R,Y+v);c.stroke();c.beginPath();c.moveTo(X+v,Y-R);c.lineTo(X+v,Y+R);c.stroke()}
+  // quatro avenidas principais até os portões
+  for(const [ax,ay] of [[0,-1],[1,0],[0,1],[-1,0]]){
+   c.lineCap='butt';c.beginPath();c.moveTo(X,Y);c.lineTo(X+ax*R,Y+ay*R);
+   c.strokeStyle='#5f5239';c.lineWidth=68;c.stroke();
+   c.strokeStyle='#d0c19b';c.lineWidth=58;c.stroke();
+   c.strokeStyle='rgba(255,255,255,.12)';c.lineWidth=2;c.setLineDash([14,18]);c.stroke();c.setLineDash([]);
+  }
+  // caminhos secundários até as lojas
+  c.lineCap='round';c.strokeStyle='#c9b995';c.lineWidth=40;
+  for(const a of [[0,0,150,-105],[0,0,-150,-105],[0,0,150,105],[0,0,-150,105]]){c.beginPath();c.moveTo(X+a[0],Y+a[1]);c.lineTo(X+a[2],Y+a[3]);c.stroke()}
+  // praça central com rosa dos ventos
+  disk(X,Y,108,'#5f5239');disk(X,Y,103,'#bcac85');
+  c.strokeStyle='#e8d8ae';c.lineWidth=5;c.beginPath();c.arc(X,Y,96,0,TAU);c.stroke();
+  c.strokeStyle='rgba(88,72,48,.5)';c.lineWidth=2;c.beginPath();c.arc(X,Y,78,0,TAU);c.stroke();
+  c.fillStyle='rgba(88,72,48,.55)';
+  for(let i=0;i<8;i++){
+   const a=i*Math.PI/4-Math.PI/2,L=i%2?62:92,w=i%2?9:14;
+   c.beginPath();c.moveTo(X+Math.cos(a)*L,Y+Math.sin(a)*L);
+   c.lineTo(X+Math.cos(a+Math.PI/2)*w,Y+Math.sin(a+Math.PI/2)*w);
+   c.lineTo(X+Math.cos(a+Math.PI)*14,Y+Math.sin(a+Math.PI)*14);
+   c.lineTo(X+Math.cos(a-Math.PI/2)*w,Y+Math.sin(a-Math.PI/2)*w);
+   c.closePath();c.fill();
+  }
+  // bacia da fonte (a água é animada por frame)
+  disk(X,Y,44,'#4b6469');disk(X,Y,38,'#7a9ba0');
+  // canteiros
+  for(const [dx,dy] of [[-205,-15],[205,-15],[-205,145],[205,145],[-25,205],[25,-225]]){
+   const bx=X+dx,by=Y+dy;
+   c.fillStyle='rgba(0,0,0,.22)';c.fillRect(bx-17,by-9,42,36);
+   c.fillStyle='#594b36';c.fillRect(bx-19,by-15,38,30);c.fillStyle='#547b45';c.fillRect(bx-16,by-12,32,24);
+   for(let k=0;k<4;k++){c.fillStyle=k%2?'#8ebd62':'#6e9e50';c.beginPath();c.arc(bx-9+(k%2)*17,by-5+Math.floor(k/2)*11,6,0,TAU);c.fill()}
+   c.fillStyle='#f9a8d4';c.beginPath();c.arc(bx-9,by-5,2,0,TAU);c.fill();c.fillStyle='#fde68a';c.beginPath();c.arc(bx+8,by+6,2,0,TAU);c.fill();
+  }
+  c.restore();
+  // muro baixo na borda + sebe com flores, abrindo passagem nos 4 portões
+  c.strokeStyle='#3b3a30';c.lineWidth=16;c.beginPath();c.arc(X,Y,R-6,0,TAU);c.stroke();
+  c.strokeStyle='#a99d7e';c.lineWidth=7;c.beginPath();c.arc(X,Y,R-6,0,TAU);c.stroke();
+  const QP=Math.PI/2;
+  for(let a=0;a<TAU;a+=.055){
+   const m=((a%QP)+QP)%QP;if(Math.min(m,QP-m)<.115)continue;
+   const h=hash2(Math.round(a*100),5,33),r=R-27+Math.sin(a*9)*2,x=X+Math.cos(a)*r,y=Y+Math.sin(a)*r;
+   c.fillStyle=h>.5?'#2f6a47':'#3d7d52';c.beginPath();c.arc(x,y,9+h*3,0,TAU);c.fill();
+   if(h>.82){c.fillStyle=['#f9a8d4','#fde68a','#ffffff'][Math.floor(h*10)%3];c.beginPath();c.arc(x+3,y-3,2.2,0,TAU);c.fill()}
+  }
+  // portões: dois pilares com lanterna por entrada
+  for(const [ax,ay] of [[0,-1],[1,0],[0,1],[-1,0]]){
+   const gx=X+ax*(R-12),gy=Y+ay*(R-12);
+   for(const s of [-1,1]){
+    const px=gx-ay*s*44,py=gy+ax*s*44;
+    c.fillStyle='rgba(0,0,0,.3)';c.fillRect(px-9,py-4,22,24);
+    c.fillStyle='#6b6350';c.fillRect(px-9,py-14,18,30);c.fillStyle='#d9ccaa';c.fillRect(px-11,py-17,22,6);
+    c.fillStyle='#3b3a30';c.fillRect(px-2,py-12,4,26);
+    lights.push([px-X,py-Y-24,lights.length*1.3]);
+   }
+  }
+  // fachadas de lojas em volta da praça (mantém livres os pontos dos NPCs)
+  const houses=[
+   {x:X-188,y:Y-174,w:76,h:58,roof:'#8b4937',wall:'#d7b77f',sign:'ESTÁBULO'},
+   {x:X+112,y:Y-178,w:78,h:58,roof:'#3f7180',wall:'#d9c28d',sign:'MERCADO'},
+   {x:X-188,y:Y+108,w:76,h:58,roof:'#78619a',wall:'#d8bd91',sign:'GUILDA'},
+   {x:X+112,y:Y+108,w:78,h:58,roof:'#547c55',wall:'#d7c18d',sign:'MASCOTES'},
+   {x:X-38,y:Y-244,w:76,h:48,roof:'#554b80',wall:'#d7c18d',sign:'PORTAL'}
+  ];
+  for(const h of houses){
+   c.fillStyle='rgba(0,0,0,.28)';c.fillRect(h.x-3,h.y+9,h.w+6,h.h+5);
+   c.fillStyle=h.wall;c.fillRect(h.x,h.y,h.w,h.h);
+   c.fillStyle='#6a4934';c.fillRect(h.x+8,h.y+23,16,h.h-23);c.fillRect(h.x+h.w-24,h.y+20,14,14);
+   c.fillStyle='#8a6544';c.fillRect(h.x+31,h.y+28,15,h.h-28);
+   c.fillStyle=h.roof;c.beginPath();c.moveTo(h.x-8,h.y+5);c.lineTo(h.x+h.w/2,h.y-22);c.lineTo(h.x+h.w+8,h.y+5);c.closePath();c.fill();
+   c.strokeStyle='#e8d3a4';c.lineWidth=2;c.stroke();
+   c.fillStyle='rgba(16,22,20,.82)';c.fillRect(h.x+2,h.y-39,h.w-4,14);
+   c.fillStyle='#fff0c2';c.font='bold 9px Inter';c.textAlign='center';c.fillText(h.sign,h.x+h.w/2,h.y-29);
+  }
+  // postes de iluminação (a lâmpada é animada por frame)
+  for(const [dx,dy] of [[-125,-205],[125,-205],[-225,65],[225,65],[-120,205],[120,205]]){
+   const lx=X+dx,ly=Y+dy;
+   c.fillStyle='rgba(0,0,0,.25)';c.fillRect(lx-3,ly+16,12,5);
+   c.fillStyle='#49372a';c.fillRect(lx-3,ly-3,6,25);
+   lights.push([dx,dy-7,lights.length*1.3]);
+  }
+  this.safeLayer={cv,off:S/2,lights};
+ }
+ drawSafeZone(c,now){
+  const R=SAFE.radius,X=SAFE.x,Y=SAFE.y,TAU=Math.PI*2,W=this.canvas.width,H=this.canvas.height,p=this.player;
+  // fora da tela: não desenha nada
+  if(X+R+40<p.x-W/2||X-R-40>p.x+W/2||Y+R+40<p.y-H/2||Y-R-40>p.y+H/2)return;
+  if(!this.safeLayer)this.buildSafeLayer();
+  const L=this.safeLayer,t=now/1000;
+  c.drawImage(L.cv,X-L.off,Y-L.off);
+  // fonte: ondas e jato d'água
+  c.fillStyle='#79bfc1';c.beginPath();c.arc(X,Y,31,0,TAU);c.fill();
+  for(let i=0;i<3;i++){const ph=(t*.55+i/3)%1;c.strokeStyle=`rgba(232,248,242,${.6*(1-ph)})`;c.lineWidth=2;c.beginPath();c.arc(X,Y,8+ph*22,0,TAU);c.stroke()}
+  c.fillStyle='#e6f4df';c.beginPath();c.arc(X,Y-4+Math.sin(t*3)*1.5,5,0,TAU);c.fill();
+  // lanternas pulsando suavemente (postes e portões)
+  for(const [dx,dy,ph] of L.lights){
+   const a=.17+.06*Math.sin(t*2.2+ph),x=X+dx,y=Y+dy;
+   c.fillStyle=`rgba(255,207,105,${a})`;c.beginPath();c.arc(x,y,34,0,TAU);c.fill();
+   c.fillStyle=`rgba(255,207,105,${a+.1})`;c.beginPath();c.arc(x,y,16,0,TAU);c.fill();
+   c.fillStyle='#ffd77a';c.beginPath();c.arc(x,y,6,0,TAU);c.fill();
+  }
+  // aura de proteção na borda
+  const ag=c.createRadialGradient(X,Y,R-70,X,Y,R+34),pulse=.5+.5*Math.sin(t*1.6);
+  ag.addColorStop(0,'rgba(52,211,153,0)');ag.addColorStop(.66,`rgba(52,211,153,${.06+.05*pulse})`);ag.addColorStop(.74,`rgba(52,211,153,${.22+.1*pulse})`);ag.addColorStop(1,'rgba(52,211,153,0)');
+  c.fillStyle=ag;c.beginPath();c.arc(X,Y,R+34,0,TAU);c.fill();
+  // anel rúnico giratório
+  c.save();c.strokeStyle=`rgba(110,231,183,${.55+.25*pulse})`;c.lineWidth=3;c.setLineDash([18,26]);c.lineDashOffset=-t*26;
+  c.beginPath();c.arc(X,Y,R+1,0,TAU);c.stroke();c.restore();
+  c.strokeStyle='#10b981';c.lineWidth=4;c.beginPath();c.arc(X,Y,R+9,0,TAU);c.stroke();
+  // vaga-lumes
+  for(let i=0;i<18;i++){
+   const a=i*2.399+t*.05*(i%2?1:-1),rr=R*(.3+.62*((i*.6180339)%1)),x=X+Math.cos(a)*rr,y=Y+Math.sin(a)*rr+Math.sin(t*1.3+i)*6;
+   c.fillStyle=`rgba(190,255,220,${.35+.35*Math.sin(t*2.1+i*1.7)})`;c.beginPath();c.arc(x,y,2.2,0,TAU);c.fill();
+  }
  }
  /* ---------- render ---------- */
  render(){
@@ -1345,60 +1499,8 @@ class Game{
    }
   }
   window.AVENTURIA_DRAW_REALMS?.(c,p,now);
-  // zona segura
-  const s0=SAFE;c.fillStyle='#4a5b60';c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.fill();
-  c.strokeStyle='rgba(20,30,34,.35)';c.lineWidth=1;for(let r=40;r<s0.radius;r+=40){c.beginPath();c.arc(s0.x,s0.y,r,0,6.283);c.stroke()}
-  c.fillStyle='rgba(16,185,129,.08)';c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.fill();c.strokeStyle='#10b981';c.lineWidth=6;c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.stroke();
-  // Vila de Aventuria: praça central, caminhos, canteiros, lanternas e fachadas.
-  // Desenhada antes das entidades para que personagens e NPCs fiquem por cima.
-  {
-   const X=s0.x,Y=s0.y;
-   c.save();
-   // piso de pedra dentro do círculo seguro
-   c.fillStyle='#887b61';c.beginPath();c.arc(X,Y,s0.radius-5,0,6.283);c.fill();
-   c.save();c.beginPath();c.arc(X,Y,s0.radius-7,0,6.283);c.clip();
-   c.strokeStyle='rgba(47,55,49,.22)';c.lineWidth=1;
-   for(let yy=Y-250;yy<Y+250;yy+=24){c.beginPath();c.moveTo(X-250,yy);c.lineTo(X+250,yy);c.stroke()}
-   for(let xx=X-250;xx<X+250;xx+=24){c.beginPath();c.moveTo(xx,Y-250);c.lineTo(xx,Y+250);c.stroke()}
-   // caminhos que ligam a praça aos serviços
-   c.lineCap='round';c.strokeStyle='#c9b995';c.lineWidth=42;
-   [[X,Y,X,Y-205],[X,Y,X+150,Y-105],[X,Y,X-150,Y-105],[X,Y,X+150,Y+105],[X,Y,X-150,Y+105]].forEach(a=>{c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(a[2],a[3]);c.stroke()});
-   c.strokeStyle='rgba(91,75,53,.28)';c.lineWidth=2;
-   for(let a=-220;a<=220;a+=22){c.beginPath();c.moveTo(X-240,Y+a);c.lineTo(X+240,Y+a);c.stroke()}
-   // praça central circular e fonte
-   c.fillStyle='#b9a982';c.beginPath();c.arc(X,Y,65,0,6.283);c.fill();
-   c.strokeStyle='#e6d6ad';c.lineWidth=5;c.beginPath();c.arc(X,Y,58,0,6.283);c.stroke();
-   c.fillStyle='#526f75';c.beginPath();c.arc(X,Y,25,0,6.283);c.fill();
-   c.fillStyle='#9bd4d0';c.beginPath();c.arc(X,Y,15,0,6.283);c.fill();
-   c.fillStyle='#e6f4df';c.beginPath();c.arc(X,Y-5,5,0,6.283);c.fill();
-   // canteiros e arbustos decorativos
-   const beds=[[-205,-15],[205,-15],[-205,145],[205,145],[-25,205],[25,-225]];
-   for(const [dx,dy] of beds){const bx=X+dx,by=Y+dy;c.fillStyle='#594b36';c.fillRect(bx-19,by-15,38,30);c.fillStyle='#547b45';c.fillRect(bx-16,by-12,32,24);for(let k=0;k<4;k++){c.fillStyle=k%2?'#8ebd62':'#6e9e50';c.beginPath();c.arc(bx-9+(k%2)*17,by-5+Math.floor(k/2)*11,6,0,6.283);c.fill()}}
-   c.restore();
-   // fachadas de lojas ao redor da praça, mantendo livres os pontos dos NPCs
-   const houses=[
-    {x:X-188,y:Y-174,w:76,h:58,roof:'#8b4937',wall:'#d7b77f',sign:'ESTÁBULO',icon:'🐎'},
-    {x:X+112,y:Y-178,w:78,h:58,roof:'#3f7180',wall:'#d9c28d',sign:'MERCADO',icon:'⚒'},
-    {x:X-188,y:Y+108,w:76,h:58,roof:'#78619a',wall:'#d8bd91',sign:'GUILDA',icon:'⚔'},
-    {x:X+112,y:Y+108,w:78,h:58,roof:'#547c55',wall:'#d7c18d',sign:'MASCOTES',icon:'🐾'},
-    {x:X-38,y:Y-244,w:76,h:48,roof:'#554b80',wall:'#d7c18d',sign:'PORTAL',icon:'✦'}
-   ];
-   for(const h of houses){
-    c.fillStyle='rgba(0,0,0,.28)';c.fillRect(h.x-3,h.y+9,h.w+6,h.h+5);
-    c.fillStyle=h.wall;c.fillRect(h.x,h.y,h.w,h.h);
-    c.fillStyle='#6a4934';c.fillRect(h.x+8,h.y+23,16,h.h-23);c.fillRect(h.x+h.w-24,h.y+20,14,14);
-    c.fillStyle='#8a6544';c.fillRect(h.x+31,h.y+28,15, h.h-28);
-    c.fillStyle=h.roof;c.beginPath();c.moveTo(h.x-8,h.y+5);c.lineTo(h.x+h.w/2,h.y-22);c.lineTo(h.x+h.w+8,h.y+5);c.closePath();c.fill();
-    c.strokeStyle='#e8d3a4';c.lineWidth=2;c.stroke();
-    c.fillStyle='rgba(16,22,20,.82)';c.fillRect(h.x+2,h.y-39,h.w-4,14);
-    c.fillStyle='#fff0c2';c.font='bold 9px Inter';c.textAlign='center';c.fillText(h.sign,h.x+h.w/2,h.y-29);
-   }
-   // postes de iluminação e bandeirolas
-   for(const [dx,dy] of [[-125,-205],[125,-205],[-225,65],[225,65],[-120,205],[120,205]]){
-    const lx=X+dx,ly=Y+dy;c.fillStyle='#49372a';c.fillRect(lx-3,ly-3,6,25);c.fillStyle='#d6a94f';c.beginPath();c.arc(lx,ly-7,8,0,6.283);c.fill();c.fillStyle='rgba(255,207,105,.18)';c.beginPath();c.arc(lx,ly-7,17,0,6.283);c.fill();
-   }
-   c.restore();
-  }
+  // zona segura (vila de Aventuria) — ver drawSafeZone()
+  this.drawSafeZone(c,now);
   // lagos
   for(const q of this.ponds){
    const cols={water:['#c3ad70','#367f83','#4e9b9a'],ice:['#c9e6f2','#9fd3e8','#c5e8f5'],swamp:['#3a4a2a','#4f6b3f','#66834e'],lava:['#2a1512','#c2410c','#fb923c']}[q.kind];
