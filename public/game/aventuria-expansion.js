@@ -106,37 +106,6 @@ function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
 function persist(){try{if(typeof saveGame==='function')saveGame(false)}catch{}}
 let lastResources=null,lastClock=0,lastDraw=0,lastSeasonKills=null,lastSeasonRaids=null;
-const HUD_EDITABLE=[{id:'joystick',label:'Joystick',selector:'#mj'},{id:'attack',label:'Ataque',selector:'#mc'},{id:'hotbar',label:'Barra de habilidades',selector:'body>div.absolute.bottom-4.left-1\\/2'},{id:'actions',label:'Botões de ação',selector:'#av-bar'},{id:'npc',label:'Interagir com NPC',selector:'#avx-mobile-interact'},{id:'exit',label:'Sair da expedição',selector:'#avx-expedition-exit'}];
-function hudPrefs(){try{return JSON.parse(localStorage.getItem('aventuria_hud_layout')||'{}')}catch{return {}}}
-function applyHudLayout(){
- const prefs=hudPrefs();
- for(const item of HUD_EDITABLE){const el=document.querySelector(item.selector);if(!el)continue;const p=prefs[item.id];if(!p)continue;
-  el.style.position='fixed';el.style.left=p.x+'px';el.style.top=p.y+'px';el.style.right='auto';el.style.bottom='auto';el.style.transform='none';
-  if(p.scale){el.style.transform='scale('+p.scale+')';el.style.transformOrigin='top left'}
- }
-}
-function openHudEditor(){
- let m=$('avx-hud-editor');if(!m){m=document.createElement('div');m.id='avx-hud-editor';document.body.appendChild(m)}
- const prefs=hudPrefs();let selected=HUD_EDITABLE[0];let size=prefs[selected.id]?.scale||1;
- m.style.cssText='position:fixed;inset:0;z-index:100010;background:#020914eF;display:flex;align-items:center;justify-content:center;padding:14px;color:#fff;font-family:system-ui';
- m.innerHTML='<section style="width:min(430px,100%);padding:18px;border:1px solid #d6b56d;border-radius:18px;background:linear-gradient(145deg,#203746,#0b1420);box-shadow:0 20px 70px #000b"><header style="display:flex;justify-content:space-between;align-items:center"><div><small style="color:#e6c77f;letter-spacing:2px">PERSONALIZAÇÃO</small><h2 style="margin:4px 0 12px">🎮 Editor do HUD</h2></div><button id="avx-hud-close" style="padding:8px 12px;border-radius:8px;background:#ffffff18;color:white">✕</button></header><label style="font-size:12px;color:#b8c7d2">Escolha um controle para editar individualmente</label><select id="avx-hud-select" style="display:block;width:100%;padding:12px;margin:7px 0 14px;border-radius:9px;background:#172c38;color:white;border:1px solid #607987">'+HUD_EDITABLE.map(x=>'<option value="'+x.id+'">'+x.label+'</option>').join('')+'</select><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Tamanho do botão</span><b id="avx-hud-size">'+Math.round(size*100)+'%</b></div><input id="avx-hud-range" type="range" min=".55" max="1.8" step=".05" value="'+size+'" style="width:100%;margin:12px 0"><p style="font-size:11px;color:#9fb2bd">Para mudar a posição, feche o editor e arraste o controle escolhido na tela. As alterações ficam salvas neste aparelho.</p><div style="display:flex;gap:8px"><button id="avx-hud-reset-one" style="flex:1;padding:10px;border-radius:9px;background:#344957;color:white">Resetar selecionado</button><button id="avx-hud-reset-all" style="flex:1;padding:10px;border-radius:9px;background:#573c32;color:white">Resetar tudo</button></div></section>';
- const select=$('avx-hud-select'),range=$('avx-hud-range'),label=$('avx-hud-size');
- const save=()=>{prefs[selected.id]??={};prefs[selected.id].scale=Number(range.value);localStorage.setItem('aventuria_hud_layout',JSON.stringify(prefs));label.textContent=Math.round(Number(range.value)*100)+'%';applyHudLayout()};
- select.onchange=()=>{selected=HUD_EDITABLE.find(x=>x.id===select.value)||HUD_EDITABLE[0];range.value=prefs[selected.id]?.scale||1;label.textContent=Math.round(Number(range.value)*100)+'%'};range.oninput=save;
- $('avx-hud-close').onclick=()=>m.remove();
- $('avx-hud-reset-one').onclick=()=>{delete prefs[selected.id];localStorage.setItem('aventuria_hud_layout',JSON.stringify(prefs));applyHudLayout();range.value=1;label.textContent='100%'};
- $('avx-hud-reset-all').onclick=()=>{localStorage.removeItem('aventuria_hud_layout');Object.keys(prefs).forEach(k=>delete prefs[k]);applyHudLayout();range.value=1;label.textContent='100%'};
-}
-function installHudEditor(){
- if($('avx-hud-edit-open'))return;
- const b=document.createElement('button');b.id='avx-hud-edit-open';b.textContent='⚙ HUD';b.style.cssText='position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 52px);z-index:99990;padding:9px 12px;border:1px solid #d6b56d;border-radius:10px;background:#152a37ee;color:#ffe5a6;font:800 12px system-ui;touch-action:manipulation';b.onclick=openHudEditor;document.body.appendChild(b);
-}
-function makeHudDraggable(){
- const prefs=hudPrefs();
- for(const item of HUD_EDITABLE){const el=document.querySelector(item.selector);if(!el||el.dataset.hudDrag==='1')continue;el.dataset.hudDrag='1';el.style.touchAction='none';
-  el.addEventListener('pointerdown',ev=>{if(ev.target.closest('button')&&item.id!=='hotbar')return;if(ev.target.closest('input,textarea,select'))return;const rect=el.getBoundingClientRect();if(ev.button!==0)return;let moved=false;const sx=ev.clientX,sy=ev.clientY;const move=mv=>{if(Math.hypot(mv.clientX-sx,mv.clientY-sy)<5&&!moved)return;moved=true;el.style.position='fixed';el.style.left=(rect.left+mv.clientX-sx)+'px';el.style.top=(rect.top+mv.clientY-sy)+'px';el.style.right='auto';el.style.bottom='auto';el.style.transform='none'};const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);if(moved){prefs[item.id]??={};prefs[item.id].x=parseFloat(el.style.left);prefs[item.id].y=parseFloat(el.style.top);localStorage.setItem('aventuria_hud_layout',JSON.stringify(prefs))}};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});});
- }
-}
 function updateMobileNPCButton(){
  const g=game(),p=g?.player;if(!g?.running||!p||p.realmId){$('avx-mobile-interact')?.remove();return}
  const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
@@ -149,7 +118,7 @@ function updateMobileNPCButton(){
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  updateMobileNPCButton();
- installHudEditor();makeHudDraggable();applyHudLayout();
+
  if(e.dungeon?.active&&e.dungeon.deadline){const left=Math.max(0,Math.ceil((e.dungeon.deadline-Date.now())/1000));if(left===0){exitDungeon('⏳ O tempo acabou! A masmorra expulsou você.');}else{let hud=$('avx-dungeon-timer');if(!hud){hud=document.createElement('div');hud.id='avx-dungeon-timer';hud.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9998;padding:9px 15px;border:1px solid #d7b66e;border-radius:12px;background:#101a27ed;color:#ffe3a0;font:900 14px system-ui;pointer-events:none';document.body.appendChild(hud)}hud.textContent='⏳ MASMORRA '+String(Math.floor(left/60)).padStart(2,'0')+':'+String(left%60).padStart(2,'0')+' · SALA '+e.dungeon.room+'/4';}}else $('avx-dungeon-timer')?.remove();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
  if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
