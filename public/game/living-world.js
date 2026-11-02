@@ -48,6 +48,7 @@
  };
  let lastSave=0,lastRendered=-1,lastHour=-1;
  world.npcs??=defs.map((d,i)=>({...d,x:d.home[0],y:d.home[1],from:[...d.home],to:[...d.home],moveAt:now,moveUntil:now,phase:i*.8,friendship:{},mood:'calmo',lastTalkAt:0,bubble:'',bubbleUntil:0}));
+ world.lastNarrativeDay??=Math.floor(world.day||1);
  // Recupera o progresso decorrido mesmo se o navegador ficou fechado.
  function advanceCalendar(t){
   const elapsed=Math.max(0,t-(world.lastSimAt||t));
@@ -67,6 +68,25 @@
   }
   world.events=world.events.filter(e=>e.endAt>t- DAY_MS);
   for(const e of world.events)if(e.status==='active'&&t>=e.endAt){e.status='finished';announce('🏁 '+e.title+' terminou. A cidade guarda as lembranças desses dias.')}
+  // Histórias pessoais são geradas por dia do mundo, inclusive nos dias em que ninguém entrou.
+  let narrativeCatchup=0;
+  while(Math.floor(world.day)>world.lastNarrativeDay&&narrativeCatchup++<30){
+   const day=++world.lastNarrativeDay;
+   const n=world.npcs[(day*7)%world.npcs.length];
+   const partnerId=n.partner||n.family[0]||n.rival;
+   const other=world.npcs.find(x=>x.id===partnerId);
+   const variants=[
+    {title:n.name+' avançou em seu objetivo',desc:n.name+' dedicou parte do dia a: '+n.goal+'.'},
+    {title:n.name+' visitou a família',desc:n.name+' passou um tempo com '+(other?.name||'pessoas queridas')+' e compartilhou novidades.'},
+    {title:n.name+' recebeu notícias da estrada',desc:n.name+' ouviu relatos de viajantes e espalhou uma nova história pela cidade.'},
+    {title:n.name+' teve um desentendimento',desc:n.name+' discordou de '+(other?.name||'um visitante')+'; os dois decidiram conversar depois.'},
+    {title:n.name+' fez planos para a cidade',desc:n.name+' sugeriu uma atividade comunitária para os próximos dias.'}
+   ];
+   const story=variants[day%variants.length];
+   world.history.unshift({...story,at:t});world.history.splice(20);
+   world.stories??=[];world.stories.unshift({id:'daily-'+day,title:story.title,desc:story.desc,cast:other?[n.id,other.id]:[n.id],at:t,status:'concluída'});world.stories.splice(25);
+   n.memories??=[];n.memories.unshift({text:story.desc,at:t,type:'história'});n.memories.splice(12);
+  }
   world.npcs.forEach(updateNPC);
  }
  function hourOfDay(t){return (t%DAY_MS)/DAY_MS*24}
