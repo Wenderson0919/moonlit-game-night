@@ -252,7 +252,28 @@ function installGameHooks(){
  const g=game(),GameCtor=g?.constructor;
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact;
- if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this)};
+const AVX_WEATHER={kind:'clear',until:0,particles:[],last:0};
+function weatherKind(biome){
+ const pool={forest:['rain','rain','storm','clear','clear'],desert:['clear','clear','storm','rain'],snow:['snow','blizzard','snow','clear'],swamp:['rain','storm','rain','clear'],volcano:['storm','storm','clear','rain']};
+ const a=pool[biome]||pool.forest;return a[Math.floor(Math.random()*a.length)];
+}
+function drawWeather(g){
+ if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
+ const now=performance.now(),w=AVX_WEATHER;
+ if(now>w.until){w.kind=weatherKind(g.player.realmId?({verdant:'forest',frost:'snow',mire:'swamp',ember:'volcano'}[g.player.realmId]||'forest'):g.player.biome||'forest');w.until=now+45000+Math.random()*45000;w.particles=[];}
+ const c=g.ctx,W=g.canvas.width,H=g.canvas.height,dt=Math.min(.05,(now-(w.last||now))/1000);w.last=now;
+ const snowy=w.kind==='snow'||w.kind==='blizzard',storm=w.kind==='storm'||w.kind==='blizzard',rain=w.kind==='rain'||w.kind==='storm';
+ const count=snowy?95:rain?150:0;
+ while(w.particles.length<count)w.particles.push({x:Math.random()*W,y:Math.random()*H,v: snowy?35+Math.random()*65:350+Math.random()*300,s:Math.random()*2+1});
+ while(w.particles.length>count)w.particles.pop();
+ c.save();c.setTransform(1,0,0,1,0,0);
+ if(rain){c.strokeStyle='rgba(155,205,235,.42)';c.lineWidth=1;for(const p of w.particles){p.y+=p.v*dt;p.x-=storm?150*dt:55*dt;if(p.y>H+8){p.y=-8;p.x=Math.random()*W}if(p.x< -8)p.x=W+8;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x-(storm?5:2),p.y+10);c.stroke()}}
+ if(snowy){c.fillStyle='rgba(240,248,255,.8)';for(const p of w.particles){p.y+=p.v*dt;p.x+=Math.sin(now/900+p.s)*18*dt;if(p.y>H+4){p.y=-4;p.x=Math.random()*W}if(p.x<0)p.x=W;if(p.x>W)p.x=0;c.beginPath();c.arc(p.x,p.y,p.s,0,Math.PI*2);c.fill()}}
+ if(storm){c.fillStyle='rgba(10,18,32,.16)';c.fillRect(0,0,W,H);if(Math.sin(now/1700)>0.997){c.fillStyle='rgba(220,235,255,.3)';c.fillRect(0,0,W,H)}}
+ if(w.kind==='blizzard'){c.fillStyle='rgba(210,230,245,.12)';c.fillRect(0,0,W,H)}
+ c.restore();
+}
+ if(originalRender)proto.render=function(){originalRender.call(this);mountAndPetDraw(this);drawWeather(this)};
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
