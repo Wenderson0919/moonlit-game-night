@@ -129,6 +129,8 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         if (status === "SUBSCRIBED") {
           state = "conectado";
           post({ av: "opened" });
+          if (snapTimer) window.clearInterval(snapTimer);
+          if (presTimer) window.clearInterval(presTimer);
           snapTimer = window.setInterval(snap, SNAP_MS);
           presTimer = window.setInterval(() => {
             if (me && channel) { const { last: _l, ...pl } = me; void channel.track(pl); }
