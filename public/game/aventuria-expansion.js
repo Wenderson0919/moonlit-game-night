@@ -237,21 +237,7 @@ function mountAndPetDraw(g){
  const c=g.ctx,p=g.player,s=state(),e=ensure();if(!s||!e)return;
  const camX=Math.round(p.x-g.canvas.width/2),camY=Math.round(p.y-g.canvas.height/2),now=performance.now();
  c.save();c.translate(-camX,-camY);
- if(!p.realmId){
-  // Praça, avenidas e edifícios da Cidade Spawn: desenhados no mundo, atrás dos NPCs.
-  c.save();c.fillStyle='#8b7650';c.fillRect(EXP_SAFE.x-520,EXP_SAFE.y-500,1040,1000);
-  c.fillStyle='#b9a27a';c.fillRect(EXP_SAFE.x-470,EXP_SAFE.y-455,940,910);
-  c.fillStyle='#8e8065';c.fillRect(EXP_SAFE.x-32,EXP_SAFE.y-490,64,980);c.fillRect(EXP_SAFE.x-490,EXP_SAFE.y-32,980,64);
-  c.fillStyle='#c9b58a';c.fillRect(EXP_SAFE.x-190,EXP_SAFE.y-190,380,380);
-  c.fillStyle='#536e67';c.beginPath();c.arc(EXP_SAFE.x,EXP_SAFE.y,72,0,Math.PI*2);c.fill();
-  c.fillStyle='#8dd3c7';c.beginPath();c.arc(EXP_SAFE.x,EXP_SAFE.y,43,0,Math.PI*2);c.fill();
-  c.fillStyle='#d9c58f';c.fillRect(EXP_SAFE.x-7,EXP_SAFE.y-54,14,108);c.fillRect(EXP_SAFE.x-54,EXP_SAFE.y-7,108,14);
-  const shops=[[-120,-360,'#8d5738'],[120,-360,'#647d87'],[0,-420,'#574c85'],[-360,150,'#8a6238'],[360,150,'#657f55'],[120,390,'#6d526b'],[-120,390,'#7d714e'],[420,-390,'#815a79'],[-420,-390,'#596e87'],[-360,-120,'#526b82'],[360,-120,'#5c765d']];
-  for(const [dx,dy,col] of shops){const bx=EXP_SAFE.x+dx,by=EXP_SAFE.y+dy;c.fillStyle='#4b4035';c.fillRect(bx-54,by-92,108,86);c.fillStyle=col;c.fillRect(bx-58,by-102,116,18);c.fillStyle='#d7c69d';c.fillRect(bx-46,by-80,92,67);c.fillStyle=col;c.beginPath();c.moveTo(bx-62,by-102);c.lineTo(bx,by-139);c.lineTo(bx+62,by-102);c.closePath();c.fill();c.fillStyle='#382b23';c.fillRect(bx-12,by-44,24,30);c.fillStyle='#b9d5d2';c.fillRect(bx-40,by-68,18,18);c.fillRect(bx+22,by-68,18,18)}
-  c.fillStyle='#f5e4b7';c.font='900 28px Inter';c.textAlign='center';c.fillText('CIDADE SPAWN',EXP_SAFE.x,EXP_SAFE.y-210);
-  c.fillStyle='#5a4935';c.font='bold 12px Inter';c.fillText('PRAÇA CENTRAL',EXP_SAFE.x,EXP_SAFE.y+112);
-  c.restore();
- }
+ // A cidade e seus prédios são renderizados pelo mapa principal antes das entidades.
  if(p.realmId){c.save();c.translate(2000,2000);c.fillStyle='rgba(125,211,252,.2)';c.beginPath();c.arc(0,0,58,0,Math.PI*2);c.fill();c.strokeStyle='#a5f3fc';c.lineWidth=7;c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.stroke();c.fillStyle='#e0f2fe';c.font='bold 13px Inter';c.textAlign='center';c.fillText('PORTAL DE RETORNO',0,-72);c.fillText('[ E ] Voltar',0,78);c.restore();}
  if(!p.realmId)for(const n of townNPCs){
   c.save();c.translate(n.x,n.y);
