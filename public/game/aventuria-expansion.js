@@ -56,8 +56,14 @@ function avxCountdown(ms){
 }
 function avxSchedule(e){
  e.world??={};const w=e.world,now=Date.now();
- w.nextBossAt??=now+15*60*1000;
- w.nextSeasonAt??=now+10*60*1000;
+ // Agenda curta de teste: migra também calendários antigos já salvos.
+ if(w.scheduleVersion!==2){
+  w.nextBossAt=now+60*1000;
+  w.nextSeasonAt=now+40*1000;
+  w.scheduleVersion=2;
+ }
+ w.nextBossAt??=now+60*1000;
+ w.nextSeasonAt??=now+40*1000;
  return w;
 }
 function renderPanel(){
@@ -221,7 +227,7 @@ function tick(){
    schedule.seasonActive=false;schedule.eventChallenges=(schedule.eventChallenges||0)+1;
    schedule.eventPoints=(schedule.eventPoints||0)+250;schedule.seasonXp=(schedule.seasonXp||0)+500;
    s.gold=(s.gold||0)+1200;s.resources??={};s.resources.crystal=(s.resources.crystal||0)+8;s.resources.diamond=(s.resources.diamond||0)+3;
-   schedule.nextSeasonAt=now+2*60*60*1000;persist();
+   schedule.nextSeasonAt=now+40*1000;persist();
    notify('🏆 Festival concluído! +1200 Gold, 8 cristais, 3 diamantes e 500 XP de temporada!');
    if(typeof updateUIStats==='function')updateUIStats();
   }
@@ -409,7 +415,7 @@ function installGameHooks(){
   proto.damageTarget=function(target,...args){
    const wasBoss=target?.bossType==='colossus',result=originalDamage.call(this,target,...args);
    if(wasBoss&&target.hp<=0){
-    const s=state(),e=ensure();if(s&&e&&!target.__avxRewarded){target.__avxRewarded=true;e.world??={};e.world.worldBoss={active:false,hp:0,maxHp:0};e.world.nextBossAt=Date.now()+45*60*1000;e.world.eventWins=(e.world.eventWins||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+220;e.world.eventPoints=(e.world.eventPoints||0)+60;s.gold=(s.gold||0)+350+(s.level||1)*8;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+12;s.resources.crystal=(s.resources.crystal||0)+25;s.resources.obsidian=(s.resources.obsidian||0)+18;s.resources.ancientCore=(s.resources.ancientCore||0)+1;e.world.seasonXp+=500;persist();notify('🏆 COLOSSO DERROTADO! +Gold, 12 diamantes, 25 cristais, 18 obsidianas e 1 Núcleo Ancestral LENDÁRIO!');if(typeof updateUIStats==='function')updateUIStats()}
+    const s=state(),e=ensure();if(s&&e&&!target.__avxRewarded){target.__avxRewarded=true;e.world??={};e.world.worldBoss={active:false,hp:0,maxHp:0};e.world.nextBossAt=Date.now()+60*1000;e.world.eventWins=(e.world.eventWins||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+220;e.world.eventPoints=(e.world.eventPoints||0)+60;s.gold=(s.gold||0)+350+(s.level||1)*8;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+12;s.resources.crystal=(s.resources.crystal||0)+25;s.resources.obsidian=(s.resources.obsidian||0)+18;s.resources.ancientCore=(s.resources.ancientCore||0)+1;e.world.seasonXp+=500;persist();notify('🏆 COLOSSO DERROTADO! +Gold, 12 diamantes, 25 cristais, 18 obsidianas e 1 Núcleo Ancestral LENDÁRIO!');if(typeof updateUIStats==='function')updateUIStats()}
    }
    return result;
   };proto.__avxBossRewardHook=true;
