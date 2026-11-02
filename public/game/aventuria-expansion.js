@@ -140,7 +140,10 @@ function updateMobileNPCButton(){
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  updateMobileNPCButton();
-
+ if(e.advanced?.treasure&&g?.player){
+  const t=e.advanced.treasure,d=Math.hypot(g.player.x-t.x,g.player.y-t.y);
+  if(d<58){const reward=250+Math.floor(Math.random()*251);s.gold=(s.gold||0)+reward;e.advanced.treasure=null;e.world.treasures=(e.world.treasures||0)+1;e.world.seasonXp=(e.world.seasonXp||0)+90;notify('💎 Baú encontrado! Você recebeu '+reward+' Gold e 90 XP de temporada.');persist();if(typeof updateUIStats==='function')updateUIStats()}
+ }
  $('avx-dungeon-timer')?.remove();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
  if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
