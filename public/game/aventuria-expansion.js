@@ -108,6 +108,21 @@ function renderPanel(){
  bind('avx-treasure-hunt',()=>{const g=game();if(adv.treasure){adv.treasure=null;notify('Busca cancelada.');return}if(!g?.player){notify('Entre no mundo para iniciar uma busca.');return}if(!spend(60))return;const a=Math.random()*Math.PI*2,d=420+Math.random()*260;adv.treasure={x:g.player.x+Math.cos(a)*d,y:g.player.y+Math.sin(a)*d,seed:Date.now()};notify('🧭 Mapa encontrado! Explore a região próxima para localizar o baú.')});
  bind('avx-awaken',()=>{const it=s.equipment?.weapon;if(!it){notify('Equipe uma arma primeiro.');return}it.awakening=it.awakening||0;if(it.awakening>=5){notify('Sua arma atingiu o despertar máximo.');return}if((s.resources?.diamond||0)<1){notify('Você precisa de 1 diamante.');return}if(!spend(250+it.awakening*250))return;s.resources.diamond--;it.awakening++;it.stats??={};it.stats.atk=(it.stats.atk||0)+6;it.stats.power=(it.stats.power||0)+3;notify('🌟 Arma despertada! Ataque +6 e poder +3.')});
 
+
+// Delegação mantém a árvore de talentos funcional mesmo após renderizações do painel.
+panel.addEventListener('click',ev=>{
+ const b=ev.target.closest('[data-skill]');if(!b||!panel.contains(b))return;
+ ev.preventDefault();ev.stopImmediatePropagation();
+ const s=state(),e=ensure(),w=e?.world;if(!s||!w)return;
+ const defs={power:5,vitality:5,haste:5,fortune:5},key=b.dataset.skill;
+ if(!Object.prototype.hasOwnProperty.call(defs,key))return;
+ w.skills??={};w.spent??=0;
+ if((s.level||1)-1-w.spent<=0){notify('Você não tem pontos de talento disponíveis.');return}
+ if((w.skills[key]||0)>=defs[key]){notify('Talento no nível máximo.');return}
+ w.skills[key]=(w.skills[key]||0)+1;w.spent++;w.seasonXp=(w.seasonXp||0)+35;
+ persist();renderPanel();if(typeof updateUIStats==='function')updateUIStats();
+});
+
  const tabs=panel.querySelectorAll('[data-tab]');
  tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.toggle('active',x===t));const v=t.dataset.tab;panel.querySelectorAll('#avx-content>.avx-card').forEach(card=>{const sec=card.dataset.section||'growth';card.style.display=v==='all'||sec===v?'':'none'})});
  bind('avx-guild',()=>{if(w.guild){notify('Sua guilda local já está criada.');return}const name=(prompt('Escolha o nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('O nome precisa ter de 3 a 20 caracteres.');return}if(!spend(200))return;w.guild=name;w.guildLevel=1;w.guildRenown=0;w.seasonXp+=50;notify('🏰 '+name+' foi fundada! Sua guilda está salva neste personagem. Convites online ainda precisam do servidor.')});
@@ -131,6 +146,11 @@ function renderPanel(){
  const ach=[['Primeiros passos',s.level>=5],['Caçador',s.kills>=25],['Desbravador',Object.keys(s.visited||{}).length>=5],['Lenda das raids',(s.raidsCleared||0)>=5],['Mestre coletor',Object.values(s.resources||{}).reduce((a,b)=>a+(b||0),0)>=300]];
  $('avx-achievements').innerHTML=ach.map(([n,ok])=>'<div class="flex justify-between py-1 border-b border-slate-800"><span>'+n+'</span><b class="'+(ok?'text-emerald-300':'text-slate-500')+'">'+(ok?'✓ Concluída':'Bloqueada')+'</b></div>').join('');
  refreshServiceWindow();
+ // Os cartões de sistemas avançados precisam ser reconstruídos sempre que o painel atualiza.
+ const content=$('avx-content');
+ if(content&&typeof featureHtml!=='undefined'&&typeof advancedHtml!=='undefined'){
+  content.insertAdjacentHTML('beforeend',featureHtml+advancedHtml);
+ }
 }
 function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id);if(!q||q.progress<q.goal||e.claimed[id])return;s.gold+=q.reward;e.claimed[id]=true;persist();notify('Recompensa recebida: '+q.reward+' Gold!');renderPanel();if(typeof updateUIStats==='function')updateUIStats()}
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
