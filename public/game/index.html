@@ -1625,7 +1625,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
      r.participants=r.participants||[];if(!r.participants.includes(+m.from))r.participants.push(+m.from);
      g.damageTarget(r.boss,Math.max(1,Math.min(250,+m.dmg||1)),0,true);
     }
-   }else if(m.kind==='reward'&&m.from!==state.id){
+   }else if(m.kind==='reward'&&m.from!==state.id&&(m.participants||[]).includes(state.id)){
     const s=S(),g=window.game;if(!s||!g)return;
     if(m.gold)s.gold+=m.gold;if(m.xp)g.gainExp(m.xp);
     for(const [k,v] of Object.entries(m.resources||{}))s.resources[k]=(s.resources[k]||0)+v;
@@ -1692,7 +1692,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
   const mats={forest:['wood','berry','iron'],desert:['sand','cactus','goldOre'],snow:['ice','pine','diamond'],swamp:['mushroom','herb','fang'],volcano:['obsidian','ember','iron']}[r.biome]||[];
   const resources={};mats.forEach(k=>resources[k]=6+r.tier*4);
   const oldState=r.state;dead0.call(this,r);
-  if(oldState!=='cleared')send({t:'raid_reward',kind:'reward',raidId:r.id,gold,xp,resources});
+  if(oldState!=='cleared')send({t:'raid_reward',kind:'reward',raidId:r.id,gold,xp,resources,participants:(r.participants||[]).filter(id=>id!==state.id)});
  };
  // Sincroniza o estado completo da raid a partir do líder eleito; o próximo líder
  // assume o último snapshot recebido se o líder atual sair.
