@@ -163,8 +163,8 @@ function updateMobileNPCButton(){
  const g=game(),p=g?.player;if(!g?.running||!p||p.realmId){$('avx-mobile-interact')?.remove();return}
  const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
  let btn=$('avx-mobile-interact');
- if(!near||near.d>240){btn?.remove();return}
- if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<260)openTownNPC(n.n.id)});document.body.appendChild(btn)}
+ if(!near||near.d>430){btn?.remove();return}
+ if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<450)openTownNPC(n.n.id)});document.body.appendChild(btn)}
  btn.textContent='E · '+near.n.name;
  btn.style.cssText='position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 190px);z-index:99999;padding:14px 18px;border-radius:16px;border:2px solid '+near.n.color+';background:#10212bea;color:#fff;font:800 13px system-ui;box-shadow:0 5px 22px #0009;touch-action:manipulation;pointer-events:auto';
 }
@@ -366,7 +366,8 @@ function installGameHooks(){
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<230){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
+   if(Math.hypot(p.x-(g.npc?.x??Infinity),p.y-(g.npc?.y??Infinity))<150)return;
+   if(nearest&&nearest.d<430){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
   },true);
  }
  const g=game(),GameCtor=g?.constructor;
@@ -439,7 +440,8 @@ function drawWeather(g){
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
-  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<230){openTownNPC(n.id);return}
+  if(Math.hypot(p.x-(this.npc?.x??Infinity),p.y-(this.npc?.y??Infinity))<150)return originalInteract.call(this);
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<430){openTownNPC(n.id);return}
   return originalInteract.call(this);
  };
  proto.__avxTownHooks=true;
@@ -531,7 +533,7 @@ function openMagicUI(){
 }
 window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
 window.AVENTURIA_SAFE_NPCS=townNPCs;
-window.AVENTURIA_NPC_RANGE=230;
+window.AVENTURIA_NPC_RANGE=430;
 // bônus de mascote (aplicados em getRPGStats, no index.html)
 window.AVENTURIA_PET_BONUS={slime:{def:8},fox:{atk:6},wisp:{power:8},lume:{power:12},crystal:{def:12},root:{hp:40},drake:{atk:15}};
 function openMerchantUI(){
