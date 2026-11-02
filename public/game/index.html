@@ -948,7 +948,7 @@ class Game{
   const i=this.animals.indexOf(a);if(i>=0)this.animals.splice(i,1);
   const s=S(),d=a.def;
   if(silent)return;
-  for(const [r,mn,mx] of d.drops){const q=ri(mn,mx);if(q>0){s.resources[r]=(s.resources[r]||0)+q;this.floatText(a.x,a.y-10-Math.random()*14,`+${q} ${RES[r].n}`,'#fde68a')}}
+  for(const [r,mn,mx] of d.drops){const q=ri(mn,mx);if(q>0){s.resources[r]=(s.resources[r]||0)+q;this.floatText(a.x,a.y-10-Math.random()*14,`+${q} ${(RES[r]?.n||r)}`,'#fde68a')}}
   if(d.beh!=='passive'){const g=ri(4,12)+Math.floor(a.m*3);s.gold+=g;this.floatText(a.x,a.y-26,`+${g} Gold`,'#f59e0b')}
   s.kills++;s.animalKills++;if(d.feat==='slime')unlockRPGAchievement('Caçador de Slimes');if(s.kills>=10)unlockRPGAchievement('Guardião da Clareira');if(s.animalKills>=25)unlockRPGAchievement('Caçador de Feras');
   this.gainExp(Math.max(1,Math.round(d.xp*(1+a.m*.2)*lvlXpMult(a))));updateUIStats();
@@ -1050,8 +1050,10 @@ class Game{
  damageTarget(t,dmg,ang,noKb){
   const s=S(),st=getRPGStats();
   const isBoss=!t.def;
+  if(!Number.isFinite(t.hp)||!Number.isFinite(dmg))return;
   t.hp-=dmg;t.hitT=.25;
-  this.floatText(t.x,t.y-(isBoss?t.sz+30:t.def.sz+14),Math.round(dmg),'#f87171');
+  const targetSize=isBoss?(t.sz||18):(t.def?.sz||t.sz||12);
+  this.floatText(t.x,t.y-(targetSize+(isBoss?30:14)),Math.round(dmg),'#f87171');
   if(st.steal>0)s.hp=Math.min(effMaxHp(),s.hp+dmg*st.steal/100);
   if(!isBoss){
    if(!noKb){t.kx=Math.cos(ang)*5;t.ky=Math.sin(ang)*5}
@@ -1133,7 +1135,7 @@ class Game{
    n.hp-=dmg;this.floatText(n.x,n.y-10,'-'+dmg,'#eab308');
    if(n.hp<=0){
     n.respawn=this.t+90;
-    for(const [r,mn,mx] of nd.drops){let q=ri(mn,mx);if(s.race==='Anão'&&nd.tool==='pickaxe'&&Math.random()<.25)q++;if(q>0){s.resources[r]=(s.resources[r]||0)+q;this.floatText(n.x,n.y-18-Math.random()*16,`+${q} ${RES[r].n}`,'#fde68a')}}
+    for(const [r,mn,mx] of nd.drops){let q=ri(mn,mx);if(s.race==='Anão'&&nd.tool==='pickaxe'&&Math.random()<.25)q++;if(q>0){s.resources[r]=(s.resources[r]||0)+q;this.floatText(n.x,n.y-18-Math.random()*16,`+${q} ${(RES[r]?.n||r)}`,'#fde68a')}}
     this.gainExp(n.type.includes('diamond')?40:12);updateUIStats();
    }
    return;
