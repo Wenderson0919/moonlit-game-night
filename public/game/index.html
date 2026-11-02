@@ -667,6 +667,9 @@ function renderRPGPanel(){
  const s=S(),st=getRPGStats(),ci=CLASS_INFO[s.className];
  const eq=SLOTS.map(sl=>{const it=s.equipment[sl];return `<div class="flex items-center justify-between border-b border-slate-700/60 py-1.5 text-xs"><div><span class="text-slate-400">${SLOT_DEFS[sl].ic} ${SLOT_DEFS[sl].n}:</span> ${it?`<b style="color:${RARITY[it.rar].c}">${it.name}</b><div class="text-[10px] text-slate-400">Nív ${it.ilvl} · ${itemStatsText(it)}</div>`:'<span class="text-slate-500">vazio</span>'}</div>${it?`<button class="btn-sm" onclick="unequipItem('${sl}')">Remover</button>`:''}</div>`}).join('');
  const inv=[...s.inventory].sort((a,b)=>b.rar-a.rar||b.ilvl-a.ilvl).map(it=>`<div class="flex items-center justify-between border-b border-slate-800 py-1.5 text-xs gap-2"><div class="min-w-0"><b style="color:${RARITY[it.rar].c}">${SLOT_DEFS[it.slot].ic} ${it.name}</b><div class="text-[10px] text-slate-400">${RARITY[it.rar].n} · Nív ${it.ilvl} · ${itemStatsText(it)}</div></div><div class="flex gap-1 shrink-0"><button class="btn-sm" onclick="equipItem('${it.id}')">Equipar</button><button class="btn-sm" style="background:#4b2a2a" onclick="sellItem('${it.id}')">${it.sell}g</button></div></div>`).join('')||'<div class="text-xs text-slate-500">Nenhum item. Derrote chefes de raid ou use as forjas!</div>';
+ const spellNames={arcane_bolt:'Projétil Arcano',frost_nova:'Nova Congelante',healing_light:'Luz Restauradora'};
+ const learned=s.learnedSpells||[],equippedSpell=s.equippedSpell;
+ const spellPanel='<section class="rounded-xl bg-slate-950/50 border border-violet-700/60 p-3"><div class="flex justify-between"><h3 class="font-bold text-violet-200">✨ Magia equipada</h3><span class="text-[10px] text-violet-300">Tecla Q</span></div>'+(equippedSpell?'<div class="text-sm mt-2">'+(spellNames[equippedSpell]||equippedSpell)+' <button class="btn-sm" onclick="unequipSpell()">Remover</button></div>':'<p class="text-xs text-slate-400 mt-2">Nenhuma magia equipada.</p>')+'<div class="mt-3 text-xs text-slate-300">Magias aprendidas</div>'+(learned.length?learned.map(id=>'<div class="flex justify-between border-b border-slate-700 py-2 text-xs"><span>'+(spellNames[id]||id)+'</span><button class="btn-sm" '+(equippedSpell===id?'disabled':'')+' onclick="equipSpell(\''+id+'\')">'+(equippedSpell===id?'Equipada':'Equipar')+'</button></div>').join(''):'<p class="text-xs text-slate-500 mt-1">Aprenda magias com o Mestre das Magias.</p>')+'</section>';
  const hasAch=s.achievements.length?s.achievements.join(' • '):'Nenhuma conquista ainda.';
  const titleOpts=['<option value="">Sem título</option>',...s.achievements.filter(a=>TITLES.includes(a)).map(a=>`<option ${s.title===a?'selected':''}>${a}</option>`)].join('');
  $('rpg-body').innerHTML=`
@@ -683,6 +686,7 @@ function renderRPGPanel(){
   <button onclick="activateRPGTransform()" class="w-full rounded-lg bg-violet-700 hover:bg-violet-600 text-white text-xs font-bold p-2">🐉 Transformação (T) — 8s de +65% dano e -55% dano recebido</button>
  </section>
  <section class="rounded-xl bg-slate-950/50 border border-slate-700 p-3"><h3 class="font-bold text-amber-200 mb-1">Equipamentos</h3>${eq}</section>
+ ${spellPanel}
  <section class="rounded-xl bg-slate-950/50 border border-slate-700 p-3"><div class="flex justify-between"><h3 class="font-bold text-amber-200">Árvore de habilidades</h3><span class="text-xs text-amber-300">Pontos: <b>${s.skillPoints}</b></span></div>
   ${SKILL_DEFS.map(([k,l,d])=>`<div class="flex justify-between items-center border-b border-slate-700/70 py-2"><div><b class="text-xs">${l}</b><div class="text-[10px] text-slate-500">${d}</div><span class="text-[10px] text-amber-300">Nível ${s.skills[k]||0}</span></div><button class="btn-sm" ${s.skillPoints<=0?'disabled style="opacity:.35"':''} onclick="addSkill('${k}')">+1</button></div>`).join('')}
   <p class="text-[10px] text-slate-500 mt-1">2 pontos por nível.</p></section>
@@ -695,6 +699,25 @@ function unequipItem(sl){const s=S();const it=s.equipment[sl];if(!it)return;s.in
 function sellItem(id){const s=S(),i=s.inventory.findIndex(x=>x.id===id);if(i<0)return;const it=s.inventory.splice(i,1)[0];s.gold+=it.sell;renderRPGPanel();updateUIStats()}
 function unlockRPGAchievement(n){const s=S();if(!s.achievements.includes(n)){s.achievements.push(n);showNotification('Conquista desbloqueada: '+n+'!','#fde68a')}}
 function activateRPGTransform(){const s=S();if(Date.now()<s.transformUntil){showNotification('Transformação já ativa!');return}if(Date.now()<s.transformCooldown){showNotification('Transformação recarregando…');return}s.transformUntil=Date.now()+8000;s.transformCooldown=Date.now()+25000;showNotification('TRANSFORMAÇÃO: poder ancestral despertado!','#c4b5fd');updateUIStats()}
+const SPELL_BOOK={
+ arcane_bolt:{name:'Projétil Arcano',cooldown:2,range:300,damage:1.25,color:'#a78bfa'},
+ frost_nova:{name:'Nova Congelante',cooldown:6,range:155,damage:1.7,color:'#7dd3fc'},
+ healing_light:{name:'Luz Restauradora',cooldown:8,heal:true}
+};
+function equipSpell(id){const s=S();s.learnedSpells??=[];if(!s.learnedSpells.includes(id)||!SPELL_BOOK[id])return;s.equippedSpell=id;showNotification(SPELL_BOOK[id].name+' equipada! Use Q para lançar.','#c4b5fd');renderRPGPanel()}
+function unequipSpell(){S().equippedSpell=null;showNotification('Magia removida do espaço.');renderRPGPanel()}
+function castEquippedSpell(){
+ const g=window.game,s=S(),id=s.equippedSpell,sp=SPELL_BOOK[id];if(!g||!g.running)return;
+ if(!sp){showNotification('Equipe uma magia no Personagem (P) primeiro.');return}
+ s.spellCooldowns??={};if(g.t<(s.spellCooldowns[id]||0)){showNotification('Magia recarregando…');return}
+ s.spellCooldowns[id]=g.t+sp.cooldown;const st=getRPGStats(),weapon=s.equipment?.weapon;
+ const damage=Math.round((24+st.power*2+s.level*1.5)*sp.damage*(weapon?1.15:1));
+ if(sp.heal){const amount=Math.round(35+st.power*2+s.level);s.hp=Math.min(effMaxHp(),s.hp+amount);g.floatText(g.player.x,g.player.y-28,'+'+amount,'#86efac');g.fx.push({x:g.player.x,y:g.player.y,r:12,max:85,t:.45,col:'#86efac'});showNotification('Luz Restauradora: +'+amount+' vida!');updateUIStats();return}
+ const ang=g.aimAngle();let hits=0;
+ g.eachTarget(t=>{const dx=t.x-g.player.x,dy=t.y-g.player.y,dist=Math.hypot(dx,dy);if(id==='frost_nova'?dist<=sp.range:(dist<=sp.range&&Math.cos(Math.atan2(dy,dx)-ang)>.82)){g.damageTarget(t,damage,Math.atan2(dy,dx),true);hits++}});
+ g.fx.push({x:g.player.x,y:g.player.y,r:12,max:sp.range,t:.42,col:sp.color});
+ showNotification(hits?sp.name+': '+hits+' alvo(s) atingido(s)!'+(weapon?' Combinação arma+magia!':''):'A magia não acertou nenhum inimigo.');
+}
 function useClassSkill(){
  const g=window.game;if(!g||!g.running)return;const s=S(),c=s.className,st=getRPGStats();
  if(g.t<s.skillCd){showNotification('Habilidade recarregando…');return}
@@ -1197,6 +1220,7 @@ class Game{
    if(e.code==='KeyP'){$('rpg-modal').classList.contains('hidden')?openRPGPanel():closeRPGPanel()}
    if(e.code==='KeyT')activateRPGTransform();
    if(e.code==='KeyF')useClassSkill();
+   if(e.code==='KeyQ'){castEquippedSpell();e.preventDefault()}
    if(e.code.startsWith('Digit')){const n=parseInt(e.code.slice(5));const i=n===0?9:n-1;if(HOTBAR_ITEMS[i])selectHotbar(HOTBAR_ITEMS[i].id)}
    if(e.code==='ShiftLeft'||e.code==='ShiftRight')this.dodge();
    if(e.code==='Space'){e.preventDefault();this.attack()}
