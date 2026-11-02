@@ -139,9 +139,7 @@ function tick(){
   if(e.petEquipped&&e.pet&&g.ctx&&Date.now()-lastDraw>80){lastDraw=Date.now();const c=g.ctx,W=g.canvas.width,H=g.canvas.height;c.save();c.font='18px serif';const em=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.fillText(em,W/2-30,H/2+17);c.restore()}
   const overlay=$('avx-world-overlay');if(overlay){overlay.style.background='rgba(7,12,35,'+(night*.24)+')';overlay.dataset.weather=weather}
   const clock=$('avx-world-clock');if(clock)clock.textContent=(night>.55?'🌙 Noite':'☀️ Dia')+' · '+weather;
-  let exitBtn=$('avx-expedition-exit');
-  if(e.dungeon?.active&&!exitBtn){exitBtn=document.createElement('button');exitBtn.id='avx-expedition-exit';exitBtn.type='button';exitBtn.textContent='↩ SAIR DA MASMORRA';exitBtn.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:12px;z-index:100005;padding:12px 15px;border:2px solid #f0c56e;border-radius:12px;background:#542b25;color:#fff;font:900 13px system-ui;box-shadow:0 4px 22px #000b;touch-action:manipulation;pointer-events:auto';exitBtn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();exitDungeon('Você abandonou a expedição e voltou à Área Safe.')});document.body.appendChild(exitBtn)}
-  if(!e.dungeon?.active&&exitBtn)exitBtn.remove();
+  $('avx-expedition-exit')?.remove();
  }
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
 }
