@@ -326,14 +326,14 @@ const ANIMALS={
  crocodilo:{n:'Crocodilo',biomes:['swamp'],beh:'predator',hp:130,spd:1.7,sz:15,col:'#3e6b46',feat:'croc',dmg:15,aggro:150,cap:5,xp:55,drops:[['meat',2,2],['leather',2,3],['fang',1,1]]},
  salamandra:{n:'Salamandra',biomes:['volcano'],beh:'neutral',hp:70,spd:1.8,sz:11,col:'#d9531e',feat:'lizard',dmg:11,cap:8,xp:28,drops:[['meat',1,1],['ember',1,2]]},
  lobo_infernal:{n:'Lobo Infernal',biomes:['volcano'],beh:'predator',pack:1,hp:95,spd:2.8,sz:12,col:'#4a1f1a',feat:'wolf',dmg:13,aggro:240,cap:6,xp:42,drops:[['ember',1,2],['fang',1,1]]},
- lume_wisp:{n:'Vagalume de Lúmen',biomes:['forest'],beh:'passive',hp:38,spd:2.2,sz:9,col:'#b7ffb0',feat:'slime',flee:130,cap:8,xp:35,drops:[['crystal',1,2]]},
- cervo_lunar:{n:'Cervo Lunar',biomes:['forest'],beh:'neutral',hp:95,spd:2.5,sz:14,col:'#c9f4da',feat:'antlers',dmg:12,cap:5,xp:70,drops:[['crystal',1,3]]},
- raposa_cristal:{n:'Raposa Cristalina',biomes:['snow'],beh:'predator',hp:125,spd:3,sz:12,col:'#8de4ff',feat:'wolf',dmg:16,aggro:210,cap:6,xp:90,drops:[['crystal',1,3]]},
- golem_cristal:{n:'Golem de Cristal',biomes:['snow'],beh:'hostile',hp:260,spd:1.1,sz:19,col:'#70cde8',feat:'bear',dmg:24,aggro:190,cap:3,xp:180,drops:[['crystal',2,5]]},
- lince_raiz:{n:'Lince das Raízes',biomes:['swamp'],beh:'predator',hp:210,spd:3.1,sz:13,col:'#a6d66d',feat:'wolf',dmg:25,aggro:240,cap:5,xp:170,drops:[['wood',2,4],['fang',1,2]]},
- tartaruga_ancestral:{n:'Tartaruga Ancestral',biomes:['swamp'],beh:'neutral',hp:420,spd:.7,sz:22,col:'#6eaa62',feat:'bear',dmg:30,cap:3,xp:260,drops:[['wood',3,5],['iron',1,2]]},
- salamandra_igne:{n:'Salamandra Ígnea',biomes:['volcano'],beh:'hostile',hp:330,spd:2.3,sz:15,col:'#ff7545',feat:'lizard',dmg:32,aggro:230,cap:6,xp:230,drops:[['ember',2,4]]},
- draco_obsidiana:{n:'Draco de Obsidiana',biomes:['volcano'],beh:'predator',hp:650,spd:2.5,sz:21,col:'#9c5548',feat:'bear',dmg:48,aggro:280,cap:2,xp:520,drops:[['ember',4,7],['diamond',1,2]]}
+ lume_wisp:{n:'Vagalume de Lúmen',biomes:['forest'],beh:'passive',hp:38,spd:2.2,sz:9,col:'#b7ffb0',feat:'slime',flee:130,cap:8,realmOnly:true,xp:35,drops:[['crystal',1,2]]},
+ cervo_lunar:{n:'Cervo Lunar',biomes:['forest'],beh:'neutral',hp:95,spd:2.5,sz:14,col:'#c9f4da',feat:'antlers',dmg:12,cap:5,realmOnly:true,xp:70,drops:[['crystal',1,3]]},
+ raposa_cristal:{n:'Raposa Cristalina',biomes:['snow'],beh:'predator',hp:125,spd:3,sz:12,col:'#8de4ff',feat:'wolf',dmg:16,aggro:210,cap:6,realmOnly:true,xp:90,drops:[['crystal',1,3]]},
+ golem_cristal:{n:'Golem de Cristal',biomes:['snow'],beh:'hostile',hp:260,spd:1.1,sz:19,col:'#70cde8',feat:'bear',dmg:24,aggro:190,cap:3,realmOnly:true,xp:180,drops:[['crystal',2,5]]},
+ lince_raiz:{n:'Lince das Raízes',biomes:['swamp'],beh:'predator',hp:210,spd:3.1,sz:13,col:'#a6d66d',feat:'wolf',dmg:25,aggro:240,cap:5,realmOnly:true,xp:170,drops:[['wood',2,4],['fang',1,2]]},
+ tartaruga_ancestral:{n:'Tartaruga Ancestral',biomes:['swamp'],beh:'neutral',hp:420,spd:.7,sz:22,col:'#6eaa62',feat:'bear',dmg:30,cap:3,realmOnly:true,xp:260,drops:[['wood',3,5],['iron',1,2]]},
+ salamandra_igne:{n:'Salamandra Ígnea',biomes:['volcano'],beh:'hostile',hp:330,spd:2.3,sz:15,col:'#ff7545',feat:'lizard',dmg:32,aggro:230,cap:6,realmOnly:true,xp:230,drops:[['ember',2,4]]},
+ draco_obsidiana:{n:'Draco de Obsidiana',biomes:['volcano'],beh:'predator',hp:650,spd:2.5,sz:21,col:'#9c5548',feat:'bear',dmg:48,aggro:280,cap:2,realmOnly:true,xp:520,drops:[['ember',4,7],['diamond',1,2]]}
 
 };
 window.AVENTURIA_CREATURE_DEFS=ANIMALS;
@@ -849,7 +849,7 @@ class Game{
   this.structs=[];this.crops=[];this.animals=[];this.loot=[];this.projs=[];this.hazards=[];this.fx=[];this.raids=[];
   this.npc={x:CX,y:CX-120,name:'Mercador Ancião'};
   this.player={x:S().x,y:S().y,speed:3.8,dir:'down',moving:false,atkT:0,atkCd:0,atkAng:0,invuln:0,hurtT:0,dashT:0,dashCd:0,dvx:0,dvy:0,inSafeZone:true,biome:'forest',lavaT:0};
-  for(const k in ANIMALS)for(let i=0;i<ANIMALS[k].cap;i++)this.trySpawnWild(k);
+  for(const k in ANIMALS)if(!ANIMALS[k].realmOnly)for(let i=0;i<ANIMALS[k].cap;i++)this.trySpawnWild(k);
   this.respawnT=0;this.raidT=0;this.raidInfoT=0;this.miniT=0;this.saveT=0;
   this.raids=[];this.raidT=30;
   for(let i=0;i<3;i++)this.spawnRaid(null,null,true);
@@ -915,7 +915,7 @@ class Game{
  }
  stepEntity(e,vx,vy){
   const nx=Math.max(40,Math.min(MAP-40,e.x+vx)),ny=Math.max(40,Math.min(MAP-40,e.y+vy));
-  if(Math.hypot(nx-SAFE.x,ny-SAFE.y)<SAFE.radius+10)return false;
+  if(!this.player?.realmId&&Math.hypot(nx-SAFE.x,ny-SAFE.y)<SAFE.radius+10)return false;
   const p=this.pondAt(nx,ny);if(p&&(p.kind==='water'||p.kind==='lava'))return false;
   e.x=nx;e.y=ny;return true;
  }
