@@ -42,9 +42,7 @@ const css=`
 @media(max-width:700px){#av-exp-btn{top:46px;right:8px;padding:7px 9px}#av-exp-panel{top:88px;right:8px;max-height:70vh}}
 `;
 const style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
-const btn=document.createElement('button');btn.id='av-exp-btn';btn.className='glass-panel rounded-xl px-3 py-2 text-xs font-black text-amber-200';btn.innerHTML='✦ AVENTURA';
-btn.onclick=()=>{const p=$('av-exp-panel');p.style.display=p.style.display==='block'?'none':'block';renderPanel()};
-document.body.appendChild(btn);
+// O menu global foi substituído por NPCs físicos no centro da cidade.
 const panel=document.createElement('section');panel.id='av-exp-panel';panel.className='glass-panel rounded-2xl p-3';
 panel.innerHTML='<header class="flex items-center justify-between border-b border-amber-700/40 pb-2"><div><b class="text-amber-200 text-base">✦ CRÔNICAS DE AVENTURIA</b><div class="text-[10px] text-slate-400">Central de aventura · progressão · desafios</div></div><button class="avx-action" id="avx-close">✕</button></header><div class="avx-tabs" id="avx-tabs"><button class="avx-tab active" data-tab="all">Tudo</button><button class="avx-tab" data-tab="social">Social</button><button class="avx-tab" data-tab="combat">Combate</button><button class="avx-tab" data-tab="growth">Progressão</button><button class="avx-tab" data-tab="world">Mundo</button></div><div id="avx-content"></div>';
 document.body.appendChild(panel);$('avx-close').onclick=()=>panel.style.display='none';
@@ -128,6 +126,90 @@ function tick(){
   const clock=$('avx-world-clock');if(clock)clock.textContent=(night>.55?'🌙 Noite':'☀️ Dia')+' · '+weather;
  }
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
+}
+
+/* NPCs de cidade, montaria e mascote integrados ao mundo */
+const townNPCs=[
+ {id:'merchant',name:'Mercador de Aventuria',role:'Loja geral',x:SAFE.x+105,y:SAFE.y-75,icon:'🛒',color:'#d5a34c'},
+ {id:'stable',name:'Mestre das Montarias',role:'Estábulo',x:SAFE.x-105,y:SAFE.y-75,icon:'🐎',color:'#b88b65'},
+ {id:'pet',name:'Cuidadora de Mascotes',role:'Mascotes',x:SAFE.x+105,y:SAFE.y+75,icon:'🐾',color:'#8bcf9a'},
+ {id:'guild',name:'Mestre das Guildas',role:'Guildas',x:SAFE.x-105,y:SAFE.y+75,icon:'🛡️',color:'#9cb9d8'},
+ {id:'dungeon',name:'Guardião do Portal',role:'Masmorras',x:SAFE.x,y:SAFE.y-175,icon:'🌀',color:'#b99aff'}
+];
+const dungeonRooms=[
+ {name:'Vestíbulo das Ruínas',x:MAP-560,y:MAP-560,w:360,h:260,enemy:'Sentinela das Ruínas',hp:100,reward:100},
+ {name:'Galeria dos Ecos',x:MAP-560,y:MAP-260,w:360,h:260,enemy:'Cavaleiro Espectral',hp:180,reward:180},
+ {name:'Câmara do Guardião',x:MAP-560,y:MAP-80,w:360,h:260,enemy:'Guardião Ancestral',hp:300,reward:350}
+];
+function mountAndPetDraw(g){
+ if(!g?.running||!g.player)return;
+ const c=g.ctx,p=g.player,s=state(),e=ensure();if(!s||!e)return;
+ const camX=Math.round(p.x-g.canvas.width/2),camY=Math.round(p.y-g.canvas.height/2),now=performance.now();
+ c.save();c.translate(-camX,-camY);
+ for(const n of townNPCs){
+  c.save();c.translate(n.x,n.y);
+  c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,14,17,6,0,0,Math.PI*2);c.fill();
+  c.fillStyle=n.color;c.fillRect(-10,-3,20,17);c.fillStyle='#e7bd91';c.beginPath();c.arc(0,-12,9,0,Math.PI*2);c.fill();
+  c.fillStyle='#26342e';c.fillRect(-6,-14,3,2);c.fillRect(3,-14,3,2);
+  c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);
+  c.restore();
+  c.font='bold 10px Inter';c.textAlign='center';c.fillStyle='#071311';c.fillRect(n.x-65,n.y-49,130,16);c.fillStyle='#ffe3a0';c.fillText(n.name,n.x,n.y-37);
+  c.fillStyle='#fff';c.font='9px Inter';c.fillText('[ E ] '+n.role,n.x,n.y-25);
+ }
+ if(e.mount){
+  c.save();c.translate(p.x-20,p.y+12);
+  c.fillStyle='#573b27';c.beginPath();c.ellipse(0,0,18,10,0,0,Math.PI*2);c.fill();
+  c.fillStyle='#9b6b42';c.fillRect(-11,-14,20,15);c.beginPath();c.arc(9,-14,8,0,Math.PI*2);c.fill();
+  c.fillStyle='#3d2a1c';c.beginPath();c.moveTo(10,-20);c.lineTo(7,-29);c.lineTo(14,-22);c.fill();
+  c.fillStyle='#d8b47a';c.fillRect(-8,-4,4,15);c.fillRect(5,-4,4,15);c.restore();
+ }
+ if(e.petEquipped&&e.pet){
+  const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';
+  c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob);
+ }
+ if(e.dungeon?.active){
+  const d=e.dungeon,room=dungeonRooms[Math.max(0,Math.min(2,d.room-1))];
+  c.fillStyle='rgba(7,10,20,.18)';c.fillRect(room.x,room.y,room.w,room.h);
+  c.strokeStyle='#a78bfa';c.lineWidth=8;c.strokeRect(room.x,room.y,room.w,room.h);
+  c.fillStyle='#ddd6fe';c.font='bold 15px Inter';c.textAlign='center';c.fillText(room.name,room.x+room.w/2,room.y+28);
+  c.fillStyle='#1f2937';c.fillRect(room.x+room.w/2-48,room.y+room.h/2-28,96,56);
+  c.fillStyle='#a78bfa';c.fillRect(room.x+room.w/2-36,room.y+room.h/2-18,72,36);
+  c.fillStyle='#fff';c.font='11px Inter';c.fillText(d.enemyName||room.enemy,room.x+room.w/2,room.y+room.h/2+54);
+ }
+ c.restore();
+}
+const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
+const originalRender=window.Game?.prototype?.render;
+if(originalRender){window.Game.prototype.render=function(){originalRender.call(this);mountAndPetDraw(this)}}
+const originalInteract=window.Game?.prototype?.interact;
+if(originalInteract){window.Game.prototype.interact=function(){
+ const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
+ if(n&&Math.hypot(p.x-n.x,p.y-n.y)<66){openTownNPC(n.id);return}
+ if(ensure()?.dungeon?.active&&Math.hypot(p.x-(MAP-380),p.y-(MAP-430))<75){advanceDungeon();return}
+ return originalInteract.call(this);
+}}
+function openTownNPC(id){
+ const s=state(),e=ensure();if(!s||!e)return;
+ const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
+ const actions={
+ merchant:()=>{const choice=prompt('LOJA DE AVENTURIA\\n1 - Poção (+vida) · 60 Gold\\n2 - Ovo de mascote · 250 Gold\\n3 - Kit de exploração · 120 Gold');if(choice==='1'&&s.gold>=60){s.gold-=60;s.items.potion=(s.items.potion||0)+1;notify('Poção adicionada ao inventário!')}else if(choice==='2'&&s.gold>=250){s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Novo mascote!')}else if(choice==='3'&&s.gold>=120){s.gold-=120;s.resources.wood+=5;s.resources.iron+=2;notify('Kit de exploração comprado!')}else notify('Opção inválida ou Gold insuficiente.');persist()},
+ stable:()=>{if(!e.mount){if(s.gold<500){notify('Você precisa de 500 Gold para comprar uma montaria.');return}s.gold-=500;e.mount=true;e.mountType='cavalo';notify('🐎 Cavalo comprado! Pressione E perto do Mestre para montar ou desmontar.')}else{e.mount=!e.mount;notify(e.mount?'Você montou!':'Você desmontou.')}persist()},
+ pet:()=>{if(!e.pet){if(s.gold<250){notify('O ovo custa 250 Gold.');return}s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Um companheiro nasceu!')}else{e.petEquipped=!e.petEquipped;notify(e.petEquipped?'Mascote invocado!':'Mascote guardado.')}persist()},
+ guild:()=>{if(!w.guild){const name=(prompt('Nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('Nome inválido.');return}if(s.gold<200){notify('Fundar uma guilda custa 200 Gold.');return}s.gold-=200;w.guild=name;w.members=[{name:s.name||'Líder',role:'Líder',joined:Date.now()}];notify('Guilda '+name+' fundada!')}else{const online=window.AVENTURIA_ONLINE?.players||[];const list=online.filter(x=>x.name!==s.name).map(x=>x.name).join(', ');const who=prompt('Guilda: '+w.guild+'\\nMembros: '+w.members.map(m=>m.name).join(', ')+'\\nJogadores visíveis: '+(list||'nenhum detectado')+'\\nDigite nome de membro para registrar convite local:');if(who){w.members.push({name:who,role:'Recruta',joined:Date.now(),pending:true});notify('Convite anotado. Para convite real entre contas precisamos persistir guildas no servidor.')}}persist()},
+ dungeon:()=>{if((s.level||1)<3){notify('O portal exige nível 3.');return}if(e.dungeon?.active){notify('Você já está em uma expedição.');return}e.dungeon={active:true,room:1,hp:Math.max(80,s.hp||100),maxHp:Math.max(80,s.hp||100),enemyHp:100,enemyName:dungeonRooms[0].enemy};const g=game();if(g?.player){g.player.x=MAP-380;g.player.y=MAP-430;s.x=g.player.x;s.y=g.player.y}notify('🌀 Você atravessou o portal! Derrote o guardião e avance pelas três salas.');persist()}
+ };
+ actions[id]?.();if(panel.style.display==='block')renderPanel();
+}
+function advanceDungeon(){
+ const e=ensure(),s=state(),d=e?.dungeon;if(!d?.active)return;
+ const room=dungeonRooms[d.room-1],st=window.getRPGStats?.()||{atk:10,power:5,def:3};
+ const hit=25+(st.atk||0)*2+(st.power||0)*2+(e.gear||0)*5+Math.random()*20;
+ d.enemyHp-=hit;d.hp-=Math.max(3,12-(st.def||0)*.3);
+ if(d.hp<=0){d.active=false;const g=game();if(g?.player){g.player.x=SAFE.x;g.player.y=SAFE.y}s.x=SAFE.x;s.y=SAFE.y;notify('Você foi derrotado! O guardião expulsou você da masmorra.');persist();return}
+ if(d.enemyHp>0){notify('Você causou '+Math.floor(hit)+' de dano. '+room.enemy+' ainda tem '+Math.ceil(d.enemyHp)+' HP. Sua vida: '+Math.ceil(d.hp));return}
+ if(d.room<3){d.room++;const next=dungeonRooms[d.room-1];d.enemyName=next.enemy;d.enemyHp=next.hp;d.hp=Math.min(d.maxHp,d.hp+25);const g=game();if(g?.player){g.player.x=next.x+next.w/2;g.player.y=next.y+next.h/2;s.x=g.player.x;s.y=g.player.y}notify('Sala '+d.room+'/3 concluída! Você avançou para '+next.name+'.');}
+ else{d.active=false;e.world.dungeonWins++;e.world.seasonXp+=200;s.gold+=room.reward+150;s.resources.iron=(s.resources.iron||0)+3;const g=game();if(g?.player){g.player.x=SAFE.x;g.player.y=SAFE.y}s.x=SAFE.x;s.y=SAFE.y;notify('🏆 Masmorra conquistada! Recompensas: Gold, 3 ferros e XP de temporada.');}
+ persist();if(panel.style.display==='block')renderPanel();
 }
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
 document.body.appendChild(overlay);
