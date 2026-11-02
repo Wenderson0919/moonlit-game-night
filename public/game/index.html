@@ -1719,6 +1719,7 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
   const g=window.game;
   if(state.raidHost===state.id){
    const raids=g.raids.map(r=>JSON.parse(JSON.stringify(r)));
+   state.raids=raids;updateOnlineRaidPanel();
    send({t:'raid_sync',kind:'sync',raids});
   }
  },250);
