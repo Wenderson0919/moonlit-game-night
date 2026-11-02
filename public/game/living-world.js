@@ -61,13 +61,20 @@
    const duration=template.duration+(Math.floor(world.day+catchup)%2);
    const event={id:'event-'+Math.floor(startAt/1000),...template,startAt,endAt:startAt+duration*DAY_MS,status:t>=startAt+duration*DAY_MS?'finished':'active'};
    world.events.push(event);world.history.unshift({title:event.title,at:startAt,desc:event.desc});
+   if(event.kind==='market'){
+    const visitors=[
+     {name:'Mercador Kael',role:'mercador viajante',color:'#a77b45',hair:'#34271f',skin:'#d6a36e'},
+     {name:'Suri',role:'contadora de histórias',color:'#557f91',hair:'#392b50',skin:'#e8b985'}
+    ];
+    visitors.forEach((v,i)=>world.npcs.push({id:'visitor-'+event.id+'-'+i,...v,home:[CX+270+i*35,CY+230],work:[CX+155+i*55,CY-70],x:CX+155+i*55,y:CY-70,from:[CX+155+i*55,CY-70],to:[CX+155+i*55,CY-70],moveAt:t,moveUntil:t+30000,phase:i*1.7,schedule:[[0,'work'],[19,'home']],friendship:{},mood:'animado',lastTalkAt:0,bubble:'',bubbleUntil:0,visitorEventId:event.id}));
+   }
    world.history=world.history.slice(0,20);
    world.nextEventAt=startAt+(6+Math.floor(((world.day+catchup)*7)%5))*DAY_MS;
    if(event.kind==='festival')world.festivalCount++;
    if(event.status==='active')announce('📣 '+event.title+' começou! '+event.desc);
   }
   world.events=world.events.filter(e=>e.endAt>t- DAY_MS);
-  for(const e of world.events)if(e.status==='active'&&t>=e.endAt){e.status='finished';announce('🏁 '+e.title+' terminou. A cidade guarda as lembranças desses dias.')}
+  for(const e of world.events)if(e.status==='active'&&t>=e.endAt){e.status='finished';world.npcs=world.npcs.filter(n=>n.visitorEventId!==e.id);announce('🏁 '+e.title+' terminou. A cidade guarda as lembranças desses dias.')}
   // Histórias pessoais são geradas por dia do mundo, inclusive nos dias em que ninguém entrou.
   let narrativeCatchup=0;
   while(Math.floor(world.day)>world.lastNarrativeDay&&narrativeCatchup++<30){
