@@ -147,16 +147,15 @@ function restoreRealmWorld(g,o){for(const k of REALM_KEYS)g[k]=o[k];g.player.inS
 function populateRealmCreatures(g,r){
  if(!g?.animals)return;
  for(const kind of r.creatures){const d=window.AVENTURIA_CREATURE_DEFS?.[kind];if(!d)continue;
-  for(let i=0;i<d.cap;i++){let x=250+Math.random()*3500,y=250+Math.random()*3500;if(Math.hypot(x-2000,y-2000)<500){x+=700}
-   g.spawnAnimal(kind,x,y,{mult:1.15})}
+  const count=Math.min(4,d.cap);for(let i=0;i<count;i++){const ang=Math.random()*Math.PI*2,dist=550+Math.random()*1250,x=2000+Math.cos(ang)*dist,y=2000+Math.sin(ang)*dist;g.spawnAnimal(kind,x,y,{mult:1.15})}
  }
 }
 function enterRealm(r){
  const g=game(),s=state();if(!g||!s||!r)return;
  if(realmReturnSnapshot){notify('Você já está em outra dimensão.');return}
  realmReturnSnapshot=saveRealmWorld(g);
- g.start(r.seed,{});
- g.player.x=2000;g.player.y=2000;g.player.inSafeZone=false;g.player.realmId=r.id;
+ g.start(r.seed,{realmId:r.id});
+ g.animals=[];g.player.x=2000;g.player.y=2350;g.player.inSafeZone=false;g.player.realmId=r.id;
  populateRealmCreatures(g,r);
  s.x=2000;s.y=2000;s.seed=r.seed;persist();
  notify('🌌 Dimensão '+r.name+' carregada! Explore livremente.');
@@ -171,7 +170,7 @@ function openDungeonPortal(){
  m.innerHTML='<div style="width:min(650px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#172c36,#101522);border:1px solid #c6a66a;border-radius:20px;padding:22px;color:#fff"><small style="color:#f1d18c;letter-spacing:2px">PORTAIS DE AVENTURIA</small><h2 style="font-size:25px;font-weight:900">🌌 Dimensões desconhecidas</h2><p style="color:#bdcbd0;font-size:13px;margin:10px 0">Cada portal abre um mundo independente, com terreno, criaturas e exploração próprios. O nível mínimo protege os aventureiros despreparados.</p>'+AVENTURIA_REALMS.map(r=>{const ok=(s.level||1)>=r.level;return '<div style="display:flex;gap:12px;align-items:center;padding:13px;margin:10px 0;border:1px solid '+r.color+'66;border-radius:13px;background:#172630"><div style="font-size:28px">'+({verdant:'🌺',frost:'💎',mire:'🌿',ember:'🌋'}[r.id])+'</div><div style="flex:1"><b style="color:'+r.color+'">'+r.name+'</b><div style="font-size:11px;color:#aab9c0">'+r.theme+' · Nível '+r.level+'+</div><div style="font-size:11px;color:#c5d0d4">'+r.desc+'</div><div style="font-size:10px;color:#9cc">Criaturas: '+r.creatures.join(', ')+'</div></div><button data-world="'+r.id+'" '+(!ok?'disabled':'')+' style="padding:9px 12px;border-radius:9px;background:'+(ok?'#386d61':'#374151')+'">'+(ok?'Entrar':'🔒 Bloqueado')+'</button></div>'}).join('')+'<button id="avx-world-close" style="padding:9px 14px;background:#30424a;border-radius:9px">Fechar</button></div>';
  $('avx-world-close').onclick=()=>m.remove();m.querySelectorAll('[data-world]').forEach(b=>b.onclick=()=>{const r=AVENTURIA_REALMS.find(x=>x.id===b.dataset.world);if(r&&(s.level||1)>=r.level){enterRealm(r);m.remove()}});
 }
-function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p.x>1850&&p.x<2150&&p.y>1850&&p.y<2150){leaveRealm();return true}return false}
+function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p.realmId&&Math.hypot(p.x-2000,p.y-2000)<115){leaveRealm();return true}return false}
 
 function openDungeonPortal(){
  const s=state();if(!s)return;let m=$('avx-dungeon-modal');if(!m){m=document.createElement('div');m.id='avx-dungeon-modal';m.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:16px';document.body.appendChild(m)}
@@ -200,7 +199,8 @@ function mountAndPetDraw(g){
  const c=g.ctx,p=g.player,s=state(),e=ensure();if(!s||!e)return;
  const camX=Math.round(p.x-g.canvas.width/2),camY=Math.round(p.y-g.canvas.height/2),now=performance.now();
  c.save();c.translate(-camX,-camY);
- for(const n of townNPCs){
+ if(p.realmId){c.save();c.translate(2000,2000);c.fillStyle='rgba(125,211,252,.2)';c.beginPath();c.arc(0,0,58,0,Math.PI*2);c.fill();c.strokeStyle='#a5f3fc';c.lineWidth=7;c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.stroke();c.fillStyle='#e0f2fe';c.font='bold 13px Inter';c.textAlign='center';c.fillText('PORTAL DE RETORNO',0,-72);c.fillText('[ E ] Voltar',0,78);c.restore();}
+ if(!p.realmId)for(const n of townNPCs){
   c.save();c.translate(n.x,n.y);
   c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,14,17,6,0,0,Math.PI*2);c.fill();
   c.fillStyle=n.color;c.fillRect(-10,-3,20,17);c.fillStyle='#e7bd91';c.beginPath();c.arc(0,-12,9,0,Math.PI*2);c.fill();
