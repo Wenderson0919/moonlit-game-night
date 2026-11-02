@@ -1144,10 +1144,13 @@ class Game{
  /* ---------- construção / interação ---------- */
  interact(){
   const p=this.player;
-  if(window.AVENTURIA_INTERACT_NPC&&p&&!p.realmId){
+  if(p&&!p.realmId&&window.AVENTURIA_INTERACT_NPC){
    const np=window.AVENTURIA_SAFE_NPCS||[];
    const near=np.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(near&&near.d<150){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
+   // The safe-zone merchants are clustered around the town center.
+   // Use a generous radius so the interaction works even with sprite/camera offsets.
+   if(near&&near.d<300){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
+   if(p.inSafeZone&&near&&near.d<390){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
   }
   if(Math.hypot(p.x-this.npc.x,p.y-this.npc.y)<70){updateUIStats();$('shop-modal').classList.remove('hidden');return}
   const ch=this.structs.find(s=>s.type==='chest'&&Math.hypot(p.x-s.x,p.y-s.y)<60);
