@@ -158,6 +158,103 @@
   const g=window.game;if(g.__livingWorldAttached)return;g.__livingWorldAttached=true;
   const original=g.render.bind(g);g.render=function(){original();render()};
  }
+
+ // Camada social: vínculos familiares, casais, rivalidades, memórias e histórias pessoais.
+ const socialProfiles={
+  mira:{family:['davi'],partner:'tomas',traits:['generosa','alegre'],goal:'abrir uma segunda padaria'},
+  tomas:{family:['mira'],partner:'mira',rival:'borin',traits:['orgulhoso','trabalhador'],goal:'forjar uma espada lendária'},
+  lina:{family:['yara'],partner:null,traits:['cuidadosa','curiosa'],goal:'criar um jardim medicinal'},
+  borin:{family:[],partner:null,rival:'tomas',traits:['protetor','reservado'],goal:'proteger todas as estradas'},
+  nara:{family:[],partner:'eron',traits:['criativa','sonhadora'],goal:'organizar uma grande feira de artesanato'},
+  eron:{family:[],partner:'nara',traits:['calmo','aventureiro'],goal:'mapear os rios de Gaia'},
+  yara:{family:['lina'],partner:null,traits:['corajosa','falante'],goal:'entregar uma mensagem além das montanhas'},
+  davi:{family:['mira'],partner:null,traits:['curioso','impulsivo'],goal:'tornar-se um grande explorador'}
+ };
+ const memories=world.memories??(world.memories=[]);
+ const playerRelations=world.playerRelations??(world.playerRelations={});
+ const stories=world.stories??(world.stories=[]);
+ world.npcs.forEach(n=>{
+  const p=socialProfiles[n.id]||{};
+  n.family??=p.family||[];n.partner??=p.partner||null;n.rival??=p.rival||null;
+  n.traits??=p.traits||['observador'];n.goal??=p.goal||'encontrar seu lugar na cidade';
+  n.memories??=[];n.relationships??={};
+ });
+ function remember(n,text,type='vida'){
+  n.memories.unshift({text,at:Date.now(),type});n.memories=n.memories.slice(0,12);
+  memories.unshift({npc:n.name,text,at:Date.now(),type});memories.splice(40);
+ }
+ function socialStory(title,desc,cast){
+  const item={id:'story-'+Date.now(),title,desc,cast,at:Date.now(),status:'em andamento'};
+  stories.unshift(item);stories.splice(25);world.history.unshift({title,desc,at:item.at});world.history.splice(20);
+  announce('📖 Nova história: '+title+' — '+desc);
+ }
+ function nearestNPC(){
+  const p=window.game?.player;if(!p)return null;
+  return world.npcs.map(n=>({n,d:Math.hypot(n.x-p.x,n.y-p.y)})).sort((a,b)=>a.d-b.d)[0]||null;
+ }
+ function talkToNPC(){
+  const hit=nearestNPC();if(!hit||hit.d>115){announce('Chegue mais perto de um morador para conversar.');return}
+  const n=hit.n,t=Date.now(),rel=playerRelations[n.id]??(playerRelations[n.id]={affinity:0,talks:0,gifts:0,trust:0});
+  const lines=[
+   'Olá! Que bom encontrar alguém disposto a conversar.',
+   'A cidade muda um pouquinho a cada dia. Você percebeu?',
+   'Tenho pensado bastante nos meus planos: '+n.goal+'.',
+   n.partner?'Às vezes converso com '+(world.npcs.find(x=>x.id===n.partner)?.name||'uma pessoa querida')+' sobre o futuro.':'Ainda estou descobrindo o que o futuro reserva.',
+   n.rival?'Prefiro evitar discussões com '+(world.npcs.find(x=>x.id===n.rival)?.name||'essa pessoa')+'.':'Gosto de conhecer pessoas novas.',
+   'Minha família é importante para mim. Nem sempre concordamos, mas estamos juntos.'
+  ];
+  const line=lines[(rel.talks+Math.floor(t/60000))%lines.length];
+  setBubble(n,line);rel.talks++;rel.affinity=clamp(rel.affinity+1,0,100);rel.trust=clamp(rel.trust+(rel.talks%3===0?1:0),0,100);
+  remember(n,'Conversou com o aventureiro. '+line,'jogador');
+  if(rel.talks===3)socialStory(n.name+' começou a confiar no aventureiro',n.name+' já reconhece o herói e compartilha mais sobre seus planos.',[n.id]);
+  if(rel.affinity>=5&&rel.affinity%5===0){const eventLine=n.name+' agora considera o aventureiro uma pessoa próxima.';setBubble(n,eventLine);remember(n,eventLine,'amizade')}
+  safeWrite(world);announce(n.name+' ('+n.role+'): '+line);
+  renderSocialPanel();
+ }
+ function renderSocialPanel(){
+  let el=$('living-social-panel');if(!el){el=document.createElement('section');el.id='living-social-panel';el.style.cssText='position:fixed;right:14px;top:90px;z-index:58;width:min(330px,calc(100vw - 28px));max-height:58vh;overflow:auto;padding:12px;border:1px solid #547d72;border-radius:13px;background:#0b171bf5;color:#f4ead5;font:12px Inter,sans-serif;display:none;box-shadow:0 12px 40px #0009';document.body.appendChild(el)}
+  const hit=nearestNPC(),relation=hit&&hit.d<180?playerRelations[hit.n.id]||{affinity:0,talks:0,trust:0}:null;
+  el.innerHTML='<header style="display:flex;justify-content:space-between"><b style="color:#9fe2bc">🤝 LAÇOS DE AVENTURIA</b><button id="living-social-close">✕</button></header>'+
+   (relation?'<p style="margin:8px 0;color:#f8df9a">Mais próximo: '+hit.n.name+' · Afinidade '+relation.affinity+'/100 · Confiança '+relation.trust+'/100</p>':'<p style="margin:8px 0;color:#aab9bc">Aproxime-se de um morador para conversar. Pressione G.</p>')+
+   '<b>👨‍👩‍👧 Famílias e vínculos</b>'+world.npcs.map(n=>'<p style="margin-top:6px">• <b>'+n.name+'</b> — '+n.role+'<br><span style="color:#b7c6c7">Família: '+(n.family.map(id=>world.npcs.find(x=>x.id===id)?.name||id).join(', ')||'sem parentes conhecidos')+' · '+(n.partner?'Relacionamento: '+(world.npcs.find(x=>x.id===n.partner)?.name||n.partner):'solteiro(a)')+(n.rival?' · Rival: '+(world.npcs.find(x=>x.id===n.rival)?.name||n.rival):'')+'</span><br><span style="color:#a7b7aa">Objetivo: '+n.goal+'</span></p>').join('')+
+   '<b style="display:block;margin-top:12px">📚 Histórias recentes</b>'+stories.slice(0,5).map(s=>'<p style="margin-top:5px;color:#cbd5e1">• '+s.title+'</p>').join('');
+  $('living-social-close').onclick=()=>el.style.display='none';return el;
+ }
+ function socialMilestones(){
+  const t=Date.now();
+  // Relacionamentos e rivalidades geram consequências narrativas ao longo do calendário.
+  for(const n of world.npcs){
+   if(!n.partner||n.id>n.partner)continue;
+   const other=world.npcs.find(x=>x.id===n.partner);if(!other)continue;
+   const key=[n.id,other.id].sort().join('-');
+   const together=world.events.some(e=>e.kind==='festival'&&e.status==='active');
+   if(together&&!world.socialMilestones?.[key]){
+    world.socialMilestones??={};world.socialMilestones[key]=t;
+    remember(n,'Passou o festival ao lado de '+other.name+'.','relacionamento');
+    remember(other,'Passou o festival ao lado de '+n.name+'.','relacionamento');
+    socialStory(n.name+' e '+other.name+' fortaleceram seu vínculo','Durante o festival, os dois passaram mais tempo juntos e fizeram planos.',[n.id,other.id]);
+   }
+  }
+  for(const n of world.npcs){
+   if(!n.rival||n.id>n.rival)continue;
+   const other=world.npcs.find(x=>x.id===n.rival);if(!other)continue;
+   const key=[n.id,other.id].sort().join('-');
+   const day=Math.floor(world.day);
+   world.rivalryDays??={};
+   if(day%9===0&&world.rivalryDays[key]!==day){
+    world.rivalryDays[key]=day;
+    remember(n,'Teve um desentendimento com '+other.name+'.','rivalidade');
+    remember(other,'Discutiu novamente com '+n.name+'.','rivalidade');
+    socialStory('Uma velha rivalidade voltou à tona',n.name+' e '+other.name+' discordaram durante o trabalho. Os moradores comentam o assunto.',[n.id,other.id]);
+   }
+  }
+ }
+ const oldTick=tick;
+ tick=function(){oldTick();socialMilestones();};
+ const socialBtn=document.createElement('button');socialBtn.id='living-social-btn';socialBtn.textContent='🤝 Laços';socialBtn.style.cssText='position:fixed;left:18px;top:110px;z-index:57;padding:8px 12px;border:1px solid #547d72;border-radius:9px;background:#17332d;color:#b8f0d2;font:bold 11px Inter,sans-serif';socialBtn.onclick=()=>{const el=renderSocialPanel();el.style.display=el.style.display==='none'?'block':'none';if(el.style.display==='block')renderSocialPanel()};document.body.appendChild(socialBtn);
+ window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();e.stopImmediatePropagation();talkToNPC()}},true);
+ window.AventuriaSocial={talk:talkToNPC,open:()=>{const el=renderSocialPanel();el.style.display='block'},getRelations:()=>playerRelations,getStories:()=>stories};
+
  setupUI();advanceCalendar(Date.now());attach();
  setInterval(tick,1000);window.addEventListener('pagehide',()=>safeWrite(world));
  window.AventuriaLivingWorld={getState:()=>world,open:()=>{const el=panel();el.style.display='block';panel()},save:()=>safeWrite(world)};
