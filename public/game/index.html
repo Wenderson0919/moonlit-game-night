@@ -1149,8 +1149,7 @@ class Game{
    const near=np.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
    // The safe-zone merchants are clustered around the town center.
    // Use a generous radius so the interaction works even with sprite/camera offsets.
-   if(near&&near.d<300){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
-   if(p.inSafeZone&&near&&near.d<390){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
+   if(near&&(near.d<420||p.inSafeZone)){window.AVENTURIA_INTERACT_NPC(near.n.id);return}
   }
   if(Math.hypot(p.x-this.npc.x,p.y-this.npc.y)<70){updateUIStats();$('shop-modal').classList.remove('hidden');return}
   const ch=this.structs.find(s=>s.type==='chest'&&Math.hypot(p.x-s.x,p.y-s.y)<60);
@@ -1186,7 +1185,14 @@ class Game{
    if(e.key==='Enter'){toggleChatPanel(true);e.preventDefault();return}
    if(e.code==='KeyB')toggleBuildMode();
    if(e.code==='KeyR'){S().buildRotation=(S().buildRotation+90)%360;showNotification('Rotação: '+S().buildRotation+'°')}
-   if(e.code==='KeyE')this.interact();
+   if(e.code==='KeyE'){
+    if(window.AVENTURIA_INTERACT_NPC&&this.player&&!this.player.realmId&&this.player.inSafeZone){
+     const np=window.AVENTURIA_SAFE_NPCS||[];
+     const near=np.map(n=>({n,d:Math.hypot(this.player.x-n.x,this.player.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
+     if(near){window.AVENTURIA_INTERACT_NPC(near.n.id);e.preventDefault();return}
+    }
+    this.interact();
+   }
    if(e.code==='KeyC')toggleCraftModal();
    if(e.code==='KeyP'){$('rpg-modal').classList.contains('hidden')?openRPGPanel():closeRPGPanel()}
    if(e.code==='KeyT')activateRPGTransform();
