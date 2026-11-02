@@ -1,0 +1,162 @@
+/* Chronicles of Gaia — Living World v1
+ * Simulação persistente local: calendário, rotinas, relações, conversas e eventos.
+ * O relógio usa tempo real, portanto continua avançando enquanto a página está fechada.
+ * Persistência global entre jogadores exige posteriormente uma tabela/worker no Supabase.
+ */
+(()=>{'use strict';
+ const DAY_MS=60*60*1000, KEY='chronicles-living-world-v1', CX=2000, CY=2000;
+ const $=id=>document.getElementById(id);
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+ const safeRead=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch{return null}};
+ const safeWrite=v=>{try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){console.warn('[living-world] save failed',e)}};
+ const names=['Mira','Tomas','Lina','Borin','Nara','Eron','Yara','Davi'];
+ const defs=[
+  {id:'mira',name:'Mira',role:'padeira',home:[CX-250,CY-210],work:[CX+145,CY-155],color:'#b86b55',hair:'#30231f',skin:'#d6a36e',schedule:[[6,'work'],[14,'plaza'],[19,'home'],[22,'sleep']]},
+  {id:'tomas',name:'Tomas',role:'ferreiro',home:[CX+260,CY+220],work:[CX-150,CY-145],color:'#637c8c',hair:'#49372c',skin:'#b9784d',schedule:[[7,'work'],[17,'plaza'],[20,'home'],[23,'sleep']]},
+  {id:'lina',name:'Lina',role:'curandeira',home:[CX-300,CY+220],work:[CX-150,CY+155],color:'#648b69',hair:'#6c4732',skin:'#e8b985',schedule:[[7,'work'],[13,'plaza'],[18,'home'],[21,'sleep']]},
+  {id:'borin',name:'Borin',role:'guarda',home:[CX+300,CY-220],work:[CX,CY-300],color:'#8c754b',hair:'#292929',skin:'#8d563d',schedule:[[0,'work'],[6,'plaza'],[8,'work'],[18,'home'],[22,'sleep']]},
+  {id:'nara',name:'Nara',role:'artesã',home:[CX-320,CY-20],work:[CX+160,CY+155],color:'#9a6caa',hair:'#251c2a',skin:'#f4d1b1',schedule:[[8,'work'],[15,'plaza'],[19,'home'],[22,'sleep']]},
+  {id:'eron',name:'Eron',role:'pescador',home:[CX+320,CY+30],work:[CX+90,CY+260],color:'#547f91',hair:'#8a633f',skin:'#d6a36e',schedule:[[5,'work'],[12,'plaza'],[17,'home'],[21,'sleep']]},
+  {id:'yara',name:'Yara',role:'mensageira',home:[CX+310,CY-20],work:[CX-80,CY+40],color:'#b07b45',hair:'#35252a',skin:'#b9784d',schedule:[[6,'work'],[11,'plaza'],[16,'work'],[20,'home'],[23,'sleep']]},
+  {id:'davi',name:'Davi',role:'estudante',home:[CX-300,CY+20],work:[CX+15,CY-240],color:'#6d78a7',hair:'#392d25',skin:'#e8b985',schedule:[[8,'work'],[12,'plaza'],[16,'work'],[19,'home'],[21,'sleep']]}
+ ];
+ const routes={
+  home:n=>n.home,work:n=>n.work,
+  plaza:n=>[CX+Math.sin(n.phase)*95,CY+Math.cos(n.phase)*78],
+  sleep:n=>n.home
+ };
+ const conversations=[
+  ['Você ouviu? Estão preparando uma festa na praça.','Ouvi sim! Parece que vai durar alguns dias.'],
+  ['Como está o movimento hoje?','A cidade está mais animada do que ontem.'],
+  ['Passei pela estrada e vi viajantes chegando.','Talvez tragam notícias de outras regiões.'],
+  ['Precisamos ajudar quem está construindo a ponte.','Vou falar com o pessoal depois do trabalho.'],
+  ['Você ainda está chateado comigo?','Já passou. Vamos conversar na praça.'],
+  ['Dizem que haverá música no festival.','Então não vou perder essa festa!']
+ ];
+ const eventTemplates=[
+  {kind:'festival',title:'Festival da Aurora',desc:'Moradores decoram a praça, músicos chegam e comerciantes montam barracas.',duration:4},
+  {kind:'market',title:'Feira dos Viajantes',desc:'Mercadores visitantes chegam à cidade com novidades e histórias.',duration:3},
+  {kind:'construction',title:'Obras na Vila',desc:'Moradores se reúnem para ampliar as estruturas da cidade.',duration:4},
+  {kind:'celebration',title:'Celebração da Colheita',desc:'A comunidade compartilha comida, música e pequenas competições.',duration:3},
+  {kind:'rumor',title:'Rumores da Estrada',desc:'Viajantes relatam movimentação estranha perto dos caminhos da floresta.',duration:3}
+ ];
+ const saved=safeRead(),now=Date.now();
+ const world=saved&&saved.version===1?saved:{
+  version:1,createdAt:now,lastSimAt:now,day:1,
+  npcs:defs.map((d,i)=>({...d,x:d.home[0],y:d.home[1],from:[...d.home],to:[...d.home],moveAt:now,moveUntil:now,phase:i*.8,friendship:{},mood:'calmo',lastTalkAt:0,bubble:'',bubbleUntil:0})),
+  events:[],history:[],nextEventAt:now+DAY_MS*3,festivalCount:0
+ };
+ let lastSave=0,lastRendered=-1,lastHour=-1;
+ world.npcs??=defs.map((d,i)=>({...d,x:d.home[0],y:d.home[1],from:[...d.home],to:[...d.home],moveAt:now,moveUntil:now,phase:i*.8,friendship:{},mood:'calmo',lastTalkAt:0,bubble:'',bubbleUntil:0}));
+ // Recupera o progresso decorrido mesmo se o navegador ficou fechado.
+ function advanceCalendar(t){
+  const elapsed=Math.max(0,t-(world.lastSimAt||t));
+  world.day+=(elapsed/DAY_MS);
+  world.lastSimAt=t;
+  if(t>=world.nextEventAt){
+   const template=eventTemplates[(world.history.length+world.day|0)%eventTemplates.length];
+   const duration=template.duration+(Math.floor(world.day)%2);
+   const event={id:'event-'+Math.floor(t/1000),...template,startAt:t,endAt:t+duration*DAY_MS,status:'active'};
+   world.events.push(event);world.history.unshift({title:event.title,at:t,desc:event.desc});
+   world.history=world.history.slice(0,20);
+   world.nextEventAt=t+(6+Math.floor((world.day*7)%5))*DAY_MS;
+   if(event.kind==='festival')world.festivalCount++;
+   announce('📣 '+event.title+' começou! '+event.desc);
+  }
+  world.events=world.events.filter(e=>e.endAt>t- DAY_MS);
+  for(const e of world.events)if(e.status==='active'&&t>=e.endAt){e.status='finished';announce('🏁 '+e.title+' terminou. A cidade guarda as lembranças desses dias.')}
+  world.npcs.forEach(updateNPC);
+ }
+ function hourOfDay(t){return (t%DAY_MS)/DAY_MS*24}
+ function destination(n,t){
+  const h=hourOfDay(t),s=n.schedule;
+  let place=s[0][1];for(const [hour,p] of s)if(h>=hour)place=p;
+  const active=world.events.find(e=>e.status==='active'&&t>=e.startAt&&t<e.endAt);
+  if(active&&active.kind==='festival'&&h>=16&&h<22&&n.id!=='borin')place='plaza';
+  if(active&&active.kind==='celebration'&&h>=15&&h<21)place='plaza';
+  return routes[place](n);
+ }
+ function updateNPC(n){
+  const t=Date.now();
+  if(!n.to||t>=n.moveUntil){
+   n.from=[n.x,n.y];n.to=destination(n,t);n.moveAt=t;
+   n.moveUntil=t+(n.to[0]===n.x&&n.to[1]===n.y?45000:18000+((n.id.charCodeAt(0)*997)%14000));
+  }
+  const f=clamp((t-n.moveAt)/Math.max(1,n.moveUntil-n.moveAt),0,1);
+  n.x=n.from[0]+(n.to[0]-n.from[0])*f;n.y=n.from[1]+(n.to[1]-n.from[1])*f;
+  n.phase+=.012;
+  if(n.bubbleUntil<t)n.bubble='';
+ }
+ function announce(message){
+  const feed=$('living-world-feed');if(!feed)return;
+  feed.textContent=message;feed.style.opacity='1';
+  clearTimeout(announce.timer);announce.timer=setTimeout(()=>feed.style.opacity='.55',9000);
+ }
+ function setBubble(n,message){
+  n.bubble=message;n.bubbleUntil=Date.now()+9000;
+ }
+ function socialize(){
+  const t=Date.now(),active=world.npcs.filter(n=>hourOfDay(t)>=7&&hourOfDay(t)<22);
+  for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
+   const a=active[i],b=active[j];if(Math.hypot(a.x-b.x,a.y-b.y)>95||t-a.lastTalkAt<45000||t-b.lastTalkAt<45000)continue;
+   const lines=conversations[(Math.floor(t/60000)+i*3+j)%conversations.length];
+   setBubble(a,lines[0]);setBubble(b,lines[1]);a.lastTalkAt=b.lastTalkAt=t;
+   a.friendship[b.id]=clamp((a.friendship[b.id]||0)+1,-100,100);
+   b.friendship[a.id]=clamp((b.friendship[a.id]||0)+1,-100,100);
+   break;
+  }
+ }
+ function drawBubble(c,text,x,y){
+  c.font='10px Inter,sans-serif';const w=Math.min(190,c.measureText(text).width+16);
+  c.fillStyle='rgba(9,18,22,.92)';c.beginPath();c.roundRect(x-w/2,y-48,w,24,7);c.fill();
+  c.strokeStyle='#d6b15e';c.lineWidth=1;c.stroke();
+  c.fillStyle='#fff1c8';c.textAlign='center';c.fillText(text.length>34?text.slice(0,32)+'…':text,x,y-32);
+  c.beginPath();c.moveTo(x-4,y-24);c.lineTo(x,y-18);c.lineTo(x+4,y-24);c.fill();
+ }
+ function render(){
+  const g=window.game;if(!g?.running||!g.ctx||!g.player||typeof window.drawCharacter!=='function')return;
+  const c=g.ctx,W=g.canvas.width,H=g.canvas.height,camX=Math.round(g.player.x-W/2),camY=Math.round(g.player.y-H/2);
+  c.save();c.translate(-camX,-camY);
+  const t=Date.now(),h=hourOfDay(t);
+  for(const n of world.npcs){
+   if(n.x<camX-80||n.x>camX+W+80||n.y<camY-90||n.y>camY+H+90)continue;
+   const moving=Math.hypot(n.to[0]-n.from[0],n.to[1]-n.from[1])>2&&t<n.moveUntil;
+   window.drawCharacter(c,n.x,n.y,{dir:'down',name:n.name,title:n.role,cls:'Guerreiro',race:'Humano',hair:n.hair,eye:'#49372c',skin:n.skin,hairStyle:'Curto',beard:'Nenhuma',outfit:n.color,outfitStyle:'Armadura',cloak:'#252b45',accessory:'Nenhum',mark:'Nenhuma',moving,local:false});
+   c.font='bold 10px Inter,sans-serif';c.textAlign='center';c.fillStyle='#fff0c2';c.fillText(n.name,n.x,n.y-30);
+   if(n.bubble)drawBubble(c,n.bubble,n.x,n.y);
+  }
+  const festival=world.events.find(e=>e.status==='active'&&e.kind==='festival');
+  if(festival){
+   // Bandeirolas e pequenas barracas na praça durante o festival.
+   for(let i=0;i<7;i++){const x=CX-150+i*50,y=CY-125+Math.sin(i)*8;c.strokeStyle='#7c6040';c.lineWidth=2;c.beginPath();c.moveTo(x,y-18);c.lineTo(x,y+18);c.stroke();c.fillStyle=['#b85b4b','#d7b45e','#6c9b72'][i%3];c.beginPath();c.moveTo(x,y-18);c.lineTo(x+22,y-10);c.lineTo(x,y-2);c.fill()}
+   c.font='bold 15px Inter';c.textAlign='center';c.fillStyle='#ffe3a0';c.fillText('✦ FESTIVAL DA AURORA ✦',CX,CY-145);
+  }
+  c.restore();
+ }
+ function panel(){
+  let el=$('living-world-panel');if(!el){el=document.createElement('section');el.id='living-world-panel';el.style.cssText='position:fixed;left:14px;top:90px;z-index:58;width:min(310px,calc(100vw - 28px));max-height:42vh;overflow:auto;padding:12px;border:1px solid #8b6b38;border-radius:13px;background:#0b171bf2;color:#f4ead5;font:12px Inter,sans-serif;display:none;box-shadow:0 12px 40px #0009';document.body.appendChild(el)}
+  const active=world.events.filter(e=>e.status==='active'),upcoming=Math.max(0,Math.ceil((world.nextEventAt-Date.now())/DAY_MS));
+  el.innerHTML='<header style="display:flex;justify-content:space-between;align-items:center"><b style="color:#f8df9a">🌍 CRÔNICAS DO MUNDO</b><button id="living-close" style="padding:4px 8px;border:1px solid #52636a;border-radius:6px">✕</button></header><p style="color:#b6c5c5;margin:7px 0">Dia '+Math.floor(world.day)+' · '+Math.floor(hourOfDay(Date.now()))+':'+String(Math.floor(hourOfDay(Date.now())%1*60)).padStart(2,'0')+' · '+world.npcs.length+' moradores</p><b>📅 Acontecimentos em andamento</b>'+(active.length?active.map(e=>'<article style="margin:7px 0;padding:8px;border:1px solid #665638;border-radius:8px"><b style="color:#f5d58b">'+e.title+'</b><p style="color:#bdcbd0;margin-top:3px">'+e.desc+'</p><small>Termina em '+Math.max(1,Math.ceil((e.endAt-Date.now())/DAY_MS))+' dia(s) do mundo</small></article>').join(''):'<p style="color:#9aabb2;margin:5px 0">A cidade está tranquila no momento.</p>')+'<p style="margin-top:8px;color:#c4b5fd">Próximo acontecimento: em '+upcoming+' dia(s) do mundo.</p><b>🗣 Últimas histórias</b>'+world.history.slice(0,5).map(e=>'<p style="margin-top:5px;color:#cbd5e1">• '+e.title+' — '+e.desc+'</p>').join('');
+  $('living-close').onclick=()=>el.style.display='none';
+  return el;
+ }
+ function setupUI(){
+  const feed=document.createElement('div');feed.id='living-world-feed';feed.style.cssText='position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:35;max-width:min(560px,90vw);padding:8px 13px;border:1px solid #8b6b38;border-radius:10px;background:#0b171beF;color:#ffe7a8;font:11px Inter,sans-serif;text-align:center;pointer-events:none;opacity:.55;transition:opacity .5s';feed.textContent='🌍 O mundo continua vivendo enquanto você está fora.';document.body.appendChild(feed);
+  const btn=document.createElement('button');btn.id='living-world-btn';btn.textContent='🌍 Mundo';btn.style.cssText='position:fixed;left:18px;top:68px;z-index:57;padding:8px 12px;border:1px solid #8b6b38;border-radius:9px;background:#172a2b;color:#f8df9a;font: bold 11px Inter,sans-serif';btn.onclick=()=>{const el=panel();el.style.display=el.style.display==='none'?'block':'none';if(el.style.display==='block')panel()};document.body.appendChild(btn);
+ }
+ function tick(){
+  const t=Date.now();advanceCalendar(t);socialize();
+  if(t-lastSave>15000){safeWrite(world);lastSave=t}
+  const hour=Math.floor(hourOfDay(t));if(hour!==lastHour){lastHour=hour;world.npcs.forEach(updateNPC);safeWrite(world)}
+  const el=$('living-world-feed');if(el&&t-lastRendered>120000){lastRendered=t;el.textContent='🌍 Dia '+Math.floor(world.day)+' · '+world.events.filter(e=>e.status==='active').length+' acontecimento(s) ativo(s) · '+world.npcs.length+' moradores com rotina';}
+  if(t-lastSave<1000)render();
+ }
+ function attach(){
+  if(!window.game||typeof window.game.render!=='function'){setTimeout(attach,500);return}
+  const g=window.game;if(g.__livingWorldAttached)return;g.__livingWorldAttached=true;
+  const original=g.render.bind(g);g.render=function(){original();render()};
+ }
+ setupUI();advanceCalendar(Date.now());attach();
+ setInterval(tick,1000);window.addEventListener('pagehide',()=>safeWrite(world));
+ window.AventuriaLivingWorld={getState:()=>world,open:()=>{const el=panel();el.style.display='block';panel()},save:()=>safeWrite(world)};
+})();
