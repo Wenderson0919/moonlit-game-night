@@ -10,6 +10,7 @@ const ensure=()=>{
  s.expansion.professions??={miner:{xp:0,level:1},lumberjack:{xp:0,level:1},forager:{xp:0,level:1},fisher:{xp:0,level:1}};
  const day=Math.floor(Date.now()/86400000);
  if(!s.expansion.daily||s.expansion.daily.day!==day){
+  s.expansion.claimed={};s.expansion.dayStartTotal=Object.values(s.resources||{}).reduce((a,b)=>a+(Number(b)||0),0);
   s.expansion.daily={day,quests:[
    {id:'hunt',name:'Caçada diária',desc:'Derrote 8 criaturas',goal:8,progress:0,reward:100,type:'kills'},
    {id:'gather',name:'Coletor experiente',desc:'Reúna 20 recursos',goal:20,progress:0,reward:80,type:'gather'},
@@ -61,18 +62,15 @@ function renderPanel(){
 function claim(id){const s=state(),e=ensure(),q=e.daily.quests.find(x=>x.id===id);if(!q||q.progress<q.goal||e.claimed[id])return;s.gold+=q.reward;e.claimed[id]=true;persist();notify('Recompensa recebida: '+q.reward+' Gold!');renderPanel();if(typeof updateUIStats==='function')updateUIStats()}
 function notify(m){if(typeof showNotification==='function')showNotification(m,'#f5d58c')}
 function persist(){try{if(typeof saveGame==='function')saveGame(false)}catch{}}
-let lastResources={},lastKills=0,lastRaids=0,lastAnimal=0,lastClock=0,lastDraw=0;
+let lastResources=null,lastClock=0,lastDraw=0;
 function tick(){
  const s=state(),e=ensure(),g=game();if(!s||!e)return;
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
- const diff=Math.max(0,total-(e.lastTotal??total));e.lastTotal=total;
- if(diff){const keys=Object.keys(res);for(const k of keys){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;} }
+ if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
  lastResources={...res};
  const q=e.daily?.quests||[];
  const kills=s.animalKills||0,raids=s.raidsCleared||0;
- for(const x of q){if(x.type==='kills')x.progress=kills;if(x.type==='raid')x.progress=raids;if(x.type==='gather')x.progress=Math.max(x.progress,Math.min(x.goal,(e.gatherStart??total)- (e.gatherStart??total)+Math.min(x.goal,total-(e.dayStartTotal??(e.dayStartTotal=total)))));}
- // Daily gather tracks collected amount since this daily cycle.
- if(e.dayStartTotal==null)e.dayStartTotal=total;
+ for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,kills-(e.dayStartKills??(e.dayStartKills=kills)));if(x.type==='raid')x.progress=Math.min(x.goal,raids-(e.dayStartRaids??(e.dayStartRaids=raids)));}
  const gathered=Math.max(0,total-e.dayStartTotal);const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
   const phase=(g.t%360)/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2-.2)+.12)/1.12));
