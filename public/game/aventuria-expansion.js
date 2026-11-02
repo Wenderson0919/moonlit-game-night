@@ -289,6 +289,8 @@ function openCompanionUI(type){
  m.querySelectorAll('[data-equip]').forEach(b=>b.onclick=()=>{if(pets){e.pet=b.dataset.equip;e.petEquipped=true;e.petData??={level:1,xp:0,bond:0,skillReady:0}}else{e.mountType=b.dataset.equip;e.mount=true}persist();openCompanionUI(type)});
  m.querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>{const id=b.dataset.sell;if((pets?e.pet:e.mountType)===id){notify('Desequipe antes de vender.');return}const i=owned.indexOf(id);if(i<0)return;owned.splice(i,1);s.gold+=Math.floor(catalog.find(z=>z.id===id).price*.45);persist();openCompanionUI(type)});
 }
+window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
+window.AVENTURIA_SAFE_NPCS=townNPCs;
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
