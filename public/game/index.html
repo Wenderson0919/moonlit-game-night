@@ -1284,8 +1284,8 @@ class Game{
   // tiles
   const tx0=Math.max(0,Math.floor(camX/TILE)),tx1=Math.min(MT-1,Math.floor((camX+W)/TILE)),ty0=Math.max(0,Math.floor(camY/TILE)),ty1=Math.min(MT-1,Math.floor((camY+H)/TILE));
   for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++){
-   const b=BKEYS[this.tb[ty*MT+tx]],B=BIOMES[b],h=hash2(tx,ty,7);
-   c.fillStyle=B.base[(h*3)|0];c.fillRect(tx*TILE,ty*TILE,TILE+1,TILE+1);
+   const wx=tx*TILE+16,wy=ty*TILE+16,realm=window.AVENTURIA_REALM_AT?.(wx,wy),b=BKEYS[this.tb[ty*MT+tx]],B=BIOMES[b],h=hash2(tx,ty,7);
+   c.fillStyle=realm?window.AVENTURIA_REALM_PALETTES[realm.id][Math.floor(h*5)%5]:B.base[(h*3)|0];c.fillRect(tx*TILE,ty*TILE,TILE+1,TILE+1);
    if(h>.78){const x=tx*TILE+h*20,y=ty*TILE+(h*97%1)*24;
     if(b==='forest'){c.fillStyle='#2d5236';c.fillRect(x,y,2,5);c.fillRect(x+3,y+1,2,4)}
     else if(b==='desert'){c.strokeStyle='#b8964f';c.lineWidth=1;c.beginPath();c.arc(x,y,6,3.4,6);c.stroke()}
@@ -1294,6 +1294,7 @@ class Game{
     else{if(h>.93){c.fillStyle='rgba(251,146,60,.65)';c.fillRect(x,y,8,1);c.fillRect(x+3,y,1,6)}else{c.fillStyle='#241c1c';c.fillRect(x,y,5,3)}}
    }
   }
+  window.AVENTURIA_DRAW_REALMS?.(c,p,now);
   // zona segura
   const s0=SAFE;c.fillStyle='#4a5b60';c.beginPath();c.arc(s0.x,s0.y,s0.radius,0,6.283);c.fill();
   c.strokeStyle='rgba(20,30,34,.35)';c.lineWidth=1;for(let r=40;r<s0.radius;r+=40){c.beginPath();c.arc(s0.x,s0.y,r,0,6.283);c.stroke()}
