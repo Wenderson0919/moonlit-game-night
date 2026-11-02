@@ -291,11 +291,19 @@ function openCompanionUI(type){
 }
 window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
 window.AVENTURIA_SAFE_NPCS=townNPCs;
+function openMerchantUI(){
+ const s=state();if(!s)return;
+ let m=$('avx-merchant-modal');if(!m){m=document.createElement('div');m.id='avx-merchant-modal';m.style.cssText='position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:14px';document.body.appendChild(m)}
+ const offers=[{id:'potion',name:'Poção de Vida',emoji:'🧪',price:60,desc:'Recupera vida pelo inventário.'},{id:'egg',name:'Ovo de Mascote',emoji:'🥚',price:250,desc:'Receba um companheiro aleatório.'},{id:'kit',name:'Kit de Exploração',emoji:'🎒',price:120,desc:'5 madeiras e 2 ferros.'}];
+ m.innerHTML='<div style="width:min(520px,100%);background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:20px;color:white"><div style="display:flex;justify-content:space-between"><h2>🛒 Loja de Aventuria</h2><button id="avx-merchant-close">✕</button></div><p style="color:#cbd5e1">Seu saldo: <b>'+Math.floor(s.gold||0)+' Gold</b></p><div style="display:grid;gap:9px">'+offers.map(x=>'<div style="padding:12px;border:1px solid #52656a;border-radius:10px;display:flex;align-items:center;gap:12px"><span style="font-size:26px">'+x.emoji+'</span><div style="flex:1"><b>'+x.name+'</b><div style="font-size:11px;color:#bdcbd0">'+x.desc+'</div></div><button data-offer="'+x.id+'" style="padding:8px;background:#456c57;border-radius:8px">Comprar · '+x.price+' G</button></div>').join('')+'</div></div>';
+ $('avx-merchant-close').onclick=()=>m.remove();
+ m.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{const x=offers.find(v=>v.id===b.dataset.offer);if(!x||s.gold<x.price){notify('Gold insuficiente.');return}s.gold-=x.price;if(x.id==='potion')s.items.potion=(s.items.potion||0)+1;if(x.id==='egg'){e.petsOwned??=[];const id=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petsOwned.push(id);e.pet=id;e.petEquipped=true}if(x.id==='kit'){s.resources.wood=(s.resources.wood||0)+5;s.resources.iron=(s.resources.iron||0)+2}persist();notify(x.name+' comprado!');openMerchantUI()});
+}
 function openTownNPC(id){
  const s=state(),e=ensure();if(!s||!e)return;
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,dungeonWins:0,arenaWins:0,eventWins:0,marketLog:[]} );
  const actions={
- merchant:()=>{const choice=prompt('LOJA DE AVENTURIA\\n1 - Poção (+vida) · 60 Gold\\n2 - Ovo de mascote · 250 Gold\\n3 - Kit de exploração · 120 Gold');if(choice==='1'&&s.gold>=60){s.gold-=60;s.items.potion=(s.items.potion||0)+1;notify('Poção adicionada ao inventário!')}else if(choice==='2'&&s.gold>=250){s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petEquipped=true;notify('Novo mascote!')}else if(choice==='3'&&s.gold>=120){s.gold-=120;s.resources.wood+=5;s.resources.iron+=2;notify('Kit de exploração comprado!')}else notify('Opção inválida ou Gold insuficiente.');persist()},
+ merchant:()=>openMerchantUI(),
  stable:()=>openCompanionUI('mount'),
  pet:()=>openCompanionUI('pet'),
  guild:()=>{if(!w.guild){const name=(prompt('Nome da sua guilda (3 a 20 caracteres):')||'').trim();if(name.length<3||name.length>20){notify('Nome inválido.');return}if(s.gold<200){notify('Fundar uma guilda custa 200 Gold.');return}s.gold-=200;w.guild=name;w.members=[{name:s.name||'Líder',role:'Líder',joined:Date.now()}];notify('Guilda '+name+' fundada!')}else{const online=window.AVENTURIA_ONLINE?.players||[];const list=online.filter(x=>x.name!==s.name).map(x=>x.name).join(', ');const who=prompt('Guilda: '+w.guild+'\\nMembros: '+w.members.map(m=>m.name).join(', ')+'\\nJogadores visíveis: '+(list||'nenhum detectado')+'\\nDigite nome de membro para registrar convite local:');if(who){w.members.push({name:who,role:'Recruta',joined:Date.now(),pending:true});notify('Convite anotado. Para convite real entre contas precisamos persistir guildas no servidor.')}}persist()},
