@@ -1685,14 +1685,46 @@ const rnd=(a,b)=>a+Math.random()*(b-a),NM=['Kira','Bruno','Zeph','Luna','Tiago',
 let party=false,pvp=false,muted=localStorage.getItem('av-mute')==='1',AC=null,master=null;
 
 /* ---------- ÁUDIO (WebAudio, sem arquivos) ---------- */
-function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=muted?0:.35;master.connect(AC.destination);music()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
-function tone(f,d,ty,v,sl,dl){if(!AC)return;const t=AC.currentTime+(dl||0),o=AC.createOscillator(),g=AC.createGain();o.type=ty||'square';o.frequency.setValueAtTime(f,t);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*sl),t+d);g.gain.setValueAtTime(v||.2,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.02)}
-function noise(d,v,fq){if(!AC)return;const n=Math.floor(AC.sampleRate*d),b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=b;f.type='lowpass';f.frequency.value=fq||2000;g.gain.value=v||.3;s.connect(f);f.connect(g);g.connect(master);s.start()}
-const SFX={swing:()=>noise(.12,.25,3000),hit:()=>{tone(180,.1,'sawtooth',.25,.5);noise(.08,.3,1500)},hurt:()=>tone(300,.25,'sawtooth',.3,.4),dash:()=>{noise(.2,.3,5000);tone(400,.15,'sine',.12,2)},loot:()=>{tone(880,.08,'triangle',.2);tone(1320,.12,'triangle',.2,1,.07)},level:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.25,'triangle',.25,1,i*.1)),roar:()=>{tone(90,.8,'sawtooth',.4,.5);noise(.6,.3,500)},win:()=>[392,523,659,784,1047].forEach((f,i)=>tone(f,.35,'square',.18,1,i*.12)),click:()=>tone(660,.05,'square',.1),trade:()=>{tone(700,.07,'triangle',.2);tone(1000,.1,'triangle',.2,1,.08)},deny:()=>tone(160,.2,'square',.2),pvp:()=>{tone(220,.3,'sawtooth',.3,2);tone(330,.3,'sawtooth',.3,2,.15)}};
-window.sfx=n=>{if(!AC||muted)return;try{SFX[n]&&SFX[n]()}catch(e){}};
-function music(){const sc=[220,261.6,293.7,329.6,392,440];let i=0;setInterval(()=>{if(!AC||muted)return;const g=window.game,boss=g&&g.raids&&g.raids.some(r=>r.state==='active');if(boss)tone(i%2?55:73.4,.35,'sawtooth',.08);else if(i%2===0)tone(sc[(i*3+(i>>2))%sc.length],1.4,'sine',.05);i++},450)}
+let musicTimer=null,musicStep=0;
+function ac(){
+ if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=muted?0:.24;master.connect(AC.destination);music()}catch(e){console.warn('Áudio indisponível',e)}}
+ if(AC&&AC.state==='suspended')AC.resume().catch(()=>{});
+ return AC
+}
+function tone(f,d,ty,v,sl,dl){
+ if(!AC||!master||!Number.isFinite(f)||!Number.isFinite(d)||d<=0)return;
+ const t=AC.currentTime+Math.max(0,dl||0),o=AC.createOscillator(),g=AC.createGain();
+ o.type=ty||'sine';o.frequency.setValueAtTime(Math.max(20,f),t);
+ if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(20,f*sl),t+d);
+ const peak=Math.max(.0001,Math.min(.22,v??.08));
+ g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(peak,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+ o.connect(g);g.connect(master);o.start(t);o.stop(t+d+.03);o.onended=()=>{o.disconnect();g.disconnect()}
+}
+function noise(d,v,fq){
+ if(!AC||!master||d<=0)return;
+ const n=Math.max(1,Math.floor(AC.sampleRate*d)),b=AC.createBuffer(1,n,AC.sampleRate),a=b.getChannelData(0);
+ for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+ const src=AC.createBufferSource(),filter=AC.createBiquadFilter(),g=AC.createGain();
+ src.buffer=b;filter.type='lowpass';filter.frequency.value=fq||2000;g.gain.setValueAtTime(Math.max(.0001,v||.08),AC.currentTime);g.gain.linearRampToValueAtTime(.0001,AC.currentTime+d);
+ src.connect(filter);filter.connect(g);g.connect(master);src.start();src.stop(AC.currentTime+d+.02);src.onended=()=>{src.disconnect();filter.disconnect();g.disconnect()}
+}
+const SFX={swing:()=>noise(.12,.09,3000),hit:()=>{tone(180,.1,'sawtooth',.12,.5);noise(.08,.1,1500)},hurt:()=>tone(300,.25,'sawtooth',.13,.4),dash:()=>{noise(.2,.1,5000);tone(400,.15,'sine',.08,2)},loot:()=>{tone(880,.08,'triangle',.1);tone(1320,.12,'triangle',.1,1,.09)},level:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.22,'triangle',.12,1,i*.13)),roar:()=>{tone(90,.8,'sawtooth',.18,.5);noise(.6,.12,500)},win:()=>[392,523,659,784,1047].forEach((f,i)=>tone(f,.25,'triangle',.1,1,i*.14)),click:()=>tone(660,.05,'square',.06),trade:()=>{tone(700,.07,'triangle',.1);tone(1000,.1,'triangle',.1,1,.09)},deny:()=>tone(160,.2,'square',.1),pvp:()=>{tone(220,.3,'sawtooth',.12,2);tone(330,.3,'sawtooth',.12,2,.16)}};
+window.sfx=n=>{if(!AC||muted)return;try{SFX[n]?.()}catch(e){console.warn('SFX',n,e)}};
+function music(){
+ if(musicTimer)clearInterval(musicTimer);
+ const chords=[[261.63,329.63,392],[220,261.63,329.63],[174.61,220,261.63],[196,246.94,293.66]];
+ musicStep=0;
+ const playBar=()=>{
+  if(!AC||muted||AC.state!=='running')return;
+  const boss=!!window.game?.raids?.some(r=>r.state==='active');
+  if(boss){const bass=musicStep%2?55:65.41;tone(bass,.85,'triangle',.035,.72);tone(bass*2,.55,'sine',.018,1,.25)}
+  else{const chord=chords[musicStep%chords.length];tone(chord[0]/2,1.7,'sine',.025,.98);chord.forEach((note,j)=>tone(note,1.15,'sine',.018,.99,.18+j*.42))}
+  musicStep++;
+ };
+ playBar();musicTimer=setInterval(playBar,2200);
+}
 ['pointerdown','keydown'].forEach(e=>addEventListener(e,ac,{passive:true}));
-window.toggleMute=()=>{muted=!muted;localStorage.setItem('av-mute',muted?'1':'0');if(master)master.gain.value=muted?0:.35;upd()};
+window.toggleMute=()=>{muted=!muted;localStorage.setItem('av-mute',muted?'1':'0');if(master)master.gain.setTargetAtTime(muted?0:.24,AC.currentTime,.04);upd()};
 
 /* ---------- BOSSES ÚNICOS POR BIOMA ---------- */
 wrap('hurtPlayer',function(o,raw,opt){const h=S().hp;const rd0=opt&&opt.src&&this.raids.find(x=>x.state==='active'&&x.boss.name===opt.src);if(rd0)raw*=Math.min(3,1+.15*Math.max(0,TIERS[rd0.tier].req-S().level));const r=o.call(this,raw,opt);if(S().hp<h&&!(opt&&opt.dot))sfx('hurt');const rd=opt&&opt.src&&this.raids.find(x=>x.state==='active'&&x.boss.name===opt.src);if(rd){const k={snow:'chill',swamp:'poison',volcano:'burn',desert:'bleed'}[rd.biome];if(k){if(!this.st||this.st.t<=0)showNotification({chill:'❄ Congelando! Lento.',poison:'☠ Envenenado!',burn:'🔥 Queimando!',bleed:'🩸 Sangrando!'}[k],'#fca5a5');this.st={k,t:4}}}return r});
