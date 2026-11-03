@@ -955,7 +955,7 @@ function useClassSkill(){
 /* ============================ SAVE / LOAD ============================ */
 function saveGame(manual){
  try{const s=S(),g=window.game;if(g&&g.running){s.x=Math.round(g.player.x);s.y=Math.round(g.player.y)}
-  localStorage.setItem(SAVE_KEY,JSON.stringify(s));if(manual){$('rpg-save-status').textContent='Jogo salvo neste navegador!';showNotification('Jogo salvo!')}}catch(e){}
+  localStorage.setItem(SAVE_KEY,JSON.stringify(s));if(manual){$('rpg-save-status').textContent='Jogo salvo na sua conta!';showNotification('Jogo salvo!')}}catch(e){}
 }
 function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.parse(r):null}catch(e){return null}}
 
