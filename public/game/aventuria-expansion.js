@@ -7,7 +7,7 @@ const game=()=>window.game;
 const ensure=()=>{
  const s=state();if(!s)return null;
  s.expansion??={day:0,pet:null,petEquipped:false,mount:false,professions:{},daily:null,claimed:{},weatherSeed:0};
- s.expansion.professions??={miner:{xp:0,level:1},lumberjack:{xp:0,level:1},forager:{xp:0,level:1},fisher:{xp:0,level:1}};
+ s.expansion.professions??={miner:{xp:0,level:1},lumberjack:{xp:0,level:1},forager:{xp:0,level:1},fisher:{xp:0,level:1}};for(const k of ['miner','lumberjack','forager','fisher'])s.expansion.professions[k]??={xp:0,level:1};
  const day=Math.floor(Date.now()/86400000);
  if(!s.expansion.daily||s.expansion.daily.day!==day){
   s.expansion.claimed={};s.expansion.dayStartTotal=Object.values(s.resources||{}).reduce((a,b)=>a+(Number(b)||0),0);
@@ -144,7 +144,7 @@ panel.addEventListener('click',ev=>{
  const egg=$('avx-pet-egg');if(egg)egg.onclick=()=>{if(s.gold<250){notify('Você precisa de 250 Gold.');return}s.gold-=250;e.pet=['slime','fox','wisp'][Math.floor(Math.random()*3)];e.petsOwned??=[];if(!e.petsOwned.includes(e.pet))e.petsOwned.push(e.pet);e.petData={level:1,xp:0,bond:0,skillReady:0,lastKills:s.animalKills||0};e.petEquipped=true;persist();notify('🥚 Novo mascote nasceu!');renderPanel()};
  const pt=$('avx-pet-toggle');if(pt)pt.onclick=()=>{e.petEquipped=!e.petEquipped;persist();renderPanel()};
  const ps=$('avx-pet-skill');if(ps)ps.onclick=()=>{if(Date.now()<(e.petData.skillReady||0)){notify('Habilidade em recarga.');return}if(e.pet==='slime'){s.hp=Math.min(s.maxHp||100,(s.hp||0)+35);notify('🟢 Escudo viscoso: vida recuperada!')}else if(e.pet==='fox'){e.petBuffUntil=Date.now()+12000;notify('🦊 Investida feroz: bônus de dano por 12 segundos!')}else{s.hp=Math.min(s.maxHp||100,(s.hp||0)+20);e.petBuffUntil=Date.now()+12000;notify('✨ Pulso arcano: energia restaurada e poder ampliado!')}e.petData.skillReady=Date.now()+30000;persist();renderPanel()};
- $('avx-mount').onclick=()=>{if(!e.mount&&s.gold<500){notify('Você precisa de 500 Gold.');return}if(!e.mount)s.gold-=500;e.mount=!e.mount;persist();renderPanel();notify(e.mount?'Montaria invocada!':'Montaria guardada.')};
+ $('avx-mount').onclick=()=>{openMountUI();return;if(!e.mount&&s.gold<500){notify('Você precisa de 500 Gold.');return}if(!e.mount)s.gold-=500;e.mount=!e.mount;persist();renderPanel();notify(e.mount?'Montaria invocada!':'Montaria guardada.')};
  const ach=[['Primeiros passos',s.level>=5],['Caçador',s.kills>=25],['Desbravador',Object.keys(s.visited||{}).length>=5],['Lenda das raids',(s.raidsCleared||0)>=5],['Mestre coletor',Object.values(s.resources||{}).reduce((a,b)=>a+(b||0),0)>=300]];
  $('avx-achievements').innerHTML=ach.map(([n,ok])=>'<div class="flex justify-between py-1 border-b border-slate-800"><span>'+n+'</span><b class="'+(ok?'text-emerald-300':'text-slate-500')+'">'+(ok?'✓ Concluída':'Bloqueada')+'</b></div>').join('');
  refreshServiceWindow();
@@ -178,7 +178,7 @@ function tick(){
  }
  $('avx-dungeon-timer')?.remove();
  const res=s.resources||{},total=Object.values(res).reduce((a,b)=>a+(Number(b)||0),0);
- if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof)e.professions[prof].xp+=d*5;}}
+ if(lastResources){for(const k of Object.keys(res)){const d=Math.max(0,(res[k]||0)-(lastResources[k]||0));if(!d)continue;const prof=['wood','pine'].includes(k)?'lumberjack':['stone','iron','goldOre','diamond','obsidian'].includes(k)?'miner':['berry','mushroom','herb','cactus'].includes(k)?'forager':null;if(prof){const pp=(e.professions[prof]??={xp:0,level:1});pp.xp=(pp.xp||0)+d*5}}}
  lastResources={...res};
  const q=e.daily?.quests||[];
  if(e.advanced?.contracts?.active){const c=e.advanced.contracts;c.progress=Math.min(c.goal,Math.max(0,(s.animalKills||0)-(c.startKills||0)))}
@@ -259,9 +259,10 @@ const townNPCs=[
  {id:'elder',name:'Mercador Ancião',role:'Melhorias de combate',x:EXP_SAFE.x,y:EXP_SAFE.y-120,icon:'💰',color:'#e7c36a',virtual:true},
  {id:'board',name:'Quadro de Missões',role:'Missões, passe e conquistas',x:EXP_SAFE.x-300,y:EXP_SAFE.y+30,icon:'📋',color:'#f2d38a'},
  {id:'trainer',name:'Mestre de Treino',role:'Habilidades, arena e evento',x:EXP_SAFE.x+300,y:EXP_SAFE.y+30,icon:'🥋',color:'#f87171'},
- {id:'mounts',name:'Domador de Montarias',role:'Montaria, profissões e casa',x:EXP_SAFE.x,y:EXP_SAFE.y+290,icon:'🐎',color:'#c08457'}
+ {id:'chronicler',name:'Cronista de Aventuria',role:'Login diário, títulos e estatísticas',x:EXP_SAFE.x,y:EXP_SAFE.y-290,icon:'📖',color:'#e9d5a1'},
+ {id:'mounts',name:'Domador de Montarias',role:'Montarias e viagem rápida',x:EXP_SAFE.x,y:EXP_SAFE.y+290,icon:'🐎',color:'#c08457'}
 ];
-const NPC_GREET={merchant:'Poções e kits fresquinhos!',stable:'Aço bom é aço forjado.',pet:'Tem um ovo esperando por você!',guild:'Juntos somos mais fortes.',magic:'A magia responde a quem ousa.',element:'Fogo, gelo, raio… combine!',forge:'Traga ferro e eu faço milagres.',contract:'Tenho trabalho para você.',treasure:'Todo mapa esconde um segredo.',stylist:'Que tal um visual novo?',awakening:'Sua arma ainda dorme…',elder:'Aprimore-se antes da próxima caçada.',board:'Missões novas todo dia!',trainer:'Quer ficar mais forte?',mounts:'Nada como cavalgar pelo mundo.'};
+const NPC_GREET={chronicler:'Sua lenda está sendo escrita.',merchant:'Poções e kits fresquinhos!',stable:'Aço bom é aço forjado.',pet:'Tem um ovo esperando por você!',guild:'Juntos somos mais fortes.',magic:'A magia responde a quem ousa.',element:'Fogo, gelo, raio… combine!',forge:'Traga ferro e eu faço milagres.',contract:'Tenho trabalho para você.',treasure:'Todo mapa esconde um segredo.',stylist:'Que tal um visual novo?',awakening:'Sua arma ainda dorme…',elder:'Aprimore-se antes da próxima caçada.',board:'Missões novas todo dia!',trainer:'Quer ficar mais forte?',mounts:'Nada como cavalgar pelo mundo.'};
 for(const n of townNPCs)n.greet=NPC_GREET[n.id];
 /* Marcador sobre a cabeça do NPC quando há algo a fazer */
 function npcBadge(id){
@@ -271,7 +272,8 @@ function npcBadge(id){
  if(id==='guild')return e.world?.guild?'':'❗';
  if(id==='pet')return e.pet?'':'🥚';
  if(id==='board'){const q=e.daily?.quests||[];return q.some(x=>x.progress>=x.goal&&!(e.claimed&&e.claimed[x.id]))?'✅':''}
- if(id==='mounts')return e.mount?'':((s.gold||0)>=500?'❗':'');
+ if(id==='mounts'){const ms=e.mounts;return (ms&&ms.owned&&ms.owned.length)||e.mount?'':((s.gold||0)>=500?'❗':'')}
+ if(id==='chronicler')return loginAvailable(e)?'🎁':'';
  if(id==='trainer'){const w=e.world;return Math.max(0,(s.level||1)-1-((w&&w.spent)||0))>0?'⭐':''}
  return '';
 }
@@ -342,6 +344,7 @@ function mountAndPetDraw(g){
  drawMeteor(c,p,now);
  drawEvents(c,p,now);
  drawElites(c,g,now);
+ drawMount(c,p,e,now);
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
 }
@@ -616,7 +619,7 @@ function makeElite(a){
  a.elite=f;a.hp*=f.hp;a.maxHp*=f.hp;
 }
 function eliteKilled(g,a){
- const s=state(),f=a.elite,lv=s?.level||1;if(!s)return;
+ const s=state(),f=a.elite,lv=s?.level||1;if(!s)return;{const ee=ensure();if(ee)ee.elitesKilled=(ee.elitesKilled||0)+1}
  const gold=60+lv*6+Math.floor(Math.random()*60);s.gold=(s.gold||0)+gold;
  s.resources??={};const dia=Math.random()<.45?1:0;if(dia)s.resources.diamond=(s.resources.diamond||0)+dia;
  g.gainExp?.(Math.round((a.def?.xp||10)*f.xp*4));
@@ -670,13 +673,204 @@ function ultHud(g,now){
  const b=$('avx-ult-btn');if(b){b.style.boxShadow=ULT.ready?'0 0 12px #fb923c':'none';b.style.opacity=(ULT.ready||ULT.active>0)?'1':'.6'}
 }
 if(!window.__avxUltKey){window.__avxUltKey=true;window.addEventListener('keydown',e=>{if(e.code==='KeyX'&&!e.repeat&&!/INPUT|TEXTAREA/.test(e.target?.tagName||'')){castUlt(window.game)}})}
+/* ---------- MONTARIAS, CRÔNICAS E VIAGEM RÁPIDA ---------- */
+const MOUNTS=[
+ {id:'horse',name:'Corcel Pardo',icon:'🐎',gold:500,lvl:1,speed:30,col:'#8b5a2b',mane:'#2b1a0e',desc:'Confiável e veloz.'},
+ {id:'wolf',name:'Lobo Sombrio',icon:'🐺',gold:1800,lvl:10,speed:38,atk:4,col:'#3b4252',mane:'#111827',desc:'+4 de ataque enquanto montado.'},
+ {id:'griffin',name:'Grifo Dourado',icon:'🦅',gold:4500,lvl:20,speed:48,col:'#d4a73a',mane:'#f8e08e',wings:'#fde68a',desc:'Asas majestosas e muita velocidade.'},
+ {id:'unicorn',name:'Unicórnio Celestial',icon:'🦄',dia:30,lvl:25,speed:42,col:'#f3e8ff',mane:'#c084fc',horn:true,desc:'Regenera 1% de vida por segundo.'},
+ {id:'dragon',name:'Dragão Ancestral',icon:'🐉',dia:80,lvl:35,speed:60,col:'#b91c1c',mane:'#450a0a',wings:'#7f1d1d',desc:'Rastro de fogo que queima inimigos próximos.'}
+];
+const mountById=id=>MOUNTS.find(m=>m.id===id);
+function mountState(e){
+ const ms=e.mounts??={owned:[],active:null,dist:0};
+ if(e.mount&&!ms.owned.length&&!ms._mig){ms.owned.push('horse');ms.active='horse'}   // migra a montaria antiga
+ ms._mig=true;return ms;
+}
+function mountLevel(ms){return Math.min(10,1+Math.floor(Math.sqrt((ms.dist||0)/6000)))}
+function activeMount(e){const ms=e&&e.mounts;return ms&&ms.active?mountById(ms.active):null}
+window.AVENTURIA_MOUNT_BONUS=ex=>{
+ const m=activeMount(ex);if(!m)return ex&&ex.mount&&!ex.mounts?{speed:30}:{};
+ const lv=mountLevel(ex.mounts),b={speed:Math.round(m.speed*(1+(lv-1)*.04))};if(m.atk)b.atk=m.atk;return b;
+};
+function setMount(e,id){
+ const ms=mountState(e);ms.active=id;e.mount=!!id;persist();if(typeof updateUIStats==='function')updateUIStats();
+}
+function toggleMount(g){
+ const s=state(),e=ensure();if(!s||!e||!g?.player||g.player.realmId)return;
+ const ms=mountState(e);
+ if(!ms.owned.length){notify('Você ainda não tem montaria. Fale com o Domador na praça (ao sul).');return}
+ if(ms.active){setMount(e,null);notify('Você desmontou.');return}
+ const last=ms.last&&ms.owned.includes(ms.last)?ms.last:ms.owned[0];
+ setMount(e,last);notify(mountById(last).icon+' '+mountById(last).name+' invocado!');
+}
+const mountFx={parts:[],trailT:0,lastX:null,lastY:null,regenT:0};
+function mountUpdate(g,dt){
+ const p=g.player,e=ensure(),s=state();if(!p||!e||!s)return;
+ const ms=mountState(e),m=activeMount(e);
+ if(mountFx.lastX!==null){
+  const d=Math.hypot(p.x-mountFx.lastX,p.y-mountFx.lastY);
+  if(m&&d<60){const lv0=mountLevel(ms);ms.dist=(ms.dist||0)+d;const lv1=mountLevel(ms);if(lv1>lv0){notify('⭐ '+m.name+' subiu para o nível '+lv1+'! Mais velocidade.');persist();if(typeof updateUIStats==='function')updateUIStats()}}
+  if(m&&d>.5&&!p.realmId&&Math.random()<.5)mountFx.parts.push({x:p.x+(Math.random()-.5)*14,y:p.y+22,vx:(Math.random()-.5)*20,vy:-10-Math.random()*20,t:.5,c:m.id==='dragon'?'#fb923c':m.id==='unicorn'?'#f0abfc':m.id==='griffin'?'#fde68a':'#b99d7a'});
+ }
+ mountFx.lastX=p.x;mountFx.lastY=p.y;
+ for(const q of mountFx.parts){q.t-=dt;q.x+=q.vx*dt;q.y+=q.vy*dt}
+ mountFx.parts=mountFx.parts.filter(q=>q.t>0).slice(-60);
+ if(!m)return;
+ if(m.id==='unicorn'&&s.hp>0){mountFx.regenT+=dt;if(mountFx.regenT>=1){mountFx.regenT=0;const cap=(s.maxHp||100)+((window.getRPGStats?.()||{}).hp||0);if(s.hp<cap)s.hp=Math.min(cap,s.hp+Math.ceil(cap*.01))}}
+ if(m.id==='dragon'&&!p.inSafeZone&&!p.realmId){
+  mountFx.trailT+=dt;
+  if(mountFx.trailT>=.45&&Math.hypot(p.x-(mountFx.lx??p.x),p.y-(mountFx.ly??p.y))>.3){
+   mountFx.trailT=0;const dmg=Math.round(18+(s.level||1)*2.4);
+   g.eachTarget?.(t=>{if(Math.hypot(t.x-p.x,t.y-p.y)<85)g.damageTarget(t,dmg,Math.atan2(t.y-p.y,t.x-p.x),true)});
+   g.fx?.push({x:p.x,y:p.y+14,r:6,max:48,t:.35,col:'#fb923c'});
+  }
+ }
+ mountFx.lx=p.x;mountFx.ly=p.y;
+}
+function drawMount(c,p,e,now){
+ const m=activeMount(e);
+ for(const q of mountFx.parts){c.globalAlpha=Math.max(0,q.t*1.6);c.fillStyle=q.c;c.beginPath();c.arc(q.x,q.y,2+q.t*3,0,Math.PI*2);c.fill()}c.globalAlpha=1;
+ if(!m||p.realmId)return;
+ const face=p.dir==='left'?-1:p.dir==='right'?1:(p._mf||1);p._mf=face;
+ const mv=!!p.moving,ph=now/(mv?70:420),bob=mv?Math.abs(Math.sin(ph))*2:Math.sin(now/500)*.6;
+ c.save();c.translate(p.x,p.y+13-bob);c.scale(face,1);
+ c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(0,15+bob,24,7,0,0,Math.PI*2);c.fill();
+ if(m.wings){const fl=Math.sin(now/(mv?90:260))*(mv?.55:.2);c.fillStyle=m.wings;c.globalAlpha=.9;
+  for(const sd of [-1,1]){c.save();c.translate(-4,-6);c.rotate(-.5+fl*sd*(sd<0?1:-1));c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(-8,-26,-30,-22);c.quadraticCurveTo(-22,-10,-20,-2);c.closePath();c.fill();c.restore()}c.globalAlpha=1}
+ // pernas
+ c.fillStyle=m.mane;
+ for(const [i,x] of [-15,-7,7,15].entries()){const o=Math.sin(ph+(i%2?Math.PI:0))*(mv?5:.6);c.fillRect(x-2,5,4,10+o*.6);}
+ // cauda
+ c.strokeStyle=m.mane;c.lineWidth=4;c.beginPath();c.moveTo(-20,-2);c.quadraticCurveTo(-32,2+Math.sin(now/180)*3,-30,12);c.stroke();
+ // corpo
+ c.fillStyle=m.col;c.beginPath();c.ellipse(0,2,22,10,0,0,Math.PI*2);c.fill();
+ // pescoço e cabeça
+ c.beginPath();c.moveTo(14,-2);c.lineTo(24,-14);c.lineTo(31,-9);c.lineTo(22,5);c.closePath();c.fill();
+ c.beginPath();c.ellipse(30,-9,8,5,.45,0,Math.PI*2);c.fill();
+ c.fillStyle=m.mane;c.beginPath();c.moveTo(18,-8);c.lineTo(23,-17);c.lineTo(25,-12);c.closePath();c.fill();
+ c.fillStyle='#fff';c.fillRect(31,-12,2,2);
+ if(m.horn){c.fillStyle='#fde68a';c.beginPath();c.moveTo(29,-14);c.lineTo(34,-26);c.lineTo(32,-13);c.closePath();c.fill()}
+ if(m.id==='dragon'){c.fillStyle='#fbbf24';for(let k=0;k<4;k++){c.beginPath();c.moveTo(-14+k*8,-8);c.lineTo(-11+k*8,-14);c.lineTo(-8+k*8,-8);c.closePath();c.fill()}}
+ // sela
+ c.fillStyle='#7c2d12';c.fillRect(-7,-8,14,5);
+ c.restore();
+}
+/* --- interface da montaria --- */
+let travelSpots=null;
+function findTravelSpots(g){
+ if(travelSpots)return travelSpots;const out={};
+ for(const bio of ['forest','desert','snow','swamp','volcano']){
+  let best=null;
+  for(let r=820;r<1850&&!best;r+=110)for(let a=0;a<360&&!best;a+=12){
+   const x=EXP_CX+Math.cos(a*Math.PI/180)*r,y=EXP_CX+Math.sin(a*Math.PI/180)*r;
+   if(x<150||y<150||x>EXP_MAP-150||y>EXP_MAP-150)continue;
+   try{if(g.biomeAt(x,y)===bio&&!g.pondAt?.(x,y,30)&&!g.blocked?.(x,y))best={x,y}}catch{}
+  }
+  if(best)out[bio]=best;
+ }
+ travelSpots=out;return out;
+}
+const BIO_NAME={forest:'🌲 Floresta',desert:'🏜️ Deserto',snow:'❄️ Montanha Gelada',swamp:'🐸 Pântano',volcano:'🌋 Vulcão'};
+function openMountUI(){
+ const s=state(),e=ensure(),g=game();if(!s||!e)return;
+ const ms=mountState(e);s.resources??={};
+ let m=$('avx-mount-modal');if(!m){m=document.createElement('div');m.id='avx-mount-modal';m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:12px';document.body.appendChild(m)}
+ const lv=mountLevel(ms),dia=s.resources.diamond||0;
+ const card=x=>{
+  const own=ms.owned.includes(x.id),act=ms.active===x.id,lock=(s.level||1)<x.lvl;
+  const price=x.gold?x.gold+' G':x.dia+' 💎';
+  const can=x.gold?(s.gold||0)>=x.gold:dia>=x.dia;
+  let btn;
+  if(own)btn='<button data-ride="'+x.id+'" style="padding:7px 10px;border-radius:8px;background:'+(act?'#7a3b3b':'#2f6b4f')+'">'+(act?'Desmontar':'Montar')+'</button>';
+  else if(lock)btn='<button disabled style="padding:7px 10px;border-radius:8px;background:#38434a;opacity:.7">Nível '+x.lvl+'</button>';
+  else btn='<button data-buy="'+x.id+'" '+(can?'':'disabled')+' style="padding:7px 10px;border-radius:8px;background:'+(can?'#456c57':'#38434a')+'">Comprar · '+price+'</button>';
+  return '<div style="padding:10px;border:1px solid '+(act?'#fbbf24':'#52656a')+';border-radius:10px;display:flex;align-items:center;gap:10px"><span style="font-size:26px">'+x.icon+'</span><div style="flex:1;min-width:0"><b>'+x.name+'</b> <span style="font-size:10px;color:#fbbf24">+'+x.speed+'% vel.</span><div style="font-size:11px;color:#bdcbd0">'+x.desc+'</div></div>'+btn+'</div>';
+ };
+ const spots=g?findTravelSpots(g):{};
+ const travel=Object.keys(BIO_NAME).filter(k=>spots[k]).map(k=>'<button data-travel="'+k+'" style="padding:7px 9px;border-radius:8px;background:#26414e;border:1px solid #4f7c8c;font-size:12px">'+BIO_NAME[k]+'</button>').join('');
+ m.innerHTML='<div style="width:min(560px,100%);max-height:92vh;overflow:auto;background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:16px;color:white"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-weight:800">🐎 Domador de Montarias</h2><button id="avx-mount-close">✕</button></div><p style="color:#cbd5e1;font-size:12px;margin:4px 0 10px">Gold: <b>'+Math.floor(s.gold||0)+'</b> · Diamantes: <b>'+dia+'</b> · Nível da montaria: <b>'+lv+'/10</b> (+4% velocidade por nível, sobe cavalgando) · Tecla <b>V</b> monta/desmonta</p><div style="display:grid;gap:8px">'+MOUNTS.map(card).join('')+'</div><h3 style="margin:14px 0 6px;font-weight:800">🧭 Viagem rápida <span style="font-size:11px;color:#bdcbd0;font-weight:400">· 40 Gold, a partir da Área Safe</span></h3><div style="display:flex;flex-wrap:wrap;gap:6px">'+(travel||'<span style="font-size:12px;color:#94a3b8">Mapa indisponível.</span>')+'</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="avx-mount-houses" style="padding:7px 10px;border-radius:8px;background:#3a3a52">🏡 Casas e profissões</button></div></div>';
+ $('avx-mount-close').onclick=()=>m.remove();m.onclick=ev=>{if(ev.target===m)m.remove()};
+ $('avx-mount-houses').onclick=()=>{m.remove();renderPanel();const cards=findServiceCards([['growth','Casas e construção de vilas'],['growth','Profissões e especializações']]);if(cards.length)openNPCServiceWindow(cards,[['growth','Casas e construção de vilas'],['growth','Profissões e especializações']]);else notify('Serviço indisponível agora.')};
+ m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{
+  const x=mountById(b.dataset.buy);if(!x||ms.owned.includes(x.id))return;
+  if((s.level||1)<x.lvl){notify('Nível '+x.lvl+' necessário.');return}
+  if(x.gold){if((s.gold||0)<x.gold){notify('Gold insuficiente.');return}s.gold-=x.gold}else{if((s.resources.diamond||0)<x.dia){notify('Diamantes insuficientes.');return}s.resources.diamond-=x.dia}
+  ms.owned.push(x.id);ms.last=x.id;setMount(e,x.id);notify(x.icon+' '+x.name+' adquirido e já montado!');openMountUI();
+ });
+ m.querySelectorAll('[data-ride]').forEach(b=>b.onclick=()=>{const id=b.dataset.ride;if(ms.active===id)setMount(e,null);else{ms.last=id;setMount(e,id)}openMountUI()});
+ m.querySelectorAll('[data-travel]').forEach(b=>b.onclick=()=>{
+  const g2=game(),sp=spots[b.dataset.travel];if(!g2?.player||!sp)return;
+  if(g2.player.inSafeZone!==true){notify('A viagem rápida só funciona a partir da Área Safe.');return}
+  if((s.gold||0)<40){notify('Você precisa de 40 Gold.');return}
+  s.gold-=40;g2.player.x=sp.x;g2.player.y=sp.y;g2.fx?.push({x:sp.x,y:sp.y,r:10,max:120,t:.6,col:'#67e8f9'});g2.shake?.(4,.4);
+  notify('🧭 Você chegou em '+BIO_NAME[b.dataset.travel]+'. Cuidado: fora da Área Safe!');m.remove();persist();if(typeof updateUIStats==='function')updateUIStats();
+ });
+}
+/* --- Crônicas: login diário, títulos e estatísticas --- */
+const TITLES=[
+ {id:'adv',name:'Aventureiro',desc:'Todo herói começa aqui.',ok:()=>true},
+ {id:'hunter',name:'Caçador de Feras',desc:'100 feras derrotadas.',ok:(s)=>(s.animalKills||0)>=100},
+ {id:'vet',name:'Veterano',desc:'Chegue ao nível 20.',ok:(s)=>(s.level||1)>=20},
+ {id:'legend',name:'Lenda Viva',desc:'Chegue ao nível 40.',ok:(s)=>(s.level||1)>=40},
+ {id:'boss',name:'Quebra-Chefes',desc:'Vença 5 chefes.',ok:(s)=>(s.raidsCleared||0)>=5},
+ {id:'elite',name:'Caçador de Elites',desc:'Derrote 10 monstros Elite.',ok:(s,e)=>(e.elitesKilled||0)>=10},
+ {id:'rider',name:'Cavaleiro',desc:'Tenha 3 montarias.',ok:(s,e)=>(e.mounts?.owned?.length||0)>=3},
+ {id:'nomad',name:'Nômade',desc:'Cavalgue 60.000 de distância.',ok:(s,e)=>(e.mounts?.dist||0)>=60000},
+ {id:'loyal',name:'Fiel',desc:'7 dias seguidos de login.',ok:(s,e)=>(e.login?.best||0)>=7}
+];
+const LOGIN_REWARDS=[
+ {t:'150 Gold',f:(s)=>{s.gold=(s.gold||0)+150}},
+ {t:'2 Poções de Vida',f:(s)=>{s.items??={};s.items.potion=(s.items.potion||0)+2}},
+ {t:'300 Gold',f:(s)=>{s.gold=(s.gold||0)+300}},
+ {t:'1 Diamante',f:(s)=>{s.resources??={};s.resources.diamond=(s.resources.diamond||0)+1}},
+ {t:'Kit de recursos (10 madeira, 5 ferro)',f:(s)=>{s.resources??={};s.resources.wood=(s.resources.wood||0)+10;s.resources.iron=(s.resources.iron||0)+5}},
+ {t:'600 Gold',f:(s)=>{s.gold=(s.gold||0)+600}},
+ {t:'3 Diamantes + 5 Poções',f:(s)=>{s.resources??={};s.resources.diamond=(s.resources.diamond||0)+3;s.items??={};s.items.potion=(s.items.potion||0)+5}}
+];
+const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function loginState(e){const l=e.login??={last:null,streak:0,best:0};return l}
+function loginAvailable(e){const l=loginState(e);return l.last!==dayKey()}
+function claimLogin(){
+ const s=state(),e=ensure();if(!s||!e)return;const l=loginState(e);
+ if(!loginAvailable(e)){notify('Você já pegou a recompensa de hoje. Volte amanhã!');return}
+ const y=new Date();y.setDate(y.getDate()-1);
+ l.streak=l.last===dayKey(y)?l.streak+1:1;l.best=Math.max(l.best||0,l.streak);l.last=dayKey();
+ const r=LOGIN_REWARDS[(l.streak-1)%7];r.f(s);notify('🎁 Dia '+l.streak+' de login: '+r.t+'!');persist();if(typeof updateUIStats==='function')updateUIStats();
+}
+function unlockedTitles(){const s=state(),e=ensure();return s&&e?TITLES.filter(t=>t.ok(s,e)):[]}
+function openChronicleUI(){
+ const s=state(),e=ensure();if(!s||!e)return;
+ const l=loginState(e),ul=unlockedTitles().map(t=>t.id),avail=loginAvailable(e);
+ let m=$('avx-chronicle-modal');if(!m){m=document.createElement('div');m.id='avx-chronicle-modal';m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:12px';document.body.appendChild(m)}
+ const nextIdx=avail?(((l.last&&l.last===dayKey(new Date(Date.now()-864e5)))?l.streak:0)%7):(l.streak%7);
+ const days=LOGIN_REWARDS.map((r,i)=>{const done=!avail?i<(l.streak-1)%7+1&&l.streak>0:i<nextIdx;const cur=i===nextIdx;return '<div style="padding:6px;border-radius:8px;border:1px solid '+(cur&&avail?'#fbbf24':'#52656a')+';background:'+(done?'#1d3a2c':'#10202a')+';font-size:10px;text-align:center"><b>Dia '+(i+1)+'</b><div style="color:#bdcbd0;margin-top:2px">'+r.t+'</div>'+(done?'<div>✅</div>':'')+'</div>'}).join('');
+ const titles=TITLES.map(t=>{const on=ul.includes(t.id),cur=(e.title||'adv')===t.id;return '<div style="padding:8px;border:1px solid '+(cur?'#fbbf24':'#52656a')+';border-radius:8px;display:flex;align-items:center;gap:8px;opacity:'+(on?1:.55)+'"><div style="flex:1"><b>'+t.name+'</b><div style="font-size:11px;color:#bdcbd0">'+t.desc+'</div></div>'+(on?'<button data-title="'+t.id+'" style="padding:5px 9px;border-radius:7px;background:'+(cur?'#7a5a1f':'#2f6b4f')+'">'+(cur?'Em uso':'Usar')+'</button>':'<span style="font-size:11px">🔒</span>')+'</div>'}).join('');
+ const mm=mountState(e);
+ const stats=[['Nível',s.level||1],['Feras derrotadas',s.animalKills||0],['Chefes vencidos',s.raidsCleared||0],['Elites derrotados',e.elitesKilled||0],['Montarias',mm.owned.length+'/'+MOUNTS.length],['Distância cavalgada',Math.round((mm.dist||0)/100)+' m'],['Maior sequência de login',(l.best||0)+' dia(s)']].map(x=>'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2a3d44"><span style="color:#bdcbd0">'+x[0]+'</span><b>'+x[1]+'</b></div>').join('');
+ m.innerHTML='<div style="width:min(600px,100%);max-height:92vh;overflow:auto;background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:16px;color:white"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-weight:800">📖 Cronista de Aventuria</h2><button id="avx-chron-close">✕</button></div><h3 style="margin:10px 0 6px;font-weight:800">🎁 Recompensa diária <span style="font-size:11px;color:#bdcbd0;font-weight:400">· sequência atual: '+(l.streak||0)+' dia(s)</span></h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:6px">'+days+'</div><button id="avx-chron-claim" '+(avail?'':'disabled')+' style="margin-top:8px;width:100%;padding:9px;border-radius:9px;background:'+(avail?'#456c57':'#38434a')+'">'+(avail?'Resgatar recompensa de hoje':'Já resgatada hoje — volte amanhã')+'</button><h3 style="margin:14px 0 6px;font-weight:800">🏅 Títulos</h3><div style="display:grid;gap:6px">'+titles+'</div><h3 style="margin:14px 0 6px;font-weight:800">📊 Estatísticas</h3>'+stats+'</div>';
+ $('avx-chron-close').onclick=()=>m.remove();m.onclick=ev=>{if(ev.target===m)m.remove()};
+ $('avx-chron-claim').onclick=()=>{claimLogin();openChronicleUI()};
+ m.querySelectorAll('[data-title]').forEach(b=>b.onclick=()=>{e.title=b.dataset.title;persist();titleApply(true);openChronicleUI()});
+}
+let titleAt=0;
+function titleApply(force){
+ const s=state(),e=ensure(),now=performance.now();if(!s||!e)return;
+ if(!force&&now-titleAt<2000)return;titleAt=now;
+ const have=unlockedTitles().map(t=>t.id);e.titlesSeen??=['adv'];
+ for(const id of have)if(!e.titlesSeen.includes(id)){e.titlesSeen.push(id);notify('🏅 Novo título desbloqueado: '+TITLES.find(t=>t.id===id).name+'! Veja no Cronista.')}
+ const t=TITLES.find(x=>x.id===(e.title||'adv')),el=$('player-name-display');
+ if(el&&t&&t.id!=='adv'){const want=s.name+' «'+t.name+'»';if(el.textContent!==want)el.textContent=want}
+ if(!e._loginNote&&loginAvailable(e)){e._loginNote=true;notify('🎁 Há uma recompensa diária esperando no Cronista (norte da praça)!')}
+}
+if(!window.__avxMountKey){window.__avxMountKey=true;window.addEventListener('keydown',ev=>{if(ev.code==='KeyV'&&!ev.repeat&&!/INPUT|TEXTAREA|SELECT/.test(ev.target?.tagName||'')){toggleMount(window.game)}})}
 function drawEnvironment(g){
  if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
  const now=performance.now(),dt=Math.min(.05,(now-(ENV._last||now))/1000);ENV._last=now;
  updateEnv(g);updateWeather(g,dt,now);
  meteorUpdate(g,ensure()||{},state()||{},Date.now());
  eventUpdate(g,state()||{},Date.now());eventHud(g,now);
- ultUpdate(g,dt);ultHud(g,now);
+ ultUpdate(g,dt);ultHud(g,now);mountUpdate(g,dt);titleApply();
  drawWeatherLayer(g,dt,now);
  drawLighting(g,now);
  drawFireflies(g,dt,now);
@@ -947,7 +1141,8 @@ function openTownNPC(id){
  elder:()=>{if(typeof updateUIStats==='function')updateUIStats();const sm=$('shop-modal');if(sm)sm.classList.remove('hidden');else notify('A loja do ancião está fechada agora.')},
  board:()=>openServices([['daily','Missões diárias'],['world','Ranking mundial e passe de temporada'],['daily','Conquistas de aventura']]),
  trainer:()=>openServices([['talents','Árvore de habilidades e subclasses'],['talents','Árvore de talentos'],['growth','Profissões e especializações'],['growth','Equipamentos evolutivos']]),
- mounts:()=>openServices([['mounts','Montaria'],['mounts','Profissões'],['growth','Casas e construção de vilas']])
+ mounts:()=>openMountUI(),
+ chronicler:()=>openChronicleUI(),
  };
  // um erro dentro de um serviço nunca deve deixar o NPC "mudo": avisa e registra no console
  try{actions[id]?.()}catch(err){console.error('Falha ao abrir NPC '+id,err);notify('Não foi possível abrir este serviço agora. Tente de novo.')}

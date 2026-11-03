@@ -723,7 +723,7 @@ function getRPGStats(){
  // mascote equipado: bônus do catálogo, +5% por nível do mascote; habilidade da raposa/fada dá +dano temporário
  if(ex.petEquipped&&ex.pet){const pb=window.AVENTURIA_PET_BONUS?.[ex.pet],pl=1+((ex.petData?.level||1)-1)*.05;if(pb)for(const k in pb)st[k]=(st[k]||0)+Math.round(pb[k]*pl);if((ex.petBuffUntil||0)>Date.now())st.atk+=8+Math.floor((ex.petData?.level||1)*1.5)}
  // montaria: +30% de velocidade de deslocamento
- if(ex.mount)st.speed+=30;
+ if(window.AVENTURIA_MOUNT_BONUS){const mb=window.AVENTURIA_MOUNT_BONUS(ex);for(const k in mb)st[k]=(st[k]||0)+mb[k]}else if(ex.mount)st.speed+=30;
  return st;
 }
 window.getRPGStats=getRPGStats;
