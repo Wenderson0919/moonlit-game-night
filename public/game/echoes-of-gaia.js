@@ -113,6 +113,8 @@
   if(state.weatherT>0)state.weatherT=Math.max(0,state.weatherT-dt)
  }
  function drawWorld(g){if(!g?.running||!g.ctx)return;const c=g.ctx,p=g.player,now=performance.now(),camX=p.x-g.canvas.width/2,camY=p.y-g.canvas.height/2;c.save();c.translate(-camX,-camY);
+  if(p.dashT>0){const pulse=p.dashT/.18;c.save();for(let i=1;i<=4;i++){c.globalAlpha=.16*(1-i/5)*pulse;c.fillStyle='#b8f2dc';c.beginPath();c.ellipse(p.x-p.dvx*i*2.2,p.y-p.dvy*i*2.2,13-i,18-i,0,0,6.28);c.fill()}c.restore()}
+  if(p.moving&&p.dashT<=0&&Math.floor(now/150)%3===0){c.save();c.globalAlpha=.18;c.fillStyle='#d8c9a2';c.beginPath();c.arc(p.x-5,p.y+13,2.5,0,6.28);c.arc(p.x+6,p.y+14,2,0,6.28);c.fill();c.restore()}
   for(const n of state.npcs)drawNPC(c,n,now);
   for(const q of state.secrets)drawSecret(c,q,now,p);
   for(const e of state.encounters){const pulse=.5+.5*Math.sin(now/260+e.phase);c.save();c.globalAlpha=.75+pulse*.25;c.fillStyle=e.type==='traveler'?'#8dd6c0':e.type==='cache'?'#f5d47a':e.type==='caravan'?'#d5a56d':'#b6c9e8';c.strokeStyle='#201a12';c.lineWidth=3;c.beginPath();c.arc(e.x,e.y-8,13+pulse*2,0,Math.PI*2);c.fill();c.stroke();c.font='bold 16px Inter';c.textAlign='center';c.fillStyle='#fff1c5';c.fillText(e.icon,e.x,e.y-3);c.font='bold 10px Inter';c.fillText(e.name,e.x,e.y-30);if(Math.hypot(p.x-e.x,p.y-e.y)<100){c.fillStyle='#171d18';c.fillRect(e.x-38,e.y+17,76,17);c.fillStyle='#ffe5a1';c.font='bold 10px Inter';c.fillText('[E] INTERAGIR',e.x,e.y+29)}c.restore()}
