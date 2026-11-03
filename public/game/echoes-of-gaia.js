@@ -27,7 +27,7 @@
  document.body.append(launch,panel);
  const toggle=()=>{panel.style.display=panel.style.display==='block'?'none':'block';renderPanel()};
  launch.onclick=toggle;panel.querySelector('#eg-close').onclick=toggle;
- const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0,talks:{},encounters:[],encounterAt:35,encounterSerial:0};
+ const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0,talks:{},encounters:[],encounterAt:35,encounterSerial:0,secrets:[],secretAt:18,weatherParticles:[],weatherCycle:0,weatherKind:'clear',weatherChange:0,lastPlayer:{x:0,y:0}}};
  function rand(a,b){return a+Math.random()*(b-a)}
  function makeNPCs(g){const names=['Lina, a Cartógrafa','Borin, o Viajante','Mestre Oren','Mila, a Mensageira','Tomas, o Aprendiz','Nara, a Herbalista','Darin, o Caçador','Ivo, o Mercador'];state.npcs=names.map((name,i)=>({name,x:g.player.x+Math.cos(i*1.25)*rand(65,210),y:g.player.y+Math.sin(i*1.25)*rand(60,170),homeX:0,homeY:0,dir:1,speed:rand(12,22),wait:rand(0,3),phase:rand(0,6),tone:['#527d72','#9b7046','#526a9b','#9a5f77','#8b874d','#58865d','#9b754f','#a17b42'][i]}));state.npcs.forEach(n=>{n.homeX=n.x;n.homeY=n.y})}
  function safeEventPoint(g){const p=g.player;for(let i=0;i<100;i++){const a=rand(0,Math.PI*2),d=rand(430,650),x=Math.max(120,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(120,Math.min(3990,p.y+Math.sin(a)*d));const bio=g.biomeAt(x,y);if(bio&&Math.hypot(x-p.x,y-p.y)>360&&!g.pondAt(x,y,90)&&!g.blocked(x,y)&&!inSafe(x,y,120))return{x,y,bio}}return{x:Math.min(3900,p.x+480),y:Math.min(3900,p.y+300),bio:g.biomeAt(p.x+480,p.y+300)||'forest'}}
@@ -78,7 +78,34 @@
   else {const gold=40;s.gold=(s.gold||0)+gold;notify('➤ Você seguiu os rastros e encontrou suprimentos: +40 ouro.','#f5d58c')}
   if(typeof g.gainExp==='function')g.gainExp(35);if(typeof window.updateUIStats==='function')window.updateUIStats();
  }
- function update(g,dt){if(!g?.running||!g.player)return;updateNPCs(g,dt);
+ function spawnSecret(g){
+  const p=g.player;for(let i=0;i<55;i++){const a=rand(0,Math.PI*2),d=rand(360,780),x=Math.max(100,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(100,Math.min(3990,p.y+Math.sin(a)*d));
+   if(inSafe(x,y,150)||g.blocked(x,y)||g.pondAt(x,y,60)||state.secrets.some(q=>Math.hypot(q.x-x,q.y-y)<260))continue;
+   state.secrets.push({x,y,kind:['shrine','ancient_stone','fairy_circle'][Math.floor(Math.random()*3)],found:false,phase:rand(0,6),life:480});return;
+  }
+ }
+ function drawWeather(g,now){
+  const c=g.ctx,W=g.canvas.width,H=g.canvas.height,p=g.player;if(!c||!p)return;
+  const kind=state.weatherKind;if(kind==='clear')return;
+  c.save();c.setTransform(1,0,0,1,0,0);
+  if(kind==='rain'||kind==='snow'||kind==='embers'){
+   c.lineWidth=1.2;for(const q of state.weatherParticles){const sx=q.x,sy=q.y;c.globalAlpha=q.a;
+    if(kind==='rain'){c.strokeStyle='#b9d9e8';c.beginPath();c.moveTo(sx,sy);c.lineTo(sx-5,sy+13);c.stroke()}
+    else{c.fillStyle=kind==='snow'?'#f2fbff':'#ff9b52';c.beginPath();c.arc(sx,sy,q.r,0,Math.PI*2);c.fill()}
+   }
+  }
+  if(kind==='mist'){const grad=c.createLinearGradient(0,0,W,H);grad.addColorStop(0,'rgba(180,205,190,.03)');grad.addColorStop(.5,'rgba(180,205,190,.15)');grad.addColorStop(1,'rgba(180,205,190,.04)');c.fillStyle=grad;c.fillRect(0,0,W,H)}
+  if(kind==='spores'){c.fillStyle='rgba(160,215,115,.045)';c.fillRect(0,0,W,H);for(const q of state.weatherParticles){c.globalAlpha=q.a;c.fillStyle='#d6f2a2';c.beginPath();c.arc(q.x,q.y,q.r,0,6.28);c.fill()}}
+  c.restore();
+ }
+ function updateWeather(g,dt){
+  state.weatherChange-=dt;if(state.weatherChange<=0){const b=g.biomeAt(g.player.x,g.player.y);const pool=b==='snow'?['clear','snow','mist']:b==='volcano'?['clear','embers','mist']:b==='swamp'?['clear','rain','mist','spores']:['clear','rain','mist','spores'];state.weatherKind=pool[Math.floor(Math.random()*pool.length)];state.weatherChange=rand(75,130);state.weatherParticles=[];for(let i=0;i<90;i++)state.weatherParticles.push({x:rand(0,g.canvas.width),y:rand(0,g.canvas.height),a:rand(.25,.75),r:rand(1,2.5),v:rand(45,120)})}
+  for(const q of state.weatherParticles){q.y+=q.v*dt;q.x+=(state.weatherKind==='rain'?-25:Math.sin(q.y/40)*8)*dt;if(q.y>g.canvas.height+12){q.y=-12;q.x=rand(0,g.canvas.width)}if(q.x< -12)q.x=g.canvas.width+12}
+ }
+ function drawSecret(c,q,now,p){const d=Math.hypot(p.x-q.x,p.y-q.y);if(d>340)return;const reveal=d<190,pulse=.5+.5*Math.sin(now/420+q.phase);c.save();c.globalAlpha=reveal?.8:.12+pulse*.12;c.strokeStyle='#b8f1c4';c.fillStyle='rgba(135,220,157,.09)';c.lineWidth=2;c.beginPath();c.arc(q.x,q.y,18+pulse*4,0,6.28);c.fill();c.stroke();c.fillStyle='#d5f5bd';c.font='bold 18px Inter';c.textAlign='center';c.fillText(q.kind==='shrine'?'✧':q.kind==='ancient_stone'?'ᛟ':'❀',q.x,q.y+6);if(reveal){c.font='bold 10px Inter';c.fillStyle='#e6f5d7';c.fillText('SEGREDO DESCOBERTO',q.x,q.y-29);if(d<70){c.fillStyle='#14231b';c.fillRect(q.x-39,q.y+25,78,17);c.fillStyle='#eaffd8';c.fillText('[E] INVESTIGAR',q.x,q.y+37)}}c.restore()}
+ function resolveSecret(g,q){if(q.found)return;q.found=true;const s=S();if(!s)return;const gold=rand(45,95)|0;s.gold=(s.gold||0)+gold;s.resources??={};const key=q.kind==='shrine'?'crystal':q.kind==='ancient_stone'?'iron':'herb';s.resources[key]=(s.resources[key]||0)+2;if(typeof g.gainExp==='function')g.gainExp(55);notify('✧ Segredo ancestral encontrado! +'+gold+' ouro e materiais raros.','#b9e9bd');if(typeof window.updateUIStats==='function')window.updateUIStats()}
+ function update(g,dt){if(!g?.running||!g.player)return;updateNPCs(g,dt);updateWeather(g,dt);
+  state.secretAt-=dt;if(state.secretAt<=0&&state.secrets.filter(q=>!q.found).length<3){spawnSecret(g);state.secretAt=rand(75,115)}state.secrets=state.secrets.filter(q=>!q.found&&q.life>0);for(const q of state.secrets)q.life-=dt;
   state.encounters=state.encounters.filter(e=>!e.used&&e.life>0);for(const e of state.encounters)e.life-=dt;
   state.encounterAt-=dt;if(state.encounterAt<=0&&state.encounters.length<2){spawnEncounter(g);state.encounterAt=rand(48,78)}
   if(state.event?.status==='active'){if(g.t>state.event.expires){state.event.status='expired';cleanupObjectives(g,state.event);notify('O acontecimento '+state.event.title+' desapareceu.','#d6b47b')}if(g.t-state.lastUi>1){state.lastUi=g.t;renderPanel()}}
@@ -87,22 +114,24 @@
  }
  function drawWorld(g){if(!g?.running||!g.ctx)return;const c=g.ctx,p=g.player,now=performance.now(),camX=p.x-g.canvas.width/2,camY=p.y-g.canvas.height/2;c.save();c.translate(-camX,-camY);
   for(const n of state.npcs)drawNPC(c,n,now);
+  for(const q of state.secrets)drawSecret(c,q,now,p);
   for(const e of state.encounters){const pulse=.5+.5*Math.sin(now/260+e.phase);c.save();c.globalAlpha=.75+pulse*.25;c.fillStyle=e.type==='traveler'?'#8dd6c0':e.type==='cache'?'#f5d47a':e.type==='caravan'?'#d5a56d':'#b6c9e8';c.strokeStyle='#201a12';c.lineWidth=3;c.beginPath();c.arc(e.x,e.y-8,13+pulse*2,0,Math.PI*2);c.fill();c.stroke();c.font='bold 16px Inter';c.textAlign='center';c.fillStyle='#fff1c5';c.fillText(e.icon,e.x,e.y-3);c.font='bold 10px Inter';c.fillText(e.name,e.x,e.y-30);if(Math.hypot(p.x-e.x,p.y-e.y)<100){c.fillStyle='#171d18';c.fillRect(e.x-38,e.y+17,76,17);c.fillStyle='#ffe5a1';c.font='bold 10px Inter';c.fillText('[E] INTERAGIR',e.x,e.y+29)}c.restore()}
   const e=state.event;if(e&&e.status==='active'){const pulse=.5+.5*Math.sin(now/330);c.save();c.strokeStyle='#f5d47a';c.fillStyle='rgba(245,212,122,.07)';c.lineWidth=4;c.setLineDash([12,8]);c.beginPath();c.arc(e.x,e.y,185,0,Math.PI*2);c.fill();c.stroke();c.setLineDash([]);c.globalAlpha=.35+pulse*.55;c.strokeStyle='#fff0b0';c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,205+pulse*9,0,Math.PI*2);c.stroke();c.globalAlpha=1;c.fillStyle='#33250e';c.strokeStyle='#f5d47a';c.lineWidth=2;c.beginPath();c.roundRect(e.x-85,e.y-236,170,28,8);c.fill();c.stroke();c.fillStyle='#ffe5a1';c.font='bold 12px Inter';c.textAlign='center';c.fillText(e.icon+' '+e.title,e.x,e.y-218);c.restore()}
-  c.restore();
+  c.restore();drawWeather(g,now);
  }
  function install(g){if(!g||g.__echoesInstalled)return;g.__echoesInstalled=true;const oldLoop=g.loop.bind(g);g.loop=function(ts){const prev=this._echoPrev||ts,dt=Math.min(.05,Math.max(0,(ts-prev)/1000));this._echoPrev=ts;try{update(this,dt)}catch(e){console.warn('[Ecos de Gaia]',e)}return oldLoop(ts)};
   const oldRender=g.render.bind(g);g.render=function(){const r=oldRender();try{drawWorld(this)}catch(e){console.warn('[Ecos de Gaia render]',e)}return r};
-  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player;if(!p)return oldInteract();const found=state.encounters.filter(e=>!e.used&&Math.hypot(p.x-e.x,p.y-e.y)<58).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];if(found){resolveEncounter(this,found);return}const near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
+  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player;if(!p)return oldInteract();const secret=state.secrets.filter(q=>!q.found&&Math.hypot(p.x-q.x,p.y-q.y)<70).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];if(secret){resolveSecret(this,secret);return}const found=state.encounters.filter(e=>!e.used&&Math.hypot(p.x-e.x,p.y-e.y)<58).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];if(found){resolveEncounter(this,found);return}const near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
    'Lina, a Cartógrafa':['As trilhas mudam quando Gaia desperta. Observe os sinais dourados no horizonte.','Já desenhei mapas de cinco biomas, mas ainda existem lugares que nem os antigos conhecem.'],
    'Borin, o Viajante':['Ouvi passos enormes perto das montanhas. Não eram de um animal comum.','Uma boa mochila e olhos atentos salvam mais vidas que uma espada afiada.'],
    'Mestre Oren':['A energia de Gaia flui por toda criatura e pedra. Até uma simples erva pode guardar poder.','Não confunda força com coragem. Saber quando recuar também é uma habilidade.'],
    'Mila, a Mensageira':['Os mercadores estão inquietos. Eventos estranhos têm surgido longe da vila.','Se encontrar uma fenda brilhante, não toque nela antes de limpar a área!'],
    'Tomas, o Aprendiz':['Um dia vou explorar todos os biomas! Por enquanto, estou aprendendo a reconhecer os minérios.','Dizem que fragmentos caídos do céu ainda guardam calor.']
   };const arr=lines[n.name]||['Que os caminhos de Gaia estejam a seu favor.'];const idx=state.talks[n.name]||0;state.talks[n.name]=idx+1;notify('💬 '+n.name+': “'+arr[idx%arr.length]+'”','#f2d59b');return}return oldInteract()}; 
+  const oldAnimalUpdate=g.updateAnimal.bind(g);g.updateAnimal=function(a,dt){oldAnimalUpdate(a,dt);if(!a||a.raid||a.def?.beh!=='passive'||a.aggroT>0||a.hitT>0)return;const herd=this.animals.filter(o=>o!==a&&!o.raid&&o.kind===a.kind&&Math.hypot(o.x-a.x,o.y-a.y)<190);if(herd.length){const cx=herd.reduce((v,o)=>v+o.x,0)/herd.length,cy=herd.reduce((v,o)=>v+o.y,0)/herd.length,dx=cx-a.x,dy=cy-a.y,d=Math.hypot(dx,dy);if(d>95){const pace=a.def.spd*.24*dt*60;this.stepEntity(a,dx/d*pace,dy/d*pace);a.moving=true;a.face=dx>=0?1:-1}}};
   const oldKill=g.killAnimal.bind(g);g.killAnimal=function(a,silent){if(!silent&&a&&activeNear(a.x,a.y))addProgress('hunt',a.x,a.y);return oldKill(a,silent)};
   const oldAttack=g.attack.bind(g);g.attack=function(){const p=this.player,before=this.nodes?.filter(n=>n.hp>0&&Math.hypot(n.x-p.x,n.y-p.y)<75).map(n=>({n,hp:n.hp}))||[];const r=oldAttack();for(const v of before)if(v.n.hp<=0&&v.hp>0&&activeNear(v.n.x,v.n.y))addProgress('gather',v.n.x,v.n.y);return r};
-  g.start=(function(old){return function(){const r=old.apply(this,arguments);state.event=null;state.nextAt=35;state.npcs=[];state.encounters=[];state.encounterAt=25;state.lastUi=0;return r}})(g.start);
+  g.start=(function(old){return function(){const r=old.apply(this,arguments);state.event=null;state.nextAt=35;state.npcs=[];state.encounters=[];state.encounterAt=25;state.secrets=[];state.secretAt=15;state.weatherParticles=[];state.weatherChange=0;state.weatherKind='clear';state.lastUi=0;return r}})(g.start);
   g.addEventListener;
  }
  function key(e){if(e.code==='KeyJ'&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){toggle();e.preventDefault()}}
