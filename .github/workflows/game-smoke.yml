@@ -25,7 +25,7 @@ jobs:
           const html = fs.readFileSync('public/game/index.html', 'utf8');
           const js = fs.readFileSync('public/game/echoes-of-gaia.js', 'utf8');
           const checks = [
-            ['module loaded by game page', html.includes('<script src="./echoes-of-gaia.js"></script>')],
+            ['module loaded by game page', /<script\s+src=["']\.\/echoes-of-gaia\.js(?:\?[^"']*)?["']\s*><\/script>/i.test(html)],
             ['game-ready bootstrap', js.includes("aventuria:game-ready")],
             ['event objectives spawned', js.includes('seedObjectives(g,state.event)')],
             ['event cleanup', js.includes('cleanupObjectives(g,e)')],
