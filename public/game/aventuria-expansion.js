@@ -339,7 +339,7 @@ function installGameHooks(){
    const wx=p.x+(ev.clientX-(rect.left+rect.width/2))*(canvas.width/rect.width);
    const wy=p.y+(ev.clientY-(rect.top+rect.height/2))*(canvas.height/rect.height);
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(wx-n.x,wy-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<190){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id)}
+   if(nearest&&nearest.d<360){ev.preventDefault();ev.stopImmediatePropagation();try{openTownNPC(nearest.n.id)}catch(err){console.error('[Aventuria NPC]',nearest.n.id,err);notify('Não foi possível abrir este NPC. Veja o console para o erro.')}}
   };
   document.addEventListener('pointerdown',handleNpcPointer,true);
  }
@@ -353,7 +353,7 @@ function installGameHooks(){
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<1000){ev.preventDefault();ev.stopImmediatePropagation();openTownNPC(nearest.n.id);return}
+   if(nearest){ev.preventDefault();ev.stopImmediatePropagation();try{openTownNPC(nearest.n.id)}catch(err){console.error('[Aventuria NPC]',nearest.n.id,err);notify('Erro ao abrir NPC: '+(err?.message||'falha desconhecida'))}return}
   },true);
  }
  const g=game(),GameCtor=g?.constructor;
@@ -426,7 +426,7 @@ function drawWeather(g){
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
   const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
-  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<1000){openTownNPC(n.id);return}
+  if(n&&Math.hypot(p.x-n.x,p.y-n.y)<700){openTownNPC(n.id);return}
   return originalInteract.call(this);
  };
  proto.__avxTownHooks=true;
@@ -601,7 +601,9 @@ function openAppearanceEditor(){
  preview();
 }
 function openTownNPC(id){
- const s=state(),e=ensure();if(!s||!e)return;
+ const s=state(),e=ensure();
+ if(!s||!e){console.error('[Aventuria NPC] Estado do personagem indisponível', {id,MMO:!!window.MMO,localState:!!window.MMO?.localState});notify('Entre com seu personagem antes de falar com este NPC.');return}
+ console.info('[Aventuria NPC] Abrindo menu:',id);
  const openAdvanced=(section,title)=>{
   renderPanel();
   const norm=v=>(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ');
