@@ -152,11 +152,11 @@ function notify(m){if(typeof showNotification==='function')showNotification(m,'#
 function persist(){try{if(typeof saveGame==='function')saveGame(false)}catch{}}
 let lastResources=null,lastClock=0,lastDraw=0,lastSeasonKills=null,lastSeasonRaids=null;
 function updateMobileNPCButton(){
- const g=game(),p=g?.player;if(!g?.running||!p||p.realmId){$('avx-mobile-interact')?.remove();return}
+ const g=game(),p=g?.player;if(!g?.running||!p||p.realmId||p.inSafeZone!==true){$('avx-mobile-interact')?.remove();return}
  const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
  let btn=$('avx-mobile-interact');
  if(!near||near.d>520){btn?.remove();return}
- if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p)return;const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<1000)openTownNPC(n.n.id)});document.body.appendChild(btn)}
+ if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p||p.inSafeZone!==true){$('avx-mobile-interact')?.remove();notify('Os serviços dos NPCs só funcionam na Área Safe.');return}const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<1000)openTownNPC(n.n.id)});document.body.appendChild(btn)}
  btn.textContent='E · '+near.n.name;
  btn.style.cssText='position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 190px);z-index:99999;padding:14px 18px;border-radius:16px;border:2px solid '+near.n.color+';background:#10212bea;color:#fff;font:800 13px system-ui;box-shadow:0 5px 22px #0009;touch-action:manipulation;pointer-events:auto';
 }
@@ -333,7 +333,7 @@ function installGameHooks(){
    // Aceita mouse, toque e caneta. Só intercepta quando o toque cai sobre um NPC.
    if(ev.pointerType==='mouse'&&ev.button!==undefined&&ev.button!==0)return;
    if(ev.target?.closest?.('button,a,input,textarea,select,[role="dialog"]'))return;
-   const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas)return;
+   const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas||p.inSafeZone!==true)return;
    const rect=canvas.getBoundingClientRect();
    if(ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;
    const wx=p.x+(ev.clientX-(rect.left+rect.width/2))*(canvas.width/rect.width);
@@ -350,6 +350,7 @@ function installGameHooks(){
    if((ev.code!=='KeyE'&&ev.key?.toLowerCase()!=='e')||ev.repeat)return;
    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
    const g=game(),p=g?.player;if(!g||!p||!g.running)return;
+   if(p.inSafeZone!==true)return;
    if(interactRealmPortal(g)){ev.preventDefault();ev.stopImmediatePropagation();return}
    if(p.realmId)return;
    const nearest=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
@@ -425,7 +426,8 @@ function drawWeather(g){
  };
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
-  const p=this.player,n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
+  const p=this.player;if(!p||p.inSafeZone!==true)return originalInteract.call(this);
+  const n=townNPCs.slice().sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
   if(n&&Math.hypot(p.x-n.x,p.y-n.y)<700){openTownNPC(n.id);return}
   return originalInteract.call(this);
  };
@@ -516,7 +518,7 @@ function openMagicUI(){
  $('avx-magic-close').onclick=()=>m.remove();
  m.querySelectorAll('[data-spell]').forEach(b=>b.onclick=()=>{const x=stock.find(v=>v.id===b.dataset.spell);if(!x||s.learnedSpells.includes(x.id)||s.gold<x.price)return;s.gold-=x.price;s.learnedSpells.push(x.id);persist();updateUIStats?.();notify('Magia aprendida: '+x.name+'!');openMagicUI()});
 }
-window.AVENTURIA_INTERACT_NPC=id=>openTownNPC(id);
+window.AVENTURIA_INTERACT_NPC=id=>{if(game()?.player?.inSafeZone!==true){notify('Entre na Área Safe para acessar lojas e serviços dos NPCs.');return}openTownNPC(id)};
 window.AVENTURIA_SAFE_NPCS=townNPCs;
 window.AVENTURIA_NPC_RANGE=230;
 // bônus de mascote (aplicados em getRPGStats, no index.html)
@@ -601,6 +603,8 @@ function openAppearanceEditor(){
  preview();
 }
 function openTownNPC(id){
+ const player=game()?.player;
+ if(!player||player.inSafeZone!==true){$('avx-mobile-interact')?.remove();notify('Entre na Área Safe para acessar lojas e serviços dos NPCs.');return}
  const s=state(),e=ensure();
  if(!s||!e){console.error('[Aventuria NPC] Estado do personagem indisponível', {id,MMO:!!window.MMO,localState:!!window.MMO?.localState});notify('Entre com seu personagem antes de falar com este NPC.');return}
  console.info('[Aventuria NPC] Abrindo menu:',id);
