@@ -32,15 +32,15 @@
  function makeNPCs(g){const names=['Lina, a Cartógrafa','Borin, o Viajante','Mestre Oren','Mila, a Mensageira','Tomas, o Aprendiz'];state.npcs=names.map((name,i)=>({name,x:g.player.x+Math.cos(i*1.25)*rand(80,190),y:g.player.y+Math.sin(i*1.25)*rand(70,150),homeX:0,homeY:0,dir:1,speed:rand(9,17),wait:rand(0,3),phase:rand(0,6),tone:['#527d72','#9b7046','#526a9b','#9a5f77','#8b874d'][i]}));state.npcs.forEach(n=>{n.homeX=n.x;n.homeY=n.y})}
  function safeEventPoint(g){const p=g.player;for(let i=0;i<100;i++){const a=rand(0,Math.PI*2),d=rand(430,650),x=Math.max(120,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(120,Math.min(3990,p.y+Math.sin(a)*d));const bio=g.biomeAt(x,y);if(bio&&Math.hypot(x-p.x,y-p.y)>360&&!g.pondAt(x,y,90)&&!g.blocked(x,y)&&!p.inSafeZone)return{x,y,bio}}return{x:Math.min(3900,p.x+480),y:Math.min(3900,p.y+300),bio:g.biomeAt(p.x+480,p.y+300)||'forest'}}
  
- const huntKinds={forest:['slime','lobo'],desert:['escorpiao','chacal'],snow:['lobo_gelo','urso'],swamp:['crocodilo','slime'],volcano:['lobo_infernal','salamandra']};
+ const huntKinds={forest:['slime','lobo'],desert:['escorpiao','chacal'],snow:['lobo_gelo','urso'],swamp:['crocodilo','slime'],volcano:['lobo_infernal','salamandra_igne']};
  const gatherKinds={forest:['bush','herb'],desert:['cactus','sandstone'],snow:['ice_crystal','pine'],swamp:['mushroom','herb'],volcano:['ember_vent','obsidian']};
  function seedObjectives(g,e){
   e.spawnedAnimals=[];e.spawnedNodes=[];
   if(e.kind==='hunt'){
    const kinds=huntKinds[e.biome]||huntKinds.forest;
-   for(let i=0;i<Math.min(e.goal,8);i++){const a=rand(i*2.399, i*2.399+1.4),d=rand(45,155),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length];if(typeof g.spawnAnimal==='function'){const mob=g.spawnAnimal(kind,x,y);if(mob){mob.aggroT=999;mob.eventSerial=e.serial;e.spawnedAnimals.push(mob)}}}
+   for(let i=0;i<Math.min(e.goal,8);i++){const a=rand(i*2.399, i*2.399+1.4),d=rand(45,155),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length];if(typeof g.spawnAnimal==='function'&&window.AVENTURIA_CREATURE_DEFS?.[kind]&&!g.blocked(x,y)&&!g.pondAt(x,y,24)){const mob=g.spawnAnimal(kind,x,y);if(mob){mob.eventSerial=e.serial;e.spawnedAnimals.push(mob)}}}
   }else{
-   const kinds=gatherKinds[e.biome]||gatherKinds.forest,defs=window.NODE_DEFS;
+   const kinds=gatherKinds[e.biome]||gatherKinds.forest,defs={bush:{hp:20},herb:{hp:12},cactus:{hp:35},sandstone:{hp:55},ice_crystal:{hp:65},pine:{hp:55},mushroom:{hp:15},ember_vent:{hp:40},obsidian:{hp:90}};
    for(let i=0;i<e.goal;i++){const a=i*2.399,d=rand(35,165),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length],def=defs?.[kind];if(!def)continue;const node={type:kind,x,y,hp:def.hp,maxHp:def.hp,respawn:0,biome:e.biome,eventSerial:e.serial};g.nodes.push(node);e.spawnedNodes.push(node)}
    g.buildNodeGrid?.();
   }
@@ -65,7 +65,7 @@
  }
  function install(g){if(!g||g.__echoesInstalled)return;g.__echoesInstalled=true;const oldLoop=g.loop.bind(g);g.loop=function(ts){const prev=this._echoPrev||ts,dt=Math.min(.05,Math.max(0,(ts-prev)/1000));this._echoPrev=ts;try{update(this,dt)}catch(e){console.warn('[Ecos de Gaia]',e)}return oldLoop(ts)};
   const oldRender=g.render.bind(g);g.render=function(){const r=oldRender();try{drawWorld(this)}catch(e){console.warn('[Ecos de Gaia render]',e)}return r};
-  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player,near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
+  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player;if(!p)return oldInteract();const near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
    'Lina, a Cartógrafa':['As trilhas mudam quando Gaia desperta. Observe os sinais dourados no horizonte.','Já desenhei mapas de cinco biomas, mas ainda existem lugares que nem os antigos conhecem.'],
    'Borin, o Viajante':['Ouvi passos enormes perto das montanhas. Não eram de um animal comum.','Uma boa mochila e olhos atentos salvam mais vidas que uma espada afiada.'],
    'Mestre Oren':['A energia de Gaia flui por toda criatura e pedra. Até uma simples erva pode guardar poder.','Não confunda força com coragem. Saber quando recuar também é uma habilidade.'],
