@@ -1594,6 +1594,57 @@ class Game{
   c.fillStyle=b.enr||cast?'#ff2a2a':'#fde68a';c.fillRect(sz*1.0,-sz*.5+bob,5,5);c.fillRect(sz*1.25,-sz*.45+bob,4,4);
   if(r.tier>=3){c.fillStyle='#fde047';c.fillRect(-sz*.3,-sz*1.05,sz*.6,5);for(let i=0;i<3;i++)c.fillRect(-sz*.3+i*sz*.25,-sz*1.25,5,10)}
   }
+  // Acabamento visual compartilhado: silhueta com contorno, placas, núcleo e runas.
+  // Mantém a arte individual de cada chefe e não altera hitbox ou combate.
+  c.save();
+  c.globalCompositeOperation='source-over';
+  c.lineJoin='round';
+  // Halo rúnico atrás da criatura.
+  c.globalAlpha=.22+pul*.12+(b.enr?.16:0);
+  c.strokeStyle=T.c;c.lineWidth=2;c.setLineDash([5,7]);
+  c.beginPath();c.ellipse(0,0,sz*1.62,sz*1.28,now/1800,0,Math.PI*2);c.stroke();
+  c.setLineDash([]);
+  c.globalAlpha=1;
+  // Contorno de energia para separar a silhueta do cenário.
+  c.shadowColor=T.c;c.shadowBlur=hit?3:10;
+  c.strokeStyle=hit?'#fff':T.c;c.lineWidth=Math.max(1.5,sz*.055);
+  c.globalAlpha=.72;c.beginPath();c.ellipse(0,bob,sz*.88,sz*.78,0,0,Math.PI*2);c.stroke();
+  c.shadowBlur=0;c.globalAlpha=1;
+  // Ombreiras e placas inferiores em metal escuro com filete da raridade.
+  const plate=hit?'#fff':(r.biome==='snow'?'#b9d7e8':r.biome==='volcano'?'#3b2421':r.biome==='desert'?'#49351f':r.biome==='swamp'?'#263b2b':'#283b31');
+  c.fillStyle=plate;c.strokeStyle=T.c;c.lineWidth=2;
+  [-1,1].forEach(side=>{
+   c.beginPath();c.moveTo(side*sz*.48,-sz*.22+bob);c.lineTo(side*sz*1.02,-sz*.42+bob);c.lineTo(side*sz*1.18,sz*.02+bob);c.lineTo(side*sz*.82,sz*.22+bob);c.closePath();c.fill();c.stroke();
+   c.fillStyle=T.c;c.beginPath();c.moveTo(side*sz*.91,-sz*.32+bob);c.lineTo(side*sz*1.08,-sz*.12+bob);c.lineTo(side*sz*.88,-sz*.04+bob);c.fill();c.fillStyle=plate;
+  });
+  // Núcleo central pulsante.
+  const coreY=sz*.12+bob,coreR=sz*(.13+pul*.025);
+  c.globalAlpha=.24;c.fillStyle=T.c;c.beginPath();c.arc(0,coreY,coreR*2.2,0,Math.PI*2);c.fill();
+  c.globalAlpha=1;c.fillStyle=hit?'#fff':T.c;c.strokeStyle='#fff8';c.lineWidth=1;
+  c.beginPath();c.moveTo(0,coreY-coreR);c.lineTo(coreR*.78,coreY);c.lineTo(0,coreY+coreR);c.lineTo(-coreR*.78,coreY);c.closePath();c.fill();c.stroke();
+  // Olhos acesos e marcas de elite.
+  c.shadowColor=b.enr?'#ff2020':T.c;c.shadowBlur=10;
+  c.fillStyle=b.enr?'#ff3030':(hit?'#fff':'#fff2a8');
+  c.fillRect(sz*.18,-sz*.4+bob,Math.max(4,sz*.13),Math.max(4,sz*.09));
+  c.fillRect(sz*.48,-sz*.36+bob,Math.max(4,sz*.13),Math.max(4,sz*.09));
+  c.shadowBlur=0;
+  c.strokeStyle=T.c;c.lineWidth=2;c.globalAlpha=.9;
+  c.beginPath();c.moveTo(-sz*.28,sz*.48+bob);c.lineTo(0,sz*.62+bob);c.lineTo(sz*.28,sz*.48+bob);c.stroke();
+  // Fragmentos orbitais para tiers altos.
+  if(r.tier>=2){
+   const count=r.tier+1;
+   for(let i=0;i<count;i++){
+    const a=now/850+i*Math.PI*2/count,rad=sz*(1.35+(i%2)*.13),px=Math.cos(a)*rad,py=Math.sin(a)*rad*.72;
+    c.globalAlpha=.72;c.fillStyle=T.c;c.strokeStyle='#fff9';c.lineWidth=1;
+    c.save();c.translate(px,py);c.rotate(a+now/500);c.beginPath();c.moveTo(0,-sz*.13);c.lineTo(sz*.09,0);c.lineTo(0,sz*.13);c.lineTo(-sz*.09,0);c.closePath();c.fill();c.stroke();c.restore();
+   }
+  }
+  // Coroa exclusiva para o chefe lendário.
+  if(r.tier===4){
+   c.globalAlpha=.95;c.fillStyle='#fbbf24';c.strokeStyle='#fff1a8';c.lineWidth=1.5;
+   c.beginPath();c.moveTo(-sz*.58,-sz*.78+bob);c.lineTo(-sz*.48,-sz*1.25+bob);c.lineTo(-sz*.18,-sz*.91+bob);c.lineTo(0,-sz*1.42+bob);c.lineTo(sz*.18,-sz*.91+bob);c.lineTo(sz*.48,-sz*1.25+bob);c.lineTo(sz*.58,-sz*.78+bob);c.closePath();c.fill();c.stroke();
+  }
+  c.restore();
   c.restore();
   // nome e vida
   c.font='bold 11px Inter';c.textAlign='center';const w=c.measureText(b.name).width+14;
