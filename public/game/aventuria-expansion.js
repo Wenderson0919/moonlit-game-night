@@ -339,6 +339,7 @@ function mountAndPetDraw(g){
  const tr=e.advanced?.treasure;
  if(tr&&!p.realmId){const dt=Math.hypot(p.x-tr.x,p.y-tr.y);if(dt<520){const k=1-dt/520,pu=.5+.5*Math.sin(now/220);c.save();c.translate(tr.x,tr.y);c.fillStyle='rgba(255,215,120,'+(.10+.22*k*pu)+')';c.beginPath();c.arc(0,0,40+22*k,0,Math.PI*2);c.fill();c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(0,14,18,6,0,0,Math.PI*2);c.fill();c.fillStyle='#6b4423';c.fillRect(-14,-6,28,18);c.fillStyle='#8b5a2b';c.fillRect(-14,-12,28,8);c.fillStyle='#e7bd5c';c.fillRect(-3,-4,6,8);c.fillRect(-14,-3,28,2);c.restore()}}
  drawMeteor(c,p,now);
+ drawEvents(c,p,now);
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
 }
@@ -517,11 +518,86 @@ function drawMeteor(c,p,now){
  c.fillStyle='#8fe3f5';c.beginPath();c.moveTo(0,-20);c.lineTo(11,0);c.lineTo(0,18);c.lineTo(-11,0);c.closePath();c.fill();
  c.fillStyle='#e6fbff';c.beginPath();c.moveTo(0,-20);c.lineTo(4,-2);c.lineTo(-5,0);c.closePath();c.fill();c.restore();
 }
+/* ---------- ACONTECIMENTOS DO MUNDO ----------
+   De tempos em tempos algo acontece fora da Área Safe: bônus temporários (Frenesi, Lua de Sangue, Bênção)
+   ou pontos de interesse no mapa (baú caído, mercador errante). Tudo aparece em um aviso no topo. */
+const EV={buff:null,spot:null,next:0,hudAt:0};
+window.AVENTURIA_EVENT_MUL=1;
+const EV_BUFFS={
+ frenzy:{icon:'⚡',name:'Frenesi de Batalha',desc:'Ouro e XP em dobro',mul:2,dur:75,col:'#fbbf24'},
+ bloodmoon:{icon:'🩸',name:'Lua de Sangue',desc:'Ouro e XP ×1,6 (feras mais fortes)',mul:1.6,dur:110,col:'#f87171',night:true},
+ blessing:{icon:'🌿',name:'Bênção da Floresta',desc:'Regenera vida e +20% de XP/ouro',mul:1.2,dur:70,col:'#86efac',regen:true}
+};
+function evMaxHp(s){return (s.maxHp||100)+((window.getRPGStats?.()||{}).hp||0)}
+function startEvent(g,s,kind){
+ const p=g.player,now=Date.now();
+ if(EV_BUFFS[kind]){
+  const b=EV_BUFFS[kind];EV.buff={kind,until:now+b.dur*1000};window.AVENTURIA_EVENT_MUL=b.mul;
+  notify(b.icon+' '+b.name+'! '+b.desc+' por '+b.dur+'s.');g.shake?.(4,.4);g.floatText?.(p.x,p.y-60,b.icon+' '+b.name,b.col);return;
+ }
+ // pontos de interesse: ficam fora da área safe, a uma caminhada de distância
+ for(let tries=0;tries<12;tries++){
+  const a=Math.random()*Math.PI*2,d=420+Math.random()*320,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
+  if(Math.hypot(x-EXP_CX,y-EXP_CX)<SAFE_R+120||x<200||y<200||x>EXP_MAP-200||y>EXP_MAP-200)continue;
+  EV.spot={kind,x,y,until:now+95000};
+  notify(kind==='chest'?'📦 Um baú caiu do céu por perto! Siga o brilho dourado.':'🧳 Um mercador errante foi visto por perto — ele troca presentes!');
+  return;
+ }
+}
+function eventUpdate(g,s,now){
+ const p=g.player;if(!p||p.realmId)return;
+ const b=EV.buff;
+ if(b){
+  const def=EV_BUFFS[b.kind];
+  if(now>=b.until||(def.night&&ENV.night<.25)){notify(def.icon+' '+def.name+' terminou.');EV.buff=null;window.AVENTURIA_EVENT_MUL=1}
+  else if(def.regen&&s.hp>0){const cap=evMaxHp(s);if(s.hp<cap&&now-(EV._reg||0)>1000){EV._reg=now;s.hp=Math.min(cap,s.hp+Math.ceil(cap*.015))}}
+ }
+ const sp=EV.spot;
+ if(sp){
+  if(now>sp.until){notify(sp.kind==='chest'?'📦 O baú desapareceu na neblina.':'🧳 O mercador seguiu viagem.');EV.spot=null}
+  else if(Math.hypot(p.x-sp.x,p.y-sp.y)<70){
+   s.resources??={};s.items??={};const lv=s.level||1;
+   if(sp.kind==='chest'){const gold=150+Math.floor(Math.random()*200)+lv*6,dia=Math.random()<.5?1:0;s.gold=(s.gold||0)+gold;if(dia)s.resources.diamond=(s.resources.diamond||0)+dia;s.resources.wood=(s.resources.wood||0)+4;s.resources.iron=(s.resources.iron||0)+2;
+    g.floatText?.(sp.x,sp.y-30,'+'+gold+' Gold','#f59e0b');notify('📦 Baú aberto: +'+gold+' Gold'+(dia?', +1 Diamante':'')+', madeira e ferro!')}
+   else{const r=Math.random();if(r<.5){s.items.potion=(s.items.potion||0)+2;notify('🧳 O mercador deixou 2 Poções de Vida para você!')}else{const gold=100+lv*8;s.gold=(s.gold||0)+gold;notify('🧳 O mercador pagou '+gold+' Gold por uma boa conversa!')}}
+   g.shake?.(3,.3);EV.spot=null;persist();if(typeof updateUIStats==='function')updateUIStats();
+  }
+ }
+ if(!EV.buff&&!sp&&now>EV.next){
+  if(!EV.next){EV.next=now+40000+Math.random()*40000;return}
+  if(p.inSafeZone){EV.next=now+15000;return}
+  const pool=['frenzy','frenzy','blessing','chest','chest','merchant'];if(ENV.night>.55)pool.push('bloodmoon','bloodmoon');
+  startEvent(g,s,pool[Math.floor(Math.random()*pool.length)]);EV.next=now+(150+Math.random()*120)*1000;
+ }
+}
+function drawEvents(c,p,now){
+ const sp=EV.spot;if(!sp||p.realmId)return;
+ const d=Math.hypot(p.x-sp.x,p.y-sp.y),pu=.5+.5*Math.sin(now/240);
+ c.save();c.translate(sp.x,sp.y);
+ c.fillStyle='rgba(255,215,120,'+(.1+.14*pu)+')';c.beginPath();c.arc(0,0,46+10*pu,0,Math.PI*2);c.fill();
+ c.font='30px serif';c.textAlign='center';c.fillText(sp.kind==='chest'?'📦':'🧳',0,10+Math.sin(now/300)*3);
+ c.restore();
+ if(d>160){ // seta indicativa na borda do círculo ao redor do jogador
+  const a=Math.atan2(sp.y-p.y,sp.x-p.x);c.save();c.translate(p.x+Math.cos(a)*110,p.y+Math.sin(a)*110);c.rotate(a);
+  c.fillStyle='rgba(255,215,120,.9)';c.beginPath();c.moveTo(12,0);c.lineTo(-6,-8);c.lineTo(-6,8);c.closePath();c.fill();c.restore();
+ }
+}
+function eventHud(g,now){
+ if(now-EV.hudAt<250)return;EV.hudAt=now;
+ let h=$('avx-event-hud');
+ const b=EV.buff,sp=EV.spot;
+ if(!b&&!sp){if(h)h.remove();return}
+ if(!h){h=document.createElement('div');h.id='avx-event-hud';h.style.cssText='position:fixed;left:50%;top:56px;transform:translateX(-50%);z-index:9997;padding:6px 13px;border-radius:10px;background:#0b1620ec;color:#fff;font:600 12px Inter,sans-serif;pointer-events:none;white-space:nowrap';document.body.appendChild(h)}
+ const t=Date.now();
+ if(b){const def=EV_BUFFS[b.kind];h.style.border='1px solid '+def.col;h.textContent=def.icon+' '+def.name+' · '+def.desc+' · '+Math.max(0,Math.ceil((b.until-t)/1000))+'s'}
+ else{h.style.border='1px solid #fbbf24';h.textContent=(sp.kind==='chest'?'📦 Baú caído':'🧳 Mercador errante')+' · '+Math.round(Math.hypot(g.player.x-sp.x,g.player.y-sp.y)/10)+' m · '+Math.max(0,Math.ceil((sp.until-t)/1000))+'s'}
+}
 function drawEnvironment(g){
  if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
  const now=performance.now(),dt=Math.min(.05,(now-(ENV._last||now))/1000);ENV._last=now;
  updateEnv(g);updateWeather(g,dt,now);
  meteorUpdate(g,ensure()||{},state()||{},Date.now());
+ eventUpdate(g,state()||{},Date.now());eventHud(g,now);
  drawWeatherLayer(g,dt,now);
  drawLighting(g,now);
  drawFireflies(g,dt,now);

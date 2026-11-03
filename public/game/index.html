@@ -1198,7 +1198,7 @@ class Game{
   // combo (abates seguidos em até 6s) e bônus de noite (+25%) aumentam ouro e XP
   const nb=1+(window.AVENTURIA_ENV?.night||0)*.25;
   this.combo=(this.combo&&this.t-this.comboT<6)?this.combo+1:1;this.comboT=this.t;
-  const mul=nb*(1+Math.min(.5,(this.combo-1)*.03));
+  const mul=nb*(window.AVENTURIA_EVENT_MUL||1)*(1+Math.min(.5,(this.combo-1)*.03));
   this.comboFeedback(a);
   for(const [r,mn,mx] of d.drops){const q=ri(mn,mx);if(q>0){s.resources[r]=(s.resources[r]||0)+q;this.floatText(a.x,a.y-10-Math.random()*14,`+${q} ${(RES[r]?.n||r)}`,'#fde68a')}}
   if(d.beh!=='passive'){const g=Math.round((ri(4,12)+Math.floor(a.m*3))*mul);s.gold+=g;this.floatText(a.x,a.y-26,`+${g} Gold`,'#f59e0b')}
