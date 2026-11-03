@@ -59,12 +59,12 @@ function renderPanel(){
  e.petData??={level:1,xp:0,bond:0,skillReady:0};const pd=e.petData,petNeed=100+(pd.level-1)*75;
  const prof=Object.entries(e.professions).map(([k,v])=>'<div class="flex justify-between text-xs"><span>'+professionName(k)+'</span><b class="text-amber-200">Nv. '+professionLevel(v)+'</b></div><div class="avx-bar"><i style="width:'+((v.xp%80)/80*100)+'%"></i></div>').join('');
  $('avx-content').innerHTML=
- '<div class="avx-card"><div class="flex justify-between"><b class="text-amber-100 text-sm">📜 Missões diárias</b><span class="text-[10px] text-slate-400">Renovam diariamente</span></div>'+
+ '<div class="avx-card" data-section="daily"><div class="flex justify-between"><b class="text-amber-100 text-sm">📜 Missões diárias</b><span class="text-[10px] text-slate-400">Renovam diariamente</span></div>'+
  q.map(x=>'<div class="mt-3"><div class="flex justify-between gap-2 text-xs"><b>'+esc(x.name)+'</b><span class="text-amber-200">'+Math.min(x.goal,x.progress)+'/'+x.goal+'</span></div><div class="text-[10px] text-slate-400">'+esc(x.desc)+' · '+x.reward+' Gold</div><div class="avx-bar"><i style="width:'+Math.min(100,x.progress/x.goal*100)+'%"></i></div><div class="text-right mt-1"><button class="avx-action" data-claim="'+x.id+'" '+(x.progress<x.goal||e.claimed[x.id]?'disabled':'')+'>'+(e.claimed[x.id]?'Resgatada':'Resgatar recompensa')+'</button></div></div>').join('')+'</div>'+
  '<div class="avx-card"><b class="text-amber-100 text-sm">🐾 Santuário de Mascotes</b><p class="text-[11px] text-slate-300 mt-1">'+(pet?pet.emoji+' <b>'+pet.name+'</b>':'Nenhum mascote. Compre um ovo para começar.')+'</p>'+(pet?'<p class="text-[10px] text-amber-200 mt-1">Nível '+pd.level+' · XP '+pd.xp+'/'+petNeed+' · Afinidade '+pd.bond+'</p><div class="avx-bar"><i style="width:'+Math.min(100,pd.xp/petNeed*100)+'%"></i></div><p class="text-[10px] text-slate-400 mt-1">'+({slime:'+8 Defesa · Escudo viscoso',fox:'+6 Ataque · Investida feroz',wisp:'+8 Poder · Pulso arcano'}[e.pet]||'')+'</p>':'')+'<div class="flex flex-wrap gap-2 mt-2">'+(pet?'<button class="avx-action" id="avx-pet-toggle">'+(e.petEquipped?'Guardar':'Invocar')+'</button><button class="avx-action" id="avx-pet-skill" '+(!e.petEquipped?'disabled':'')+'>Habilidade especial</button>':'<button class="avx-action" id="avx-pet-egg">Comprar ovo · 250 Gold</button>')+'</div><p class="text-[10px] text-slate-500 mt-2">Mascotes evoluem ao derrotar criaturas e oferecem bônus enquanto invocados.</p></div>'+ 
- '<div class="avx-card"><b class="text-amber-100 text-sm">🛠 Profissões</b><div class="mt-2 space-y-2">'+prof+'</div><p class="text-[10px] text-slate-500 mt-2">Evoluem ao coletar materiais e explorar o mundo.</p></div>'+
- '<div class="avx-card"><b class="text-amber-100 text-sm">🐎 Montaria</b><p class="text-[11px] text-slate-400 mt-1">Montaria de viagem: aumenta a velocidade de deslocamento em 30%.</p><button id="avx-mount" class="avx-action mt-2">'+(e.mount?'Guardar montaria':'Invocar montaria · 500 Gold')+'</button></div>'+
- '<div class="avx-card"><b class="text-amber-100 text-sm">🏆 Conquistas de aventura</b><div id="avx-achievements" class="text-[11px] text-slate-300 mt-2"></div></div>';
+ '<div class="avx-card" data-section="mounts"><b class="text-amber-100 text-sm">🛠 Profissões</b><div class="mt-2 space-y-2">'+prof+'</div><p class="text-[10px] text-slate-500 mt-2">Evoluem ao coletar materiais e explorar o mundo.</p></div>'+
+ '<div class="avx-card" data-section="mounts"><b class="text-amber-100 text-sm">🐎 Montaria</b><p class="text-[11px] text-slate-400 mt-1">Montaria de viagem: aumenta a velocidade de deslocamento em 30%.</p><button id="avx-mount" class="avx-action mt-2">'+(e.mount?'Guardar montaria':'Invocar montaria · 500 Gold')+'</button></div>'+
+ '<div class="avx-card" data-section="daily"><b class="text-amber-100 text-sm">🏆 Conquistas de aventura</b><div id="avx-achievements" class="text-[11px] text-slate-300 mt-2"></div></div>';
 
  const w=e.world??=( {guild:null,friends:[],house:0,skills:{},spent:0,gear:0,seasonXp:0,seasonClaimed:[],treasures:0,arenaWins:0,eventWins:0,marketLog:[]} );
  // Chefes mundiais e festivais automáticos removidos.
@@ -93,7 +93,8 @@ function renderPanel(){
  '<div class="avx-card" data-section="growth"><b class="text-amber-100">🎭 Transmog e aparência</b><p class="avx-muted mt-1">Altere o visual da arma sem mudar seus atributos.</p><div class="flex flex-wrap gap-2 mt-2">'+[['default','Original'],['crystal','Cristal'],['flame','Chamas'],['shadow','Sombria']].map(([id,n])=>'<button class="avx-action" data-skin="'+id+'">'+n+'</button>').join('')+'</div><div class="avx-muted mt-2">Visual atual: '+esc(s.equipment?.weapon?.appearance||'default')+'</div></div>'+
  '<div class="avx-card" data-section="world"><b class="text-amber-100">📜 Contratos de caça</b><p class="avx-muted mt-1">Aceite contratos, derrote criaturas e resgate recompensas.</p><div class="text-xs mt-2">Abates desde o contrato: '+(adv.contracts.progress||0)+'/'+(adv.contracts.goal||0)+'</div><button id="avx-contract" class="avx-action mt-2">'+(adv.contracts.active?'Abandonar contrato':'Aceitar contrato · 5 criaturas')+'</button><button id="avx-contract-claim" class="avx-action mt-2" '+(!(adv.contracts.active&&adv.contracts.progress>=adv.contracts.goal)?'disabled':'')+'>Resgatar 180 Gold</button></div>'+
  '<div class="avx-card" data-section="world"><b class="text-amber-100">🧭 Caça ao tesouro</b><p class="avx-muted mt-1">Explore uma expedição e procure um baú perdido. A expedição usa sua posição atual como ponto de partida.</p><div class="text-xs mt-2">'+(adv.treasure?'Expedição ativa · procure o baú indicado no mapa':'Nenhuma expedição ativa')+'</div><button id="avx-treasure-hunt" class="avx-action mt-2">'+(adv.treasure?'Cancelar busca':'Iniciar busca · 60 Gold')+'</button></div>'+
- '<div class="avx-card" data-section="growth"><b class="text-amber-100">🌟 Despertar de armas</b><p class="avx-muted mt-1">Desperte a arma equipada para liberar poder adicional e efeitos especiais.</p><div class="text-xs mt-2">Despertar: '+(s.equipment?.weapon?.awakening||0)+'/5</div><button id="avx-awaken" class="avx-action mt-2">Despertar · '+(250+((s.equipment?.weapon?.awakening||0)*250))+' Gold + 1 Diamante</button></div>'
+ '<div class="avx-card" data-section="growth"><b class="text-amber-100">🌟 Despertar de armas</b><p class="avx-muted mt-1">Desperte a arma equipada para liberar poder adicional e efeitos especiais.</p><div class="text-xs mt-2">Despertar: '+(s.equipment?.weapon?.awakening||0)+'/5</div><button id="avx-awaken" class="avx-action mt-2">Despertar · '+(250+((s.equipment?.weapon?.awakening||0)*250))+' Gold + 1 Diamante</button></div>'+
+ '<div class="avx-card" data-section="combat"><b class="text-amber-100">🏟 Arena de duelos</b><p class="avx-muted mt-1">Enfrente um rival do seu nível. A vitória rende Gold e XP de temporada. Disponível a partir do nível 5.</p><div class="text-xs mt-2">Vitórias na arena: '+w.arenaWins+'</div><button id="avx-arena" class="avx-action mt-2">Duelar · 25 Gold</button></div>'
  $('avx-content').insertAdjacentHTML('beforeend',advancedHtml);
  // bind/spend precisam existir antes do primeiro uso (const não é içada: antes isso gerava ReferenceError
  // e derrubava o painel inteiro, deixando vários NPCs sem funcionar)
@@ -191,13 +192,9 @@ function tick(){
  for(const x of q){if(x.type==='kills')x.progress=Math.min(x.goal,Math.max(0,kills-e.dayStartKills));if(x.type==='raid')x.progress=Math.min(x.goal,Math.max(0,raids-e.dayStartRaids))}
  const gathered=Math.max(0,total-(e.dayStartTotal??(e.dayStartTotal=total)));const gatherQ=q.find(x=>x.type==='gather');if(gatherQ)gatherQ.progress=Math.min(gatherQ.goal,gathered);
  if(g&&g.running){
-  const safeT=Number.isFinite(g.t)?g.t:Date.now()/1000;
-  const phase=((safeT%360)+360)%360/360,night=Math.max(0,Math.min(1,(Math.cos(phase*Math.PI*2+Math.PI-.2)+.12)/1.12));
-  const weather=['Céu limpo','Chuva leve','Neblina','Vento forte'][Math.floor(g.t/150)%4];
-  if(Math.floor(g.t/360)!==lastClock){lastClock=Math.floor(g.t/360);notify('O mundo entrou em um novo período do dia.')}
-  const p=g.player;if(p){const base=p.baseSpd||p.speed||3.8;if(p.baseSpd){p.speed=p.baseSpd}}
-  const overlay=$('avx-world-overlay');if(overlay){overlay.style.background='rgba(7,12,35,'+(night*.24)+')';overlay.dataset.weather=weather}
-  const clock=$('avx-world-clock');if(clock)clock.textContent=(night>.55?'🌙 Noite':'☀️ Dia')+' · '+weather;
+  e.clockHour=ENV.hour;
+  const p=g.player;if(p&&p.baseSpd)p.speed=p.baseSpd;
+  const overlay=$('avx-world-overlay');if(overlay)overlay.style.background='transparent';   // a escuridão agora é desenhada no canvas (com luzes)
   $('avx-expedition-exit')?.remove();
  }
  if(panel.style.display==='block'&&Date.now()-lastDraw>900){lastDraw=Date.now();renderPanel()}
@@ -257,12 +254,30 @@ const townNPCs=[
  {id:'contract',name:'Capitã da Guarda',role:'Contratos e recompensas',x:EXP_SAFE.x+120,y:EXP_SAFE.y+390,icon:'📜',color:'#93c5fd'},
  {id:'treasure',name:'Cartógrafo',role:'Mapas e caça ao tesouro',x:EXP_SAFE.x-120,y:EXP_SAFE.y+390,icon:'🧭',color:'#d6ad62'},
  {id:'stylist',name:'Estilista',role:'Aparência do personagem',x:EXP_SAFE.x+420,y:EXP_SAFE.y-390,icon:'🎭',color:'#f0abfc'},
- {id:'awakening',name:'Oráculo das Armas',role:'Despertar de armas',x:EXP_SAFE.x-420,y:EXP_SAFE.y-390,icon:'🌟',color:'#c4b5fd'}
+ {id:'awakening',name:'Oráculo das Armas',role:'Despertar de armas',x:EXP_SAFE.x-420,y:EXP_SAFE.y-390,icon:'🌟',color:'#c4b5fd'},
+ {id:'elder',name:'Mercador Ancião',role:'Melhorias de combate',x:EXP_SAFE.x,y:EXP_SAFE.y-120,icon:'💰',color:'#e7c36a',virtual:true},
+ {id:'board',name:'Quadro de Missões',role:'Missões, passe e conquistas',x:EXP_SAFE.x-300,y:EXP_SAFE.y+30,icon:'📋',color:'#f2d38a'},
+ {id:'trainer',name:'Mestre de Treino',role:'Habilidades, arena e evento',x:EXP_SAFE.x+300,y:EXP_SAFE.y+30,icon:'🥋',color:'#f87171'},
+ {id:'mounts',name:'Domador de Montarias',role:'Montaria, profissões e casa',x:EXP_SAFE.x,y:EXP_SAFE.y+290,icon:'🐎',color:'#c08457'}
 ];
+const NPC_GREET={merchant:'Poções e kits fresquinhos!',stable:'Aço bom é aço forjado.',pet:'Tem um ovo esperando por você!',guild:'Juntos somos mais fortes.',magic:'A magia responde a quem ousa.',element:'Fogo, gelo, raio… combine!',forge:'Traga ferro e eu faço milagres.',contract:'Tenho trabalho para você.',treasure:'Todo mapa esconde um segredo.',stylist:'Que tal um visual novo?',awakening:'Sua arma ainda dorme…',elder:'Aprimore-se antes da próxima caçada.',board:'Missões novas todo dia!',trainer:'Quer ficar mais forte?',mounts:'Nada como cavalgar pelo mundo.'};
+for(const n of townNPCs)n.greet=NPC_GREET[n.id];
+/* Marcador sobre a cabeça do NPC quando há algo a fazer */
+function npcBadge(id){
+ const s=state(),e=s&&s.expansion;if(!e)return '';
+ if(id==='contract'){const c=e.advanced?.contracts;if(c?.active&&c.progress>=c.goal)return '✅';return c?.active?'':'❗'}
+ if(id==='treasure')return e.advanced?.treasure?'':'❗';
+ if(id==='guild')return e.world?.guild?'':'❗';
+ if(id==='pet')return e.pet?'':'🥚';
+ if(id==='board'){const q=e.daily?.quests||[];return q.some(x=>x.progress>=x.goal&&!(e.claimed&&e.claimed[x.id]))?'✅':''}
+ if(id==='mounts')return e.mount?'':((s.gold||0)>=500?'❗':'');
+ if(id==='trainer'){const w=e.world;return Math.max(0,(s.level||1)-1-((w&&w.spent)||0))>0?'⭐':''}
+ return '';
+}
 function mountAndPetDraw(g){
  if(!g?.running||!g.player)return;
  const c=g.ctx,p=g.player,s=state(),e=ensure();if(!s||!e)return;
- const camX=Math.round(p.x-g.canvas.width/2),camY=Math.round(p.y-g.canvas.height/2),now=performance.now();
+ const camX=Math.round(p.x-g.canvas.width/2+(g._shx||0)),camY=Math.round(p.y-g.canvas.height/2+(g._shy||0)),now=performance.now();
  c.save();c.translate(-camX,-camY);
  if(p.realmId){
   c.save();c.translate(2000,2000);c.fillStyle='rgba(125,211,252,.2)';c.beginPath();c.arc(0,0,58,0,Math.PI*2);c.fill();c.strokeStyle='#a5f3fc';c.lineWidth=7;c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.stroke();c.fillStyle='#e0f2fe';c.font='bold 13px Inter';c.textAlign='center';c.fillText('PORTAL DE RETORNO',0,-72);c.fillText('[ E ] Voltar',0,78);c.restore();
@@ -304,13 +319,17 @@ function mountAndPetDraw(g){
   c.fillStyle='#5d4b36';c.font='bold 12px Inter';c.fillText('PRAÇA CENTRAL',cx,cy+125);
  }
  if(!p.realmId)for(const n of townNPCs){
-  c.save();c.translate(n.x,n.y);
+  c.save();c.translate(n.x,n.y);if(n.virtual){c.restore();}else{
   c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,14,17,6,0,0,Math.PI*2);c.fill();
   c.fillStyle=n.color;c.fillRect(-10,-3,20,17);c.fillStyle='#e7bd91';c.beginPath();c.arc(0,-12,9,0,Math.PI*2);c.fill();
   c.fillStyle='#26342e';c.fillRect(-6,-14,3,2);c.fillRect(3,-14,3,2);
-  c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);c.restore();
+  c.font='16px serif';c.textAlign='center';c.fillText(n.icon,0,-26);c.restore();}
   // nome sempre visível; função + [E] e um anel pulsante só para o NPC ao alcance
-  const near=Math.hypot(p.x-n.x,p.y-n.y)<520;
+  const near=Math.hypot(p.x-n.x,p.y-n.y)<230;
+  if(near&&!n._wasNear&&now-(n._greetAt||-1e9)>45000)n._greetAt=now;
+  n._wasNear=near;
+  const bd=npcBadge(n.id);if(bd){c.font='15px serif';c.textAlign='center';c.fillText(bd,n.x+20,n.y-28+Math.sin(now/260+n.x)*3)}
+  if(n.greet&&n._greetAt&&now-n._greetAt<3800){c.font='italic 10px Inter';const gw=c.measureText(n.greet).width+18;c.fillStyle='rgba(255,252,240,.96)';c.beginPath();c.roundRect(n.x-gw/2,n.y-112,gw,19,8);c.fill();c.fillStyle='#3a2c18';c.textAlign='center';c.fillText(n.greet,n.x,n.y-99)}
   if(near){const pu=.5+.5*Math.sin(now/260);c.strokeStyle='rgba(255,227,160,'+(.45+.35*pu)+')';c.lineWidth=2;c.beginPath();c.ellipse(n.x,n.y+14,26+pu*4,10+pu*2,0,0,Math.PI*2);c.stroke()}
   c.font='bold 10px Inter';c.textAlign='center';
   const tw=Math.max(70,c.measureText(n.name).width+18);c.fillStyle='rgba(7,19,17,.85)';c.fillRect(n.x-tw/2,n.y-61,tw,16);c.fillStyle=near?'#fff3c4':'#ffe3a0';c.fillText(n.name,n.x,n.y-49);
@@ -319,8 +338,204 @@ function mountAndPetDraw(g){
  // baú da caça ao tesouro: brilha quando você chega perto
  const tr=e.advanced?.treasure;
  if(tr&&!p.realmId){const dt=Math.hypot(p.x-tr.x,p.y-tr.y);if(dt<520){const k=1-dt/520,pu=.5+.5*Math.sin(now/220);c.save();c.translate(tr.x,tr.y);c.fillStyle='rgba(255,215,120,'+(.10+.22*k*pu)+')';c.beginPath();c.arc(0,0,40+22*k,0,Math.PI*2);c.fill();c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(0,14,18,6,0,0,Math.PI*2);c.fill();c.fillStyle='#6b4423';c.fillRect(-14,-6,28,18);c.fillStyle='#8b5a2b';c.fillRect(-14,-12,28,8);c.fillStyle='#e7bd5c';c.fillRect(-3,-4,6,8);c.fillRect(-14,-3,28,2);c.restore()}}
+ drawMeteor(c,p,now);
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
+}
+/* ===================== AMBIENTE: dia/noite, iluminação, clima e eventos ===================== */
+// 24h de jogo = 8 minutos reais (1h = 20s). O jogo começa às 06:00 e o horário é salvo no personagem.
+const DAY_SECONDS=480,HOUR_SEC=DAY_SECONDS/24,TAU=Math.PI*2,SAFE_R=680;
+const ENV=window.AVENTURIA_ENV={hour:6,night:0,warm:0,period:'Amanhecer',icon:'🌅',kind:'clear',k:0};
+const smooth=(a,b,x)=>{x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)};
+const WEATHER={
+ clear:{n:'Céu limpo',i:'☀️',max:0,dim:0},rain:{n:'Chuva',i:'🌧️',max:150,dim:.07},storm:{n:'Tempestade',i:'⛈️',max:200,dim:.15},
+ snow:{n:'Neve',i:'❄️',max:95,dim:.02},blizzard:{n:'Nevasca',i:'🌨️',max:170,dim:.08},fog:{n:'Neblina',i:'🌫️',max:0,dim:.05},
+ sandstorm:{n:'Tempestade de areia',i:'🏜️',max:160,dim:.06},ash:{n:'Chuva de cinzas',i:'🌋',max:90,dim:.1}
+};
+const WPOOL={
+ forest:['clear','clear','rain','rain','storm','fog'],desert:['clear','clear','clear','sandstorm','sandstorm','rain'],
+ snow:['snow','snow','blizzard','clear','fog'],swamp:['fog','fog','rain','rain','storm','clear'],volcano:['ash','ash','ash','storm','clear']
+};
+const W={kind:'clear',target:'clear',state:'hold',k:1,until:0,parts:[],flash:0,nextStrike:0,biome:null,bc:0};
+let meteor=null,meteorNext=0,fireflies=null,darkCv=null,darkCtx=null,envHudAt=0;
+function periodOf(h){return h<5?['Madrugada','🌙']:h<7?['Amanhecer','🌅']:h<12?['Manhã','☀️']:h<17?['Tarde','🌤️']:h<20?['Entardecer','🌇']:['Noite','🌙']}
+function fmtHour(h){const hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
+function weatherLabel(){const d=WEATHER[W.kind]||WEATHER.clear;return (W.kind==='clear'&&ENV.night>.5?'🌙':d.i)+' '+d.n}
+function updateEnv(g){
+ const e=ensure();
+ if(ENV._base===undefined)ENV._base=(e&&Number.isFinite(e.clockHour)?e.clockHour:6)-g.t/HOUR_SEC;
+ const h=(((ENV._base+g.t/HOUR_SEC)%24)+24)%24;ENV.hour=h;
+ // escuridão: 0 de dia, 1 de noite; amanhecer 5-7h e entardecer 17-20h com transição suave
+ ENV.night=(h>=20||h<5)?1:h<7?1-smooth(5,7,h):h<17?0:smooth(17,20,h);
+ ENV.warm=(h>=5&&h<7)?Math.sin(smooth(5,7,h)*Math.PI):(h>=17&&h<20)?Math.sin(smooth(17,20,h)*Math.PI):0;
+ const [name,icon]=periodOf(h);
+ if(ENV.period!==name){
+  ENV.period=name;ENV.icon=icon;
+  if(ENV._started){
+   if(name==='Noite')notify('🌙 A noite caiu: criaturas +20% mais fortes, mas ouro e XP +25%. Estrelas cadentes podem surgir!');
+   else if(name==='Amanhecer')notify('🌅 Amanheceu. O perigo da noite ficou para trás.');
+   else if(name==='Entardecer')notify('🌇 O sol se põe… a noite se aproxima.');
+  }
+ }
+ ENV._started=true;
+}
+function pickWeather(biome){
+ const pool=WPOOL[biome]||WPOOL.forest;let k=pool[Math.floor(Math.random()*pool.length)];
+ if(ENV.warm>.05&&ENV.hour<12&&(biome==='forest'||biome==='swamp'||biome==='snow')&&Math.random()<.4)k='fog';
+ return k;
+}
+function updateWeather(g,dt,now){
+ const p=g.player,biome=p.realmId?({verdant:'forest',frost:'snow',mire:'swamp',ember:'volcano'}[p.realmId]||'forest'):(p.biome||'forest');
+ if(W.biome===null){W.biome=biome;W.kind=W.target=pickWeather(biome);W.k=1;W.state='hold';W.until=now+60000+Math.random()*60000}
+ // ao mudar de bioma o clima local muda, com transição suave (no máximo a cada 20s para não piscar na divisa)
+ if(biome!==W.biome){W.biome=biome;if(now-W.bc>20000){W.bc=now;const nk=pickWeather(biome);if(nk!==W.kind){W.target=nk;W.state='out'}}}
+ if(W.state==='hold'&&now>W.until){W.target=pickWeather(biome);W.state=W.target===W.kind?'hold':'out';if(W.state==='hold')W.until=now+60000+Math.random()*70000}
+ if(W.state==='out'){
+  W.k-=dt/3;
+  if(W.k<=0){W.k=0;const prev=W.kind;W.kind=W.target;W.parts=[];W.state='in';if(prev!==W.kind&&W.kind!=='clear')notify((WEATHER[W.kind].i)+' '+WEATHER[W.kind].n+' começou.')}
+ }else if(W.state==='in'){W.k+=dt/3;if(W.k>=1){W.k=1;W.state='hold';W.until=now+60000+Math.random()*70000}}
+ ENV.kind=W.kind;ENV.k=W.k;
+}
+function strikeLightning(g,now){
+ W.flash=1;W.nextStrike=now+9000+Math.random()*9000;
+ const p=g.player,s=state();
+ // raio telegrafado (1,1s) perto do jogador fora da cidade: dá tempo de sair da marca
+ if(p.realmId||Math.hypot(p.x-EXP_CX,p.y-EXP_CX)<SAFE_R+40)return;
+ const a=Math.random()*TAU,d=30+Math.random()*200,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
+ g.hazards.push({x,y,r:46,t:1.1,dur:1.1,dmg:Math.max(6,Math.round(((s&&s.maxHp)||100)*.06)),col:'#fde047',rgb:'253,224,71',src:'Raio'});
+}
+function newParticle(kind,Wd,Hd){
+ const p={x:Math.random()*Wd,y:Math.random()*Hd,s:Math.random()*2+1,ph:Math.random()*TAU};
+ p.v=kind==='rain'||kind==='storm'?350+Math.random()*300:kind==='snow'?35+Math.random()*65:kind==='blizzard'?160+Math.random()*180:kind==='sandstorm'?520+Math.random()*380:25+Math.random()*40;
+ return p;
+}
+function drawWeatherLayer(g,dt,now){
+ const kind=W.kind,def=WEATHER[kind],k=W.k;if(kind==='clear'||k<=.01)return;
+ const c=g.ctx,Wd=g.canvas.width,Hd=g.canvas.height,want=Math.floor(def.max*k);
+ while(W.parts.length<want)W.parts.push(newParticle(kind,Wd,Hd));
+ while(W.parts.length>want)W.parts.pop();
+ c.save();c.setTransform(1,0,0,1,0,0);
+ const rain=kind==='rain'||kind==='storm',snowy=kind==='snow'||kind==='blizzard';
+ if(rain){
+  const slant=kind==='storm'?150:55;c.strokeStyle='rgba(155,205,235,'+(.42*k)+')';c.lineWidth=1;
+  for(const q of W.parts){q.y+=q.v*dt;q.x-=slant*dt;if(q.y>Hd+8){q.y=-8;q.x=Math.random()*Wd}if(q.x<-8)q.x=Wd+8;c.beginPath();c.moveTo(q.x,q.y);c.lineTo(q.x-(kind==='storm'?5:2),q.y+10);c.stroke()}
+ }else if(snowy){
+  c.fillStyle='rgba(240,248,255,'+(.8*k)+')';const drift=kind==='blizzard'?-120:0;
+  for(const q of W.parts){q.y+=q.v*dt;q.x+=Math.sin(now/900+q.ph)*18*dt+drift*dt;if(q.y>Hd+4){q.y=-4;q.x=Math.random()*Wd}if(q.x<0)q.x=Wd;if(q.x>Wd)q.x=0;c.beginPath();c.arc(q.x,q.y,q.s,0,TAU);c.fill()}
+  if(kind==='blizzard'){c.fillStyle='rgba(210,230,245,'+(.14*k)+')';c.fillRect(0,0,Wd,Hd)}
+ }else if(kind==='sandstorm'){
+  c.fillStyle='rgba(200,150,70,'+(.2*k)+')';c.fillRect(0,0,Wd,Hd);c.strokeStyle='rgba(240,210,150,'+(.35*k)+')';c.lineWidth=1.5;
+  for(const q of W.parts){q.x+=q.v*dt;q.y+=Math.sin(now/700+q.ph)*14*dt;if(q.x>Wd+30){q.x=-30;q.y=Math.random()*Hd}c.beginPath();c.moveTo(q.x,q.y);c.lineTo(q.x-28,q.y+3);c.stroke()}
+ }else if(kind==='ash'){
+  c.fillStyle='rgba(60,45,45,'+(.12*k)+')';c.fillRect(0,0,Wd,Hd);
+  for(const q of W.parts){q.y+=q.v*dt;q.x+=Math.sin(now/1200+q.ph)*10*dt;if(q.y>Hd+4){q.y=-4;q.x=Math.random()*Wd}c.fillStyle=q.s>2.4?'rgba(251,146,60,'+(.9*k)+')':'rgba(190,180,170,'+(.6*k)+')';c.beginPath();c.arc(q.x,q.y,q.s*.8,0,TAU);c.fill()}
+ }else if(kind==='fog'){
+  c.fillStyle='rgba(205,220,228,'+(.2*k)+')';c.fillRect(0,0,Wd,Hd);
+  for(let i=0;i<5;i++){
+   const x=((now/40)*(1+i*.3)+i*300)%(Wd+500)-250,y=Hd*(.12+.18*i)+Math.sin(now/2000+i)*40,gr=c.createRadialGradient(x,y,10,x,y,280);
+   gr.addColorStop(0,'rgba(225,235,240,'+(.3*k)+')');gr.addColorStop(1,'rgba(225,235,240,0)');c.fillStyle=gr;c.fillRect(x-280,y-280,560,560);
+  }
+ }
+ if(kind==='storm'&&k>.6&&now>W.nextStrike)strikeLightning(g,now);
+ c.restore();
+}
+function drawLighting(g,now){
+ const def=WEATHER[W.kind]||WEATHER.clear,base=Math.min(.8,ENV.night*.6+def.dim*W.k);
+ if(base<.02&&ENV.warm<.02)return;
+ const c=g.ctx,Wd=g.canvas.width,Hd=g.canvas.height,p=g.player;
+ if(!darkCv||darkCv.width!==Wd||darkCv.height!==Hd){darkCv=document.createElement('canvas');darkCv.width=Wd;darkCv.height=Hd;darkCtx=darkCv.getContext('2d')}
+ const d=darkCtx;
+ if(base>=.02){
+  d.globalCompositeOperation='source-over';d.clearRect(0,0,Wd,Hd);d.fillStyle='rgba(8,12,42,'+base+')';d.fillRect(0,0,Wd,Hd);
+  d.globalCompositeOperation='destination-out';
+  const camX=Math.round(p.x-Wd/2+(g._shx||0)),camY=Math.round(p.y-Hd/2+(g._shy||0));
+  const lamp=(x,y,r,a)=>{const sx=x-camX,sy=y-camY;if(sx<-r||sx>Wd+r||sy<-r||sy>Hd+r)return;const gr=d.createRadialGradient(sx,sy,r*.1,sx,sy,r);gr.addColorStop(0,'rgba(0,0,0,'+a+')');gr.addColorStop(1,'rgba(0,0,0,0)');d.fillStyle=gr;d.beginPath();d.arc(sx,sy,r,0,TAU);d.fill()};
+  lamp(p.x,p.y,190,.92);                                    // lanterna do jogador
+  for(const st of (g.structs||[]))if(st.type==='campfire')lamp(st.x,st.y,230,.95);
+  if(!p.realmId){
+   lamp(EXP_CX,EXP_CX,210,.7);                              // fonte
+   for(const l of (g.safeLayer?.lights||[]))lamp(EXP_CX+l[0],EXP_CX+l[1],150,.85);
+   for(const n of townNPCs)lamp(n.x,n.y,120,.6);
+  }
+  for(const r of (g.raids||[]))if(r.state==='active')lamp(r.boss.x,r.boss.y,190,.65);
+  for(const h of (g.hazards||[]))lamp(h.x,h.y,h.r*1.5,.7);
+  let n=0;for(const q of (g.projs||[])){if(q.from==='enemy'&&n++<40)lamp(q.x,q.y,55,.55)}
+  if(meteor&&meteor.landed)lamp(meteor.x,meteor.y,210,.95);
+  const tr=ensure()?.advanced?.treasure;if(tr)lamp(tr.x,tr.y,110,.5);
+  d.globalCompositeOperation='source-over';
+  c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(darkCv,0,0);c.restore();
+ }
+ if(ENV.warm>.02){c.save();c.setTransform(1,0,0,1,0,0);c.fillStyle='rgba(255,140,60,'+(ENV.warm*.16)+')';c.fillRect(0,0,Wd,Hd);c.restore()}
+}
+function drawFireflies(g,dt,now){
+ const biome=g.player.biome,on=ENV.night>.3&&(W.kind==='clear'||W.kind==='fog')&&(biome==='forest'||biome==='swamp');
+ if(!on)return;
+ const c=g.ctx,Wd=g.canvas.width,Hd=g.canvas.height;
+ if(!fireflies)fireflies=Array.from({length:28},()=>({x:Math.random(),y:Math.random(),ph:Math.random()*TAU,sp:.4+Math.random()*.6}));
+ c.save();c.setTransform(1,0,0,1,0,0);c.globalCompositeOperation='lighter';
+ for(const f of fireflies){
+  f.x=(f.x+Math.cos(now/1800*f.sp+f.ph)*.012*dt+1)%1;f.y=(f.y+Math.sin(now/1500*f.sp+f.ph)*.01*dt+1)%1;
+  const a=ENV.night*(.45+.4*Math.sin(now/400*f.sp+f.ph)),x=f.x*Wd,y=f.y*Hd;
+  c.fillStyle='rgba(163,230,53,'+(a*.28)+')';c.beginPath();c.arc(x,y,7,0,TAU);c.fill();
+  c.fillStyle='rgba(236,252,203,'+a+')';c.beginPath();c.arc(x,y,1.8,0,TAU);c.fill();
+ }
+ c.restore();
+}
+/* Estrela cadente: de noite, fora da cidade, cai um fragmento que dá Gold e diamantes se for coletado */
+function meteorUpdate(g,e,s,now){
+ const p=g.player;if(!p||p.realmId)return;
+ if(!meteor){
+  if(ENV.night>.7&&!p.inSafeZone&&now>meteorNext){
+   const a=Math.random()*TAU,d=380+Math.random()*240,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
+   if(Math.hypot(x-EXP_CX,y-EXP_CX)<SAFE_R+120||x<200||y<200||x>EXP_MAP-200||y>EXP_MAP-200){meteorNext=now+4000;return}
+   meteor={x,y,at:now+3500,until:now+110000,landed:false};meteorNext=now+(100+Math.random()*80)*1000;
+   notify('☄️ Uma estrela cadente cruzou o céu! Siga a luz até o ponto de impacto.');
+  }
+  return;
+ }
+ const m=meteor;
+ if(!m.landed&&now>=m.at){m.landed=true;g.shake?.(6,.5);notify('💥 O fragmento estelar caiu! Corra para coletá-lo antes do amanhecer.')}
+ if(ENV.night<.3||now>m.until){if(m.landed)notify('☄️ O fragmento estelar se apagou.');meteor=null;return}
+ if(m.landed&&Math.hypot(p.x-m.x,p.y-m.y)<80){
+  const gold=120+Math.floor(Math.random()*140)+(s.level||1)*4,dia=1+(Math.random()<.4?1:0);
+  s.gold=(s.gold||0)+gold;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+dia;
+  if(e.world)e.world.seasonXp=(e.world.seasonXp||0)+60;
+  g.floatText?.(m.x,m.y-30,'+'+gold+' Gold','#f59e0b');g.floatText?.(m.x,m.y-50,'+'+dia+' Diamante','#67e8f9');
+  notify('✨ Fragmento estelar coletado: +'+gold+' Gold e +'+dia+' Diamante!');meteor=null;persist();if(typeof updateUIStats==='function')updateUIStats();
+ }
+}
+function drawMeteor(c,p,now){
+ const m=meteor;if(!m||p.realmId)return;
+ if(!m.landed){
+  const f=1-Math.max(0,(m.at-Date.now())/3500);c.save();c.translate(m.x,m.y);
+  const x=-160*(1-f),y=-480*(1-f);c.strokeStyle='rgba(255,230,160,.85)';c.lineWidth=4;c.beginPath();c.moveTo(x-30,y-90);c.lineTo(x,y);c.stroke();
+  c.fillStyle='#fff7d6';c.beginPath();c.arc(x,y,7,0,TAU);c.fill();
+  c.strokeStyle='rgba(255,230,160,'+(.2+.4*f)+')';c.lineWidth=2;c.beginPath();c.arc(0,0,30+40*(1-f),0,TAU);c.stroke();c.restore();return;
+ }
+ const pu=.5+.5*Math.sin(now/260);c.save();c.translate(m.x,m.y);
+ c.fillStyle='rgba(180,240,255,'+(.12+.16*pu)+')';c.beginPath();c.arc(0,0,48+10*pu,0,TAU);c.fill();
+ c.fillStyle='#8fe3f5';c.beginPath();c.moveTo(0,-20);c.lineTo(11,0);c.lineTo(0,18);c.lineTo(-11,0);c.closePath();c.fill();
+ c.fillStyle='#e6fbff';c.beginPath();c.moveTo(0,-20);c.lineTo(4,-2);c.lineTo(-5,0);c.closePath();c.fill();c.restore();
+}
+function drawEnvironment(g){
+ if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
+ const now=performance.now(),dt=Math.min(.05,(now-(ENV._last||now))/1000);ENV._last=now;
+ updateEnv(g);updateWeather(g,dt,now);
+ meteorUpdate(g,ensure()||{},state()||{},Date.now());
+ drawWeatherLayer(g,dt,now);
+ drawLighting(g,now);
+ drawFireflies(g,dt,now);
+ if(W.flash>0){const c=g.ctx;c.save();c.setTransform(1,0,0,1,0,0);c.fillStyle='rgba(225,235,255,'+(W.flash*.35)+')';c.fillRect(0,0,g.canvas.width,g.canvas.height);c.restore();W.flash=Math.max(0,W.flash-dt*2.2)}
+ // HUD: relógio e seta da estrela cadente (atualizados 4x/s)
+ if(now-envHudAt>250){
+  envHudAt=now;
+  const clock=$('avx-world-clock');if(clock)clock.textContent=ENV.icon+' '+fmtHour(ENV.hour)+' · '+ENV.period+' · '+weatherLabel();
+  const hud=$('avx-meteor-hud');
+  if(meteor&&meteor.landed&&!g.player.realmId){
+   let h=hud;if(!h){h=document.createElement('div');h.id='avx-meteor-hud';h.style.cssText='position:fixed;left:50%;top:92px;transform:translateX(-50%);z-index:9998;padding:7px 13px;border:1px solid #67e8f9;border-radius:10px;background:#0b1b2cee;color:#c8f4ff;font:800 12px Inter,system-ui;pointer-events:none';document.body.appendChild(h)}
+   const dx=meteor.x-g.player.x,dy=meteor.y-g.player.y;h.textContent='☄️ FRAGMENTO: '+Math.round(Math.hypot(dx,dy))+'m · '+(Math.abs(dx)>Math.abs(dy)?(dx>0?'→':'←'):(dy>0?'↓':'↑'));
+  }else hud?.remove();
+ }
 }
 const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=townNPCs;return true};
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
@@ -367,46 +582,11 @@ function installGameHooks(){
   };
   proto.__avxHouseCollision=true;
  }
-const AVX_WEATHER={kind:'clear',until:0,particles:[],last:0};
-function weatherKind(biome){
- const pool={forest:['rain','rain','storm','clear','clear'],desert:['clear','clear','storm','rain'],snow:['snow','blizzard','snow','clear'],swamp:['rain','storm','rain','clear'],volcano:['storm','storm','clear','rain']};
- const a=pool[biome]||pool.forest;return a[Math.floor(Math.random()*a.length)];
-}
-function drawWeather(g){
- if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
- const now=performance.now(),w=AVX_WEATHER;
- if(now>w.until){w.kind=weatherKind(g.player.realmId?({verdant:'forest',frost:'snow',mire:'swamp',ember:'volcano'}[g.player.realmId]||'forest'):g.player.biome||'forest');w.until=now+45000+Math.random()*45000;w.particles=[];}
- const c=g.ctx,W=g.canvas.width,H=g.canvas.height,dt=Math.min(.05,(now-(w.last||now))/1000);w.last=now;
- const snowy=w.kind==='snow'||w.kind==='blizzard',storm=w.kind==='storm'||w.kind==='blizzard',rain=w.kind==='rain'||w.kind==='storm';
- const count=snowy?95:rain?150:0;
- while(w.particles.length<count)w.particles.push({x:Math.random()*W,y:Math.random()*H,v: snowy?35+Math.random()*65:350+Math.random()*300,s:Math.random()*2+1});
- while(w.particles.length>count)w.particles.pop();
- c.save();c.setTransform(1,0,0,1,0,0);
- if(rain){c.strokeStyle='rgba(155,205,235,.42)';c.lineWidth=1;for(const p of w.particles){p.y+=p.v*dt;p.x-=storm?150*dt:55*dt;if(p.y>H+8){p.y=-8;p.x=Math.random()*W}if(p.x< -8)p.x=W+8;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x-(storm?5:2),p.y+10);c.stroke()}}
- if(snowy){c.fillStyle='rgba(240,248,255,.8)';for(const p of w.particles){p.y+=p.v*dt;p.x+=Math.sin(now/900+p.s)*18*dt;if(p.y>H+4){p.y=-4;p.x=Math.random()*W}if(p.x<0)p.x=W;if(p.x>W)p.x=0;c.beginPath();c.arc(p.x,p.y,p.s,0,Math.PI*2);c.fill()}}
- if(storm){c.fillStyle='rgba(10,18,32,.16)';c.fillRect(0,0,W,H);if(Math.sin(now/1700)>0.997){c.fillStyle='rgba(220,235,255,.3)';c.fillRect(0,0,W,H)}}
- if(w.kind==='blizzard'){c.fillStyle='rgba(210,230,245,.12)';c.fillRect(0,0,W,H)}
- // Ciclo noturno cinematográfico: céu profundo, estrelas, lua, brilho e vinheta.
- const clock=((Number(g.t)||0)%360+360)%360/360;
- const night=Math.max(0,Math.min(1,(Math.cos(clock*Math.PI*2+Math.PI-.2)+.12)/1.12));
- if(night>.08){
-  c.fillStyle='rgba(5,10,29,'+(night*.62)+')';c.fillRect(0,0,W,H);
-  c.globalAlpha=night*.9;
-  for(let i=0;i<58;i++){
-   const sx=((i*97+31)%997)/997*W,sy=((i*53+17)%613)/613*H;
-   const tw=.45+.55*Math.sin(now/500+i*2.1);
-   c.fillStyle='rgba(220,235,255,'+(tw*.85)+')';c.beginPath();c.arc(sx,sy,((i%3)+1)*.55,0,Math.PI*2);c.fill();
-  }
-  const vg=c.createRadialGradient(W/2,H/2,Math.min(W,H)*.18,W/2,H/2,Math.max(W,H)*.72);vg.addColorStop(0,'rgba(4,8,25,0)');vg.addColorStop(1,'rgba(2,5,20,'+(night*.42)+')');c.fillStyle=vg;c.fillRect(0,0,W,H);
-  c.globalAlpha=1;
- }
- c.restore();
-}
  if(originalRender)proto.render=function(){
   originalRender.call(this);
   // NPCs/efeitos ficam em camada própria; a praça central permanece livre para o spawn.
   mountAndPetDraw(this);
-  drawWeather(this);
+  drawEnvironment(this);
  };
  if(originalInteract)proto.interact=function(){
   if(interactRealmPortal(this))return;
@@ -510,7 +690,7 @@ window.AVENTURIA_PET_BONUS={slime:{def:8},fox:{atk:6},wisp:{power:8},lume:{power
 function openMerchantUI(){
  const s=state(),e=ensure();if(!s||!e)return;
  s.items??={};s.resources??={};
- let m=$('avx-merchant-modal');if(!m){m=document.createElement('div');m.id='avx-merchant-modal';m.style.cssText='position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:14px';document.body.appendChild(m)}
+ let m=$('avx-merchant-modal');if(!m){m=document.createElement('div');m.id='avx-merchant-modal';m.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#061018dd;padding:14px';document.body.appendChild(m)}
  const offers=[
   {id:'potion',name:'Poção de Vida',emoji:'🧪',price:60,desc:'Restaura 120 de vida. Beba aqui ou com a tecla H.'},
   {id:'egg',name:'Ovo de Mascote',emoji:'🥚',price:250,desc:'Receba um companheiro que você ainda não tem.'},
@@ -543,20 +723,21 @@ function openMerchantUI(){
 /* Janela de serviço: mostra o cartão do painel dentro de um modal. O painel é redesenhado a cada
    ação, então o cartão exibido é trocado pelo novo (refreshServiceWindow) em vez de ficar velho. */
 let serviceKey=null;
+function findServiceCards(list){return list.map(([sec,title])=>[...document.querySelectorAll('#avx-content [data-section="'+sec+'"]')].find(c=>c.textContent.includes(title))).filter(Boolean)}
 function refreshServiceWindow(){
  const modal=$('avx-npc-service');if(!modal||!serviceKey)return;
  const body=modal.querySelector('#avx-service-body');if(!body)return;
- const card=[...document.querySelectorAll('#avx-content [data-section="'+serviceKey.section+'"]')].find(c=>c.textContent.includes(serviceKey.title));
- if(card)body.replaceChildren(card);
+ const cards=findServiceCards(serviceKey);
+ if(cards.length)body.replaceChildren(...cards);
 }
-function openNPCServiceWindow(card,key){
+function openNPCServiceWindow(cards,key){
  let modal=$('avx-npc-service');if(!modal){modal=document.createElement('div');modal.id='avx-npc-service';document.body.appendChild(modal)}
  serviceKey=key||null;
- const originalParent=card?.parentNode||null,originalNext=card?.nextSibling||null;
- modal.style.cssText='position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:14px;background:#020914e8';
+  modal.style.cssText='position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:14px;background:#020914e8';
  modal.innerHTML='<section style="width:min(560px,100%);max-height:88vh;overflow:auto;border:1px solid #d6ad62;border-radius:18px;background:linear-gradient(145deg,#20343b,#0b1420);padding:16px;color:white"><header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:#f4d68e">SERVIÇO DA CIDADE</b><button id="avx-service-close" style="padding:7px 12px;border:1px solid #60747b;border-radius:8px;cursor:pointer">Fechar ✕</button></header><div id="avx-service-body"></div></section>';
- modal.querySelector('#avx-service-body').appendChild(card);
- const close=()=>{if(card&&originalParent){if(originalNext&&originalNext.parentNode===originalParent)originalParent.insertBefore(card,originalNext);else originalParent.appendChild(card)}serviceKey=null;modal.remove()};
+ const origins=cards.map(c=>({c,p:c.parentNode,n:c.nextSibling}));
+ for(const card of cards)modal.querySelector('#avx-service-body').appendChild(card);
+ const close=()=>{for(const {c,p,n} of origins){if(!p)continue;if(n&&n.parentNode===p)p.insertBefore(c,n);else p.appendChild(c)}serviceKey=null;modal.remove()};
  modal.querySelector('#avx-service-close').onclick=close;
  modal.onclick=ev=>{if(ev.target===modal)close()};
 }
@@ -590,17 +771,9 @@ function openTownNPC(id){
  const player=game()?.player;
  if(!player||player.inSafeZone!==true){$('avx-mobile-interact')?.remove();notify('Entre na Área Safe para acessar lojas e serviços dos NPCs.');return}
  const s=state(),e=ensure();
- if(!s||!e){console.error('[Aventuria NPC] Estado do personagem indisponível', {id,MMO:!!window.MMO,localState:!!window.MMO?.localState});notify('Entre com seu personagem antes de falar com este NPC.');return}
- console.info('[Aventuria NPC] Abrindo menu:',id);
- const openAdvanced=(section,title)=>{
-  renderPanel();
-  const norm=v=>(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ');
-  const cards=[...document.querySelectorAll('#avx-content [data-section="'+section+'"]')];
-  const wanted=norm(title);
-  const target=cards.find(card=>norm(card.textContent).includes(wanted))||cards[0];
-  if(!target){notify('O menu deste NPC não carregou. Tente novamente.');return}
-  openNPCServiceWindow(target,{section,title});
- };
+ if(!s||!e){console.error('[Aventuria NPC] Estado do personagem indisponível',{id,MMO:!!window.MMO,localState:!!window.MMO?.localState});notify('Entre com seu personagem antes de falar com este NPC.');return}
+ const openServices=list=>{renderPanel();const cards=findServiceCards(list);if(!cards.length){notify('Este serviço está indisponível no momento.');return}openNPCServiceWindow(cards,list)};
+ const openAdvanced=(section,title)=>openServices([[section,title]]);
  const actions={
  merchant:()=>openMerchantUI(),
  stable:()=>openArmorerUI(),
@@ -612,9 +785,14 @@ function openTownNPC(id){
  contract:()=>openAdvanced('world','Contratos de caça'),
  treasure:()=>openAdvanced('world','Caça ao tesouro'),
  awakening:()=>openAdvanced('growth','Despertar de armas'),
- stylist:()=>openAppearanceEditor()
+ stylist:()=>openAppearanceEditor(),
+ elder:()=>{if(typeof updateUIStats==='function')updateUIStats();const sm=$('shop-modal');if(sm)sm.classList.remove('hidden');else notify('A loja do ancião está fechada agora.')},
+ board:()=>openServices([['daily','Missões diárias'],['world','Ranking mundial e passe de temporada'],['daily','Conquistas de aventura']]),
+ trainer:()=>openServices([['growth','Árvore de habilidades'],['combat','Arena de duelos'],['world','Chefes mundiais e eventos'],['growth','Equipamentos evolutivos']]),
+ mounts:()=>openServices([['mounts','Montaria'],['mounts','Profissões'],['growth','Casas e construção de vilas']])
  };
- actions[id]?.();
+ // um erro dentro de um serviço nunca deve deixar o NPC "mudo": avisa e registra no console
+ try{actions[id]?.()}catch(err){console.error('Falha ao abrir NPC '+id,err);notify('Não foi possível abrir este serviço agora. Tente de novo.')}
 }
 
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
