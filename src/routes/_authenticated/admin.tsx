@@ -129,9 +129,9 @@ function PlayerTools({ p, send }: { p: Player; send: (k: GrantKind, payload: Rec
   const [gold, setGold] = useState(0);
   const [kind, setKind] = useState<GrantKind>("resource");
   const def = GIFT_KINDS.find((k) => k.id === kind)!;
-  const [item, setItem] = useState(RESOURCES[0].id);
+  const [item, setItem] = useState(RESOURCES[0]!.id);
   const [qty, setQty] = useState(10);
-  const [slot, setSlot] = useState(GEAR_SLOTS[0].id);
+  const [slot, setSlot] = useState(GEAR_SLOTS[0]!.id);
   const [rar, setRar] = useState(4);
   const [ilvl, setIlvl] = useState(Math.max(1, p.level));
 
@@ -162,7 +162,7 @@ function PlayerTools({ p, send }: { p: Player; send: (k: GrantKind, payload: Rec
 
       <div>
         <label className="text-xs text-muted-foreground">Dar presente</label>
-        <select className="field mt-1" value={kind} onChange={(e) => { const k = e.target.value as GrantKind; setKind(k); const l = GIFT_KINDS.find((x) => x.id === k)?.list; if (l) setItem(l[0].id); }}>
+        <select className="field mt-1" value={kind} onChange={(e) => { const k = e.target.value as GrantKind; setKind(k); const l = GIFT_KINDS.find((x) => x.id === k)?.list; if (l?.[0]) setItem(l[0].id); }}>
           {GIFT_KINDS.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
         </select>
         {def.list && (
