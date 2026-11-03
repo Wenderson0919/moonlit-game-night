@@ -538,6 +538,152 @@ const BOSS_ART={
   };
  });
 })();
+/* ---- direção de arte v2: modelos autorais por criatura ---- */
+(()=>{
+ const models={
+ 'Javali Rei':'boar','Lobo Alfa Sombrio':'direwolf','Ent Corrompido':'treant','Cervo Espectral':'stag','Guardião Ancestral':'guardian',
+ 'Escorpião Gigante':'scorpion','Chacal Bandido':'jackal','Faraó de Areia':'pharaoh','Rainha Escorpiã':'queenScorpion','Colosso do Deserto Eterno':'colossus',
+ 'Urso Polar Alfa':'bear','Lobo da Geada':'frostwolf','Yeti Titã':'yeti','Bruxa do Inverno':'witch','Dragão de Gelo Eterno':'iceDragon',
+ 'Crocodilo Ancião':'crocodile','Sapo-Gigante Venenoso':'toad','Bruxa do Lodo':'bogWitch','Hidra do Pântano':'hydra','Leviatã do Brejo':'leviathan',
+ 'Salamandra Ardente':'salamander','Cão do Inferno':'hellhound','Golem de Magma':'magmaGolem','Senhor das Cinzas':'ashLord','Dragão Ígneo Primordial':'fireDragon'
+ };
+ const palettes={
+ forest:['#426b3d','#263b2b','#9cbd61','#e7c66b'],
+ desert:['#c18a43','#634329','#f0c66c','#4d9caa'],
+ snow:['#b9d5e5','#526c83','#f0f7fb','#6fe1ef'],
+ swamp:['#718b42','#34432d','#b3c65a','#9be36a'],
+ volcano:['#a7472b','#45231f','#f28a35','#ffe08a']
+ };
+ const path=(c,pts,fill,stroke)=>{c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();if(fill){c.fillStyle=fill;c.fill()}if(stroke){c.strokeStyle=stroke;c.lineWidth=2;c.stroke()}};
+ const orb=(c,x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill()};
+ const limb=(c,x1,y1,x2,y2,w,color)=>{c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke();c.lineCap='butt'};
+ const spikes=(c,sz,y,count,color,phase=0)=>{c.fillStyle=color;for(let i=0;i<count;i++){const x=(-.72+i*1.44/Math.max(1,count-1))*sz,h=(.22+(i%2)*.13)*sz;c.beginPath();c.moveTo(x-4,y);c.lineTo(x+Math.sin(phase+i)*3,y-h);c.lineTo(x+5,y);c.fill()}};
+ const face=(c,x,y,sz,eye,muzzle=true)=>{orb(c,x,y,sz*.48,sz*.42,'#171b20');c.fillStyle=eye;c.fillRect(x-sz*.25,y-sz*.08,Math.max(4,sz*.15),Math.max(3,sz*.09));c.fillRect(x+sz*.1,y-sz*.08,Math.max(4,sz*.15),Math.max(3,sz*.09));if(muzzle){path(c,[[x-sz*.2,y+sz*.16],[x,y+sz*.31],[x+sz*.2,y+sz*.16]],'#242027') }};
+ Object.entries(models).forEach(([name,type],index)=>{
+  BOSS_ART[name]=(c,sz,bob,lg,col,T,b,now)=>{
+   const biome=Object.keys(BOSS_NAMES).find(k=>BOSS_NAMES[k].includes(name))||'forest';
+   const [base,dark,light,glow]=palettes[biome],flash=col==='#fff',main=flash?'#fff':base,shadow=flash?'#fff':dark,trim=flash?'#fff':light,eye=b.enr?'#ff3030':(flash?'#fff':glow),t=now/250;
+   const y=bob, tier=TIERS.findIndex(q=>q===T);
+   c.lineJoin='round';
+   // Sombra corporal y pies: la criatura siempre tiene volumen y contacto com o solo.
+   orb(c,0,sz*.77,sz*1.05,sz*.25,'rgba(0,0,0,.28)');
+   const legs=(spread=.55)=>{limb(c,-sz*spread,sz*.22+y,-sz*spread*1.08,sz*.78+lg,sz*.24,shadow);limb(c,sz*spread,sz*.22+y,sz*spread*1.08,sz*.78-lg,sz*.24,shadow);orb(c,-sz*spread*1.08,sz*.8+lg,sz*.19,sz*.12,trim);orb(c,sz*spread*1.08,sz*.8-lg,sz*.19,sz*.12,trim)};
+   const armor=()=>{path(c,[[-sz*.55,-sz*.05+y],[-sz*.3,-sz*.42+y],[sz*.3,-sz*.42+y],[sz*.58,-sz*.05+y],[sz*.42,sz*.38+y],[-sz*.42,sz*.38+y]],shadow,trim);path(c,[[-sz*.18,-sz*.25+y],[0,-sz*.42+y],[sz*.18,-sz*.25+y],[0,sz*.18+y]],glow)};
+   switch(type){
+    case 'boar':
+     legs(.62);orb(c,-sz*.08,sz*.05+y,sz*.94,sz*.55,main);orb(c,sz*.58,-sz*.28+y,sz*.55,sz*.48,main);orb(c,sz*.91,-sz*.13+y,sz*.32,sz*.2,trim);
+     path(c,[[sz*.5,-sz*.48+y],[sz*.38,-sz*.95+y],[sz*.72,-sz*.65+y]],trim);path(c,[[sz*.8,-sz*.42+y],[sz*1.12,-sz*.78+y],[sz*.98,-sz*.3+y]],trim);
+     path(c,[[sz*.7,sz*.08+y],[sz*.94,sz*.42+y],[sz*1.03,sz*.03+y]],'#eee0b5');face(c,sz*.62,-sz*.31+y,sz*.75,eye,false);spikes(c,sz,-sz*.35+y,5,shadow,t);
+     break;
+    case 'direwolf':case 'frostwolf':case 'hellhound':
+     legs(.65);path(c,[[-sz*.95,sz*.1+y],[-sz*.55,-sz*.38+y],[sz*.35,-sz*.42+y],[sz*.78,-sz*.1+y],[sz*.45,sz*.42+y],[-sz*.65,sz*.4+y]],main);
+     limb(c,-sz*.72,sz*.12+y,-sz*1.35,-sz*.25+y,sz*.15,main);orb(c,sz*.65,-sz*.35+y,sz*.52,sz*.38,main);
+     path(c,[[sz*.3,-sz*.55+y],[sz*.25,-sz*1.08+y],[sz*.58,-sz*.58+y]],shadow);path(c,[[sz*.72,-sz*.55+y],[sz*.95,-sz*.98+y],[sz*.94,-sz*.42+y]],shadow);
+     face(c,sz*.72,-sz*.32+y,sz*.75,eye);path(c,[[sz*.92,-sz*.08+y],[sz*1.32,sz*.04+y],[sz*.95,sz*.18+y]],trim);
+     if(type==='frostwolf'){spikes(c,sz,-sz*.35+y,6,trim,t);orb(c,-sz*.15,-sz*.05+y,sz*.65,sz*.08,glow)}
+     if(type==='hellhound'){spikes(c,sz,-sz*.4+y,4,glow,t);orb(c,sz*.45,sz*.08+y,sz*.2,sz*.18,'#f15a24')}
+     break;
+    case 'treant':
+     legs(.5);path(c,[[-sz*.55,sz*.45+y],[-sz*.42,-sz*.5+y],[0,-sz*.72+y],[sz*.48,-sz*.45+y],[sz*.55,sz*.5+y]],shadow,trim);
+     limb(c,-sz*.35,-sz*.2+y,-sz*1.2,-sz*.72+y,sz*.22,shadow);limb(c,sz*.35,-sz*.2+y,sz*1.12,-sz*.82+y,sz*.22,shadow);
+     for(let i=0;i<4;i++){const x=(-.75+i*.48)*sz;path(c,[[x,-sz*.55+y],[x-sz*.18,-sz*1.02+y],[x+sz*.1,-sz*.7+y]],trim)}
+     orb(c,-sz*.45,-sz*.85+y,sz*.48,sz*.32,main);orb(c,sz*.18,-sz*.98+y,sz*.55,sz*.4,main);orb(c,sz*.72,-sz*.78+y,sz*.4,sz*.3,main);
+     face(c,sz*.08,-sz*.28+y,sz*.8,eye,false);limb(c,-sz*.7,sz*.1+y,-sz*1.12,sz*.48+y,sz*.16,trim);limb(c,sz*.7,sz*.08+y,sz*1.12,sz*.42+y,sz*.16,trim);
+     break;
+    case 'stag':
+     legs(.48);orb(c,0,sz*.12+y,sz*.63,sz*.55,main);orb(c,sz*.42,-sz*.48+y,sz*.43,sz*.36,main);
+     limb(c,sz*.55,-sz*.62+y,sz*.72,-sz*1.22+y,sz*.07,trim);limb(c,sz*.72,-sz*1.22+y,sz*.42,-sz*1.42+y,sz*.07,trim);limb(c,sz*.72,-sz*1.22+y,sz*.98,-sz*1.48+y,sz*.07,trim);
+     limb(c,sz*.32,-sz*.62+y,sz*.1,-sz*1.15+y,sz*.07,trim);limb(c,sz*.1,-sz*1.15+y,-sz*.18,-sz*1.36+y,sz*.07,trim);
+     face(c,sz*.48,-sz*.5+y,sz*.55,eye,false);orb(c,-sz*.2,sz*.1+y,sz*.18,sz*.18,glow);
+     break;
+    case 'guardian':case 'colossus':case 'magmaGolem':
+     legs(.58);c.fillStyle=shadow;c.fillRect(-sz*.55,-sz*.35+y,sz*1.1,sz*.9);orb(c,0,-sz*.52+y,sz*.53,sz*.42,main);
+     c.fillStyle=main;c.fillRect(-sz*1.05,-sz*.32+y,sz*.48,sz*.68);c.fillRect(sz*.57,-sz*.32+y,sz*.48,sz*.68);
+     path(c,[[-sz*.65,-sz*.3+y],[-sz*.8,-sz*.75+y],[-sz*.35,-sz*.55+y],[0,-sz*.9+y],[sz*.35,-sz*.55+y],[sz*.8,-sz*.75+y],[sz*.65,-sz*.3+y]],trim);
+     armor();face(c,0,-sz*.54+y,sz*.8,eye,false);
+     if(type==='magmaGolem'){c.strokeStyle=glow;c.lineWidth=sz*.09;c.beginPath();c.moveTo(-sz*.35,-sz*.15+y);c.lineTo(-sz*.08,sz*.1+y);c.lineTo(-sz*.3,sz*.36+y);c.moveTo(sz*.4,-sz*.25+y);c.lineTo(sz*.15,sz*.04+y);c.lineTo(sz*.42,sz*.3+y);c.stroke()}
+     break;
+    case 'scorpion':case 'queenScorpion':
+     orb(c,0,sz*.28+y,sz*.78,sz*.5,main);for(let i=0;i<4;i++){const side=i<2?-1:1,k=i%2;limb(c,side*sz*.4,sz*.25+y,side*sz*(.95+k*.25),sz*(.45-k*.28)+y,sz*.12,shadow)}
+     for(let i=0;i<3;i++)orb(c,-sz*.45+i*sz*.45,sz*.05+y,sz*.18,sz*.2,trim);
+     limb(c,-sz*.05,-sz*.02+y,-sz*.3,-sz*.65+y,sz*.22,main);limb(c,-sz*.3,-sz*.65+y,sz*.12,-sz*1.0+y,sz*.18,main);limb(c,sz*.12,-sz*1.0+y,sz*.52,-sz*.72+y,sz*.16,main);
+     path(c,[[sz*.52,-sz*.82+y],[sz*.92,-sz*1.08+y],[sz*.78,-sz*.62+y]],glow);orb(c,-sz*.7,-sz*.25+y,sz*.28,sz*.2,main);orb(c,sz*.7,-sz*.25+y,sz*.28,sz*.2,main);
+     if(type==='queenScorpion'){path(c,[[0,-sz*.35+y],[-sz*.3,-sz*.85+y],[0,-sz*1.25+y],[sz*.3,-sz*.85+y]],trim);spikes(c,sz,-sz*.2+y,7,trim,t)}
+     break;
+    case 'jackal':
+     legs(.5);path(c,[[-sz*.62,sz*.4+y],[-sz*.4,-sz*.3+y],[sz*.35,-sz*.38+y],[sz*.65,-sz*.05+y],[sz*.35,sz*.42+y]],main);
+     orb(c,sz*.55,-sz*.48+y,sz*.4,sz*.32,main);path(c,[[sz*.3,-sz*.65+y],[sz*.15,-sz*1.18+y],[sz*.52,-sz*.7+y]],trim);path(c,[[sz*.65,-sz*.65+y],[sz*.88,-sz*1.12+y],[sz*.9,-sz*.5+y]],trim);
+     face(c,sz*.62,-sz*.48+y,sz*.58,eye);path(c,[[sz*.72,-sz*.25+y],[sz*1.2,-sz*.12+y],[sz*.72,sz*.03+y]],shadow);
+     // bandoleira e lâmina curva
+     limb(c,-sz*.32,-sz*.25+y,sz*.3,sz*.3+y,sz*.08,trim);limb(c,-sz*.95,-sz*.1+y,-sz*1.18,-sz*.55+y,sz*.08,glow);
+     break;
+    case 'pharaoh':
+     legs(.42);path(c,[[-sz*.55,sz*.55+y],[-sz*.4,-sz*.38+y],[sz*.4,-sz*.38+y],[sz*.55,sz*.55+y]],main,trim);
+     orb(c,0,-sz*.55+y,sz*.43,sz*.43,trim);path(c,[[-sz*.48,-sz*.55+y],[-sz*.35,-sz*1.12+y],[0,-sz*.92+y],[sz*.35,-sz*1.12+y],[sz*.48,-sz*.55+y],[0,-sz*.35+y]],glow);
+     face(c,0,-sz*.56+y,sz*.58,eye,false);armor();limb(c,-sz*.42,-sz*.1+y,-sz*.92,sz*.3+y,sz*.12,trim);limb(c,sz*.42,-sz*.1+y,sz*.9,-sz*.55+y,sz*.12,trim);
+     break;
+    case 'bear':case 'yeti':
+     legs(.6);orb(c,0,sz*.12+y,sz*.92,sz*.78,main);orb(c,sz*.48,-sz*.42+y,sz*.48,sz*.42,main);orb(c,sz*.18,-sz*.68+y,sz*.18,sz*.18,trim);orb(c,sz*.75,-sz*.68+y,sz*.18,sz*.18,trim);
+     limb(c,-sz*.62,-sz*.05+y,-sz*1.0,sz*.5+y,sz*.3,main);limb(c,sz*.62,-sz*.05+y,sz*1.0,sz*.5+y,sz*.3,main);
+     face(c,sz*.5,-sz*.43+y,sz*.7,eye);
+     if(type==='yeti'){spikes(c,sz,-sz*.4+y,7,trim,t);orb(c,-sz*.2,-sz*.15+y,sz*.6,sz*.3,trim)}
+     break;
+    case 'witch':case 'bogWitch':
+     limb(c,-sz*.3,sz*.05+y,-sz*.5,sz*.8+y,sz*.13,shadow);limb(c,sz*.3,sz*.05+y,sz*.5,sz*.8+y,sz*.13,shadow);
+     path(c,[[-sz*.55,sz*.5+y],[-sz*.32,-sz*.38+y],[sz*.32,-sz*.38+y],[sz*.55,sz*.5+y]],main,trim);orb(c,0,-sz*.55+y,sz*.38,sz*.42,trim);
+     path(c,[[-sz*.65,-sz*.5+y],[0,-sz*1.35+y],[sz*.65,-sz*.5+y]],shadow,glow);face(c,0,-sz*.55+y,sz*.55,eye,false);
+     limb(c,-sz*.42,-sz*.15+y,-sz*1.0,-sz*.5+y,sz*.11,main);orb(c,-sz*1.02,-sz*.53+y,sz*.18,sz*.18,glow);
+     if(type==='bogWitch'){for(let i=0;i<3;i++)orb(c,(i-1)*sz*.5,sz*.5+y,sz*.13,sz*.13,glow)}
+     break;
+    case 'iceDragon':case 'fireDragon':
+     orb(c,-sz*.08,sz*.05+y,sz*.88,sz*.5,main);legs(.55);
+     path(c,[[-sz*.2,-sz*.05+y],[-sz*1.55,-sz*1.12+y],[-sz*1.25,sz*.15+y],[-sz*.35,sz*.35+y]],shadow,trim);
+     path(c,[[sz*.05,-sz*.12+y],[sz*1.4,-sz*1.28+y],[sz*1.05,sz*.15+y],[sz*.3,sz*.32+y]],main,trim);
+     limb(c,sz*.5,-sz*.18+y,sz*1.12,-sz*.82+y,sz*.2,main);orb(c,sz*1.22,-sz*.88+y,sz*.42,sz*.3,main);
+     path(c,[[sz*.95,-sz*1.0+y],[sz*.85,-sz*1.48+y],[sz*1.18,-sz*1.1+y]],trim);path(c,[[sz*1.3,-sz*.98+y],[sz*1.55,-sz*1.4+y],[sz*1.5,-sz*.9+y]],trim);
+     face(c,sz*1.25,-sz*.9+y,sz*.6,eye);limb(c,-sz*.75,sz*.2+y,-sz*1.65,sz*.5+y,sz*.14,main);
+     if(type==='iceDragon'){spikes(c,sz,-sz*.3+y,8,glow,t);orb(c,-sz*.3,-sz*.15+y,sz*.5,sz*.1,'#c8f8ff')}
+     else{spikes(c,sz,-sz*.3+y,7,glow,t);orb(c,sz*.25,sz*.18+y,sz*.24,sz*.22,'#ff6a20')}
+     break;
+    case 'crocodile':case 'leviathan':
+     orb(c,-sz*.05,sz*.3+y,sz*1.0,sz*.48,main);path(c,[[sz*.35,-sz*.12+y],[sz*1.25,-sz*.35+y],[sz*1.55,sz*.05+y],[sz*.52,sz*.3+y]],trim,shadow);
+     for(let i=0;i<7;i++)path(c,[[sz*(.48+i*.14),sz*.0+y],[sz*(.54+i*.14),-sz*.13+y],[sz*(.6+i*.14),sz*.02+y]],'#f5e7bd');
+     legs(.62);spikes(c,sz,-sz*.1+y,8,shadow,t);orb(c,-sz*.65,sz*.1+y,sz*.25,sz*.18,glow);
+     if(type==='leviathan'){limb(c,-sz*.7,sz*.25+y,-sz*1.5,-sz*.35+y,sz*.22,main);orb(c,-sz*1.5,-sz*.35+y,sz*.35,sz*.28,main);spikes(c,sz,-sz*.3+y,10,glow,t)}
+     break;
+    case 'toad':
+     orb(c,0,sz*.22+y,sz*.95,sz*.68,main);orb(c,-sz*.48,-sz*.38+y,sz*.3,sz*.3,trim);orb(c,sz*.48,-sz*.38+y,sz*.3,sz*.3,trim);
+     face(c,0,-sz*.18+y,sz*.85,eye,false);limb(c,-sz*.55,sz*.42+y,-sz*.95,sz*.72+y,sz*.22,main);limb(c,sz*.55,sz*.42+y,sz*.95,sz*.72+y,sz*.22,main);
+     for(let i=0;i<6;i++)orb(c,(-.65+i*.26)*sz,sz*.15+y,sz*.07,sz*.09,glow);
+     break;
+    case 'hydra':
+     orb(c,0,sz*.35+y,sz*.95,sz*.5,main);legs(.55);
+     for(let i=0;i<5;i++){const x=(i-2)*sz*.38,wig=Math.sin(t+i)*sz*.13;limb(c,x,sz*.05+y,x+wig,-sz*(.75+(i%2)*.2)+y,sz*.16,main);orb(c,x+wig,-sz*(.85+(i%2)*.2)+y,sz*.24,sz*.19,trim);c.fillStyle=eye;c.fillRect(x+wig-5,-sz*(.9+(i%2)*.2)+y,5,5)}
+     break;
+    case 'salamander':
+     orb(c,0,sz*.24+y,sz*.9,sz*.48,main);legs(.58);orb(c,sz*.72,-sz*.1+y,sz*.42,sz*.3,main);
+     limb(c,-sz*.7,sz*.3+y,-sz*1.45,sz*.52+y,sz*.1,trim);spikes(c,sz,-sz*.15+y,7,glow,t);
+     orb(c,-sz*.3,sz*.05+y,sz*.16,sz*.13,glow);orb(c,sz*.2,sz*.05+y,sz*.16,sz*.13,glow);
+     break;
+    case 'ashLord':
+     legs(.5);path(c,[[-sz*.5,sz*.55+y],[-sz*.45,-sz*.48+y],[sz*.45,-sz*.48+y],[sz*.5,sz*.55+y]],shadow,trim);
+     orb(c,0,-sz*.67+y,sz*.42,sz*.4,main);path(c,[[-sz*.5,-sz*.55+y],[-sz*.8,-sz*1.35+y],[-sz*.18,-sz*.88+y],[0,-sz*1.5+y],[sz*.2,-sz*.88+y],[sz*.8,-sz*1.35+y],[sz*.5,-sz*.55+y]],glow);
+     armor();face(c,0,-sz*.66+y,sz*.55,eye,false);
+     limb(c,-sz*.45,-sz*.15+y,-sz*1.05,sz*.18+y,sz*.16,main);limb(c,sz*.45,-sz*.15+y,sz*1.05,-sz*.45+y,sz*.16,main);
+     // cetro de cinzas
+     limb(c,sz*1.1,-sz*.55+y,sz*1.1,sz*.75+y,sz*.07,trim);orb(c,sz*1.1,-sz*.62+y,sz*.2,sz*.2,glow);
+     break;
+   }
+   // Acabamento de pintura: placas, recortes luminosos e coroa de tier alto.
+   if(tier>=2){c.globalAlpha=.85;spikes(c,sz,-sz*.52+y,Math.min(9,4+tier),trim,t);c.globalAlpha=1}
+   if(tier===4){path(c,[[-sz*.48,-sz*.85+y],[-sz*.32,-sz*1.35+y],[-sz*.08,-sz*.98+y],[0,-sz*1.55+y],[sz*.12,-sz*.98+y],[sz*.36,-sz*1.35+y],[sz*.5,-sz*.85+y]],glow,'#fff4b0')}
+   // brilho de olhos e marcas de combate
+   c.shadowColor=eye;c.shadowBlur=8;c.fillStyle=eye;
+   c.fillRect(sz*.22,-sz*.45+y,Math.max(4,sz*.12),Math.max(3,sz*.08));c.shadowBlur=0;
+   if(b.enr){c.strokeStyle='#ff3b26';c.lineWidth=3;c.beginPath();c.arc(0,0,sz*1.12,Math.PI*1.05,Math.PI*1.95);c.stroke()}
+  };
+ });
+})(); 
 const BOSS_PROFILE={forest:{hp:1.1,spd:1.2,dmg:.95,pool:['slam','charge','charge','fan']},desert:{hp:.9,spd:1.0,dmg:1.15,pool:['rain','rain','charge','slam']},snow:{hp:1.3,spd:.85,dmg:1.0,pool:['nova','fan','slam']},swamp:{hp:1.2,spd:.9,dmg:.9,pool:['rain','fan','slam','slam']},volcano:{hp:1.0,spd:1.1,dmg:1.25,pool:['nova','charge','rain','fan']}};
 const MINION_KIND={forest:'lobo',desert:'escorpiao',snow:'lobo_gelo',swamp:'slime',volcano:'lobo_infernal'};
 
