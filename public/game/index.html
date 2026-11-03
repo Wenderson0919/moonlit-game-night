@@ -2012,19 +2012,12 @@ window.WebSocket=function(u,p){return u==='lovable-realtime'?new Bridge(u):new N
 (()=>{
  const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').toLowerCase();
  const clean=()=>{
-  document.querySelectorAll('body *').forEach(el=>{
-   if(el.id==='remove-legacy-boss-event-countdowns'||el.id==='remove-boss-event-countdowns')return;
-   const t=norm(el.innerText||el.textContent);
-   if(t.includes('proximo chefe')&&t.includes('proximo evento')){
-    let target=el;
-    while(target.parentElement&&target.parentElement!==document.body){
-     const parent=target.parentElement,pt=norm(parent.innerText||parent.textContent);
-     if(!(pt.includes('proximo chefe')&&pt.includes('proximo evento')))break;
-     target=parent;
-    }
-    target.remove();
-   }
-  });
+  const all=[...document.querySelectorAll('body *')].filter(el=>el.id!=='remove-legacy-boss-event-countdowns'&&el.id!=='remove-boss-event-countdowns');
+  const matches=all.filter(el=>{const t=norm(el.innerText||el.textContent);return t.includes('proximo chefe')&&t.includes('proximo evento')});
+  for(const el of matches){
+   const childMatch=[...el.children].some(ch=>{const t=norm(ch.innerText||ch.textContent);return t.includes('proximo chefe')&&t.includes('proximo evento')});
+   if(!childMatch)el.remove();
+  }
  };
  clean();
  new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
