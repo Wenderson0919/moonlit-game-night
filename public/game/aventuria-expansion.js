@@ -340,6 +340,7 @@ function mountAndPetDraw(g){
  if(tr&&!p.realmId){const dt=Math.hypot(p.x-tr.x,p.y-tr.y);if(dt<520){const k=1-dt/520,pu=.5+.5*Math.sin(now/220);c.save();c.translate(tr.x,tr.y);c.fillStyle='rgba(255,215,120,'+(.10+.22*k*pu)+')';c.beginPath();c.arc(0,0,40+22*k,0,Math.PI*2);c.fill();c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(0,14,18,6,0,0,Math.PI*2);c.fill();c.fillStyle='#6b4423';c.fillRect(-14,-6,28,18);c.fillStyle='#8b5a2b';c.fillRect(-14,-12,28,8);c.fillStyle='#e7bd5c';c.fillRect(-3,-4,6,8);c.fillRect(-14,-3,28,2);c.restore()}}
  drawMeteor(c,p,now);
  drawEvents(c,p,now);
+ drawElites(c,g,now);
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
 }
@@ -592,12 +593,89 @@ function eventHud(g,now){
  if(b){const def=EV_BUFFS[b.kind];h.style.border='1px solid '+def.col;h.textContent=def.icon+' '+def.name+' · '+def.desc+' · '+Math.max(0,Math.ceil((b.until-t)/1000))+'s'}
  else{h.style.border='1px solid #fbbf24';h.textContent=(sp.kind==='chest'?'📦 Baú caído':'🧳 Mercador errante')+' · '+Math.round(Math.hypot(g.player.x-sp.x,g.player.y-sp.y)/10)+' m · '+Math.max(0,Math.ceil((sp.until-t)/1000))+'s'}
 }
+/* ---------- MEGA ATUALIZAÇÃO: ELITES + FÚRIA DESPERTA ----------
+   Elites: algumas feras selvagens nascem mais fortes, com título e aura. Valem muito mais, mas bastam
+   poucas para encher a barra de Fúria. Fúria (tecla X): explosão de energia em pulsos ao seu redor. */
+const ELITE_AFFIX=[
+ {id:'ember',name:'Flamejante',col:'#fb923c',hp:3,xp:3},
+ {id:'frost',name:'Glacial',col:'#7dd3fc',hp:3.4,xp:3},
+ {id:'venom',name:'Peçonhento',col:'#a3e635',hp:2.8,xp:3.4},
+ {id:'storm',name:'Tempestuoso',col:'#fde047',hp:3.2,xp:3.2},
+ {id:'umbra',name:'Sombrio',col:'#a78bfa',hp:3.6,xp:3.6}
+];
+const ULT={charge:0,active:0,pulse:0,max:100,hudAt:0,ring:0,ready:false};
+window.AVENTURIA_ULT=ULT;window.AVENTURIA_CAST_ULT=()=>castUlt(window.game);
+function ultAdd(g,n){
+ if(ULT.active>0)return;const was=ULT.charge;ULT.charge=Math.min(ULT.max,ULT.charge+n);
+ if(!ULT.ready&&ULT.charge>=ULT.max){ULT.ready=true;notify('🔥 Fúria Desperta pronta! Aperte X (ou o botão ao lado da barra).');g.floatText?.(g.player.x,g.player.y-70,'🔥 FÚRIA PRONTA','#fb923c')}
+}
+function makeElite(a){
+ if(!a||a.raid||a.elite||a.def?.beh==='passive'||Math.random()>.08)return;
+ const f=ELITE_AFFIX[Math.floor(Math.random()*ELITE_AFFIX.length)];
+ a.elite=f;a.hp*=f.hp;a.maxHp*=f.hp;
+}
+function eliteKilled(g,a){
+ const s=state(),f=a.elite,lv=s?.level||1;if(!s)return;
+ const gold=60+lv*6+Math.floor(Math.random()*60);s.gold=(s.gold||0)+gold;
+ s.resources??={};const dia=Math.random()<.45?1:0;if(dia)s.resources.diamond=(s.resources.diamond||0)+dia;
+ g.gainExp?.(Math.round((a.def?.xp||10)*f.xp*4));
+ g.floatText?.(a.x,a.y-48,'ELITE! +'+gold+' Gold'+(dia?' +💎':''),f.col);
+ g.shake?.(5,.4);g.fx?.push({x:a.x,y:a.y,r:10,max:110,t:.45,col:f.col});
+ notify('☠️ Elite '+f.name+' derrotado: +'+gold+' Gold'+(dia?' e 1 Diamante':'')+'!');
+ ultAdd(g,38);persist();if(typeof updateUIStats==='function')updateUIStats();
+}
+function castUlt(g){
+ const p=g?.player,s=state();if(!g?.running||!p||!s||p.realmId)return;
+ if(ULT.active>0)return;
+ if(!ULT.ready){notify('Fúria em '+Math.floor(ULT.charge)+'%. Derrote feras (elites enchem mais) para carregar.');return}
+ ULT.ready=false;ULT.charge=0;ULT.active=5.5;ULT.pulse=0;ULT.ring=0;
+ const st=window.getRPGStats?.()||{};const cap=(s.maxHp||100)+(st.hp||0);s.hp=Math.min(cap,s.hp+Math.round(cap*.3));
+ g.shake?.(9,.7);g.floatText?.(p.x,p.y-64,'🔥 FÚRIA DESPERTA!','#fb923c');notify('🔥 Fúria Desperta! Pulsos de energia por 5 segundos e +30% de vida.');
+ if(typeof updateUIStats==='function')updateUIStats();
+}
+function ultUpdate(g,dt){
+ if(ULT.active<=0)return;
+ ULT.active-=dt;ULT.pulse-=dt;ULT.ring+=dt;
+ if(ULT.pulse<=0&&ULT.active>0){
+  ULT.pulse=.55;const p=g.player,s=state(),st=window.getRPGStats?.()||{};
+  const dmg=Math.round(34+(st.power||0)*2.2+(st.atk||0)+(s?.level||1)*3.2);
+  g.eachTarget?.(t=>{const dx=t.x-p.x,dy=t.y-p.y;if(Math.hypot(dx,dy)<210)g.damageTarget(t,dmg,Math.atan2(dy,dx),true)});
+  g.fx?.push({x:p.x,y:p.y,r:20,max:210,t:.5,col:'#fb923c'});g.shake?.(3,.2);
+ }
+ if(ULT.active<=0){ULT.active=0;notify('A Fúria se dissipou.')}
+}
+function drawElites(c,g,now){
+ for(const a of g.animals||[]){
+  if(!a.elite)continue;const f=a.elite,s=(a.def?.sz||16);
+  c.save();c.translate(a.x,a.y);
+  const pu=.5+.5*Math.sin(now/200+a.x);
+  c.strokeStyle=f.col;c.globalAlpha=.55+.3*pu;c.lineWidth=3;c.beginPath();c.ellipse(0,s*.55,s*1.5+pu*4,s*.7+pu*2,0,0,Math.PI*2);c.stroke();
+  c.globalAlpha=.18;c.fillStyle=f.col;c.beginPath();c.arc(0,0,s*1.7,0,Math.PI*2);c.fill();c.globalAlpha=1;
+  const t='☠ '+f.name,w=c.measureText(t).width;c.font='bold 10px Inter';const tw=c.measureText(t).width+14;
+  c.fillStyle='rgba(8,12,20,.82)';c.fillRect(-tw/2,-s-40,tw,15);c.fillStyle=f.col;c.textAlign='center';c.fillText(t,0,-s-29);
+  c.restore();
+ }
+ if(ULT.active>0){const p=g.player;c.save();c.translate(p.x,p.y);const k=(ULT.ring%.55)/.55;
+  c.strokeStyle='rgba(251,146,60,'+(1-k)+')';c.lineWidth=4;c.beginPath();c.arc(0,0,40+k*170,0,Math.PI*2);c.stroke();
+  c.fillStyle='rgba(251,146,60,.08)';c.beginPath();c.arc(0,0,210,0,Math.PI*2);c.fill();c.restore()}
+}
+function ultHud(g,now){
+ if(now-ULT.hudAt<120)return;ULT.hudAt=now;
+ let h=$('avx-ult-hud');
+ if(!h){h=document.createElement('div');h.id='avx-ult-hud';h.style.cssText='position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:9996;display:flex;align-items:center;gap:8px;font:700 11px Inter,sans-serif;color:#fff';
+  h.innerHTML='<div style="width:170px;height:12px;border-radius:7px;background:#1b1410cc;border:1px solid #fb923c;overflow:hidden"><div id="avx-ult-fill" style="height:100%;width:0;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div><button id="avx-ult-btn" style="padding:4px 10px;border-radius:8px;border:1px solid #fb923c;background:#2a1a10;color:#fff;cursor:pointer">🔥 X</button>';
+  document.body.appendChild(h);$('avx-ult-btn').onclick=()=>castUlt(window.game)}
+ const f=$('avx-ult-fill');if(f){f.style.width=(ULT.active>0?(ULT.active/5.5*100):ULT.charge)+'%';f.style.filter=ULT.ready?'brightness(1.5)':''}
+ const b=$('avx-ult-btn');if(b){b.style.boxShadow=ULT.ready?'0 0 12px #fb923c':'none';b.style.opacity=(ULT.ready||ULT.active>0)?'1':'.6'}
+}
+if(!window.__avxUltKey){window.__avxUltKey=true;window.addEventListener('keydown',e=>{if(e.code==='KeyX'&&!e.repeat&&!/INPUT|TEXTAREA/.test(e.target?.tagName||'')){castUlt(window.game)}})}
 function drawEnvironment(g){
  if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
  const now=performance.now(),dt=Math.min(.05,(now-(ENV._last||now))/1000);ENV._last=now;
  updateEnv(g);updateWeather(g,dt,now);
  meteorUpdate(g,ensure()||{},state()||{},Date.now());
  eventUpdate(g,state()||{},Date.now());eventHud(g,now);
+ ultUpdate(g,dt);ultHud(g,now);
  drawWeatherLayer(g,dt,now);
  drawLighting(g,now);
  drawFireflies(g,dt,now);
@@ -636,6 +714,9 @@ function installGameHooks(){
  if(!GameCtor||GameCtor.prototype.__avxTownHooks)return;
  const proto=GameCtor.prototype,originalRender=proto.render,originalInteract=proto.interact,originalBlocked=proto.blocked,originalDamage=proto.damageTarget;
  // Recompensas automáticas do Colosso removidas.
+ const origSpawn=proto.spawnAnimal,origKill=proto.killAnimal;
+ if(origSpawn)proto.spawnAnimal=function(...a){const r=origSpawn.apply(this,a);try{makeElite(r)}catch(e){}return r};
+ if(origKill)proto.killAnimal=function(a,silent){const el=a&&a.elite;const r=origKill.call(this,a,silent);if(!silent){try{if(el)eliteKilled(this,a);else ultAdd(this,6)}catch(e){console.error(e)}}return r};
  if(originalBlocked&&!proto.__avxHouseCollision){
   proto.blocked=function(x,y){
    if(originalBlocked.call(this,x,y))return true;
