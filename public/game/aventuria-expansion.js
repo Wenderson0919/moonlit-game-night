@@ -156,7 +156,7 @@ function updateMobileNPCButton(){
  const near=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];
  let btn=$('avx-mobile-interact');
  if(!near||near.d>520){btn?.remove();return}
- if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p||p.inSafeZone!==true){$('avx-mobile-interact')?.remove();notify('Os serviços dos NPCs só funcionam na Área Safe.');return}const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<1000)openTownNPC(n.n.id)});document.body.appendChild(btn)}
+ if(!btn){btn=document.createElement('button');btn.id='avx-mobile-interact';btn.type='button';btn.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();const g=game(),p=g?.player;if(!p||p.inSafeZone!==true){$('avx-mobile-interact')?.remove();notify('Os serviços dos NPCs só funcionam na Área Safe.');return}const n=townNPCs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(n&&n.d<1000)openTownNPC(n.n.id)});document.body.appendChild(btn)}
  btn.textContent='E · '+near.n.name;
  btn.style.cssText='position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom) + 190px);z-index:99999;padding:14px 18px;border-radius:16px;border:2px solid '+near.n.color+';background:#10212bea;color:#fff;font:800 13px system-ui;box-shadow:0 5px 22px #0009;touch-action:manipulation;pointer-events:auto';
 }
@@ -326,23 +326,7 @@ const gameReady=()=>{const g=game();if(!g||!g.running)return false;g.townNPCs=to
 /* O jogo é instanciado no evento load do index.html. Como este arquivo externo
    é carregado durante o parse, instalar os hooks imediatamente encontraria window.game vazio. */
 function installGameHooks(){
- // Clique/toque diretamente no NPC no cenário (desktop e mobile).
- if(!window.__avxNpcPointerHook){
-  window.__avxNpcPointerHook=true;
-  const handleNpcPointer=ev=>{
-   // Aceita mouse, toque e caneta. Só intercepta quando o toque cai sobre um NPC.
-   if(ev.pointerType==='mouse'&&ev.button!==undefined&&ev.button!==0)return;
-   if(ev.target?.closest?.('#mc,.mcb,#avx-mobile-interact,button,a,input,textarea,select,[role="dialog"]'))return;
-   const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas||p.inSafeZone!==true)return;
-   const rect=canvas.getBoundingClientRect();
-   if(ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;
-   const wx=p.x+(ev.clientX-(rect.left+rect.width/2))*(canvas.width/rect.width);
-   const wy=p.y+(ev.clientY-(rect.top+rect.height/2))*(canvas.height/rect.height);
-   const nearest=townNPCs.map(n=>({n,d:Math.hypot(wx-n.x,wy-n.y)})).sort((a,b)=>a.d-b.d)[0];
-   if(nearest&&nearest.d<360){ev.preventDefault();ev.stopImmediatePropagation();try{openTownNPC(nearest.n.id)}catch(err){console.error('[Aventuria NPC]',nearest.n.id,err);notify('Não foi possível abrir este NPC. Veja o console para o erro.')}}
-  };
-  document.addEventListener('pointerdown',handleNpcPointer,true);
- }
+ // NPC menus are opened only by the on-screen E button or keyboard E.
  // Keyboard handling is installed independently of the Game constructor.
  if(!window.__avxNpcKeyHook){
   window.__avxNpcKeyHook=true;
