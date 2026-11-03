@@ -788,7 +788,7 @@ function openTownNPC(id){
  stylist:()=>openAppearanceEditor(),
  elder:()=>{if(typeof updateUIStats==='function')updateUIStats();const sm=$('shop-modal');if(sm)sm.classList.remove('hidden');else notify('A loja do ancião está fechada agora.')},
  board:()=>openServices([['daily','Missões diárias'],['world','Ranking mundial e passe de temporada'],['daily','Conquistas de aventura']]),
- trainer:()=>openServices([['growth','Árvore de habilidades'],['combat','Arena de duelos'],['world','Chefes mundiais e eventos'],['growth','Equipamentos evolutivos']]),
+ trainer:()=>openServices([['talents','Árvore de habilidades e subclasses'],['talents','Árvore de talentos'],['growth','Profissões e especializações'],['growth','Equipamentos evolutivos']]),
  mounts:()=>openServices([['mounts','Montaria'],['mounts','Profissões'],['growth','Casas e construção de vilas']])
  };
  // um erro dentro de um serviço nunca deve deixar o NPC "mudo": avisa e registra no console
