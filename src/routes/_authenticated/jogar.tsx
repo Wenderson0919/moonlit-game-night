@@ -27,7 +27,7 @@ function Play() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <iframe ref={ref} src="/game/index.html?v=10" title="Aventuria" className="h-full w-full border-0" allow="fullscreen; autoplay" />
+      <iframe ref={ref} src="/game/index.html?v=11" title="Aventuria" className="h-full w-full border-0" allow="fullscreen; autoplay" />
       <div className="absolute left-3 bottom-3 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] text-muted-foreground backdrop-blur">
         Online: {st ? `${st.state} · ${st.others} outro(s) · ${st.received} sinais` : "iniciando…"}
       </div>
