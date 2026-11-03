@@ -175,6 +175,8 @@
  }
  function key(e){if(e.code==='KeyJ'&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){toggle();e.preventDefault()}}
  window.addEventListener('keydown',key);
- function boot(){if(G())install(G())}
- window.addEventListener('aventuria:game-ready',boot);if(G())install(G());
+ function boot(){const g=G();if(g?.canvas&&g?.ctx){install(g);return}requestAnimationFrame(boot)}
+ window.addEventListener('aventuria:game-ready',()=>requestAnimationFrame(boot));
+ window.addEventListener('load',()=>requestAnimationFrame(boot),{once:true});
+ if(G())requestAnimationFrame(boot);
 })();
