@@ -55,7 +55,22 @@
   const pct=Math.round(e.progress/e.goal*100),g=G(),dist=g?Math.round(Math.hypot(g.player.x-e.x,g.player.y-e.y)):'—';
   root.innerHTML='<div class="eg-row" style="margin-top:13px"><span class="eg-tag">'+(e.status==='active'?'EM ANDAMENTO':e.status==='complete'?'CONCLUÍDO':'ENCERRADO')+'</span><span style="color:#e7cb8a;font-weight:800">'+e.icon+' '+biomes[e.biome]?.name+'</span></div><h3 style="margin-top:10px">'+e.title+'</h3><p class="muted">'+e.desc+'</p><div class="eg-row" style="margin-top:12px"><b>Progresso</b><b>'+e.progress+'/'+e.goal+'</b></div><div class="eg-progress"><span style="width:'+pct+'%"></span></div><div class="eg-row"><span class="muted">Distância: '+dist+' m</span><span class="muted">Recompensa: '+e.reward+' ouro</span></div>'+(e.status==='active'?'<p class="muted" style="margin-top:8px">Tempo restante: '+Math.max(0,Math.ceil(e.expires-(g?.t||0)))+'s</p>':'<p class="muted" style="margin-top:8px">O mundo prepara novos acontecimentos.</p>')+'<div style="margin-top:10px"><span class="eg-tag">+ '+e.xp+' EXP</span> <span class="eg-tag">+ materiais</span></div>';
  }
- function drawNPC(c,n,now){c.save();c.translate(n.x,n.y+Math.sin(now/260+n.phase)*1.2);c.fillStyle='#0006';c.beginPath();c.ellipse(0,12,9,3,0,0,Math.PI*2);c.fill();c.fillStyle=n.tone;c.fillRect(-6,-8,12,17);c.fillStyle='#d5ad83';c.fillRect(-5,-17,10,10);c.fillStyle='#302a25';c.fillRect(-5,-19,10,4);c.fillStyle='#f2d59b';c.fillRect(n.dir>0?1:-3,-13,2,2);c.fillStyle='#7b5736';c.fillRect(-7,7,5,5);c.fillRect(2,7,5,5);c.restore();c.font='9px Inter';c.textAlign='center';c.fillStyle='#e9d5a0';c.fillText(n.name,n.x,n.y-24)}
+ function drawNPC(c,n,now){
+  const bob=Math.sin(now/210+n.phase)*1.4,walk=Math.sin(now/85+n.phase)*2;
+  c.save();c.translate(Math.round(n.x),Math.round(n.y+bob));
+  c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(0,13,10,3.5,0,0,6.28);c.fill();
+  c.fillStyle='#302a25';c.fillRect(-7,6+walk,5,8);c.fillRect(2,6-walk,5,8);
+  c.fillStyle='#b88a55';c.fillRect(-8,12+walk,6,2);c.fillRect(2,12-walk,6,2);
+  c.fillStyle=n.tone;c.fillRect(-8,-8,16,15);c.fillStyle='#d7b46a';c.fillRect(-7,-3,14,3);
+  c.fillStyle='#49362c';c.fillRect(-10,-6,3,11);c.fillRect(7,-6,3,11);
+  c.fillStyle='#d5ad83';c.fillRect(-6,-19,12,11);c.fillRect(-8,-16,2,5);c.fillRect(6,-16,2,5);
+  c.fillStyle='#30251e';c.fillRect(-7,-21,14,4);c.fillRect(-6,-23,12,3);
+  c.fillStyle='#f2d59b';c.fillRect(n.dir>0?1:-4,-15,2,2);
+  c.fillStyle='#5d3e2c';c.fillRect(-7,-9,14,2);
+  c.fillStyle='#b88d54';c.fillRect(-11,-5,3,8);c.fillRect(8,-5,3,8);
+  c.restore();
+  c.save();c.font='bold 9px Inter';c.textAlign='center';c.lineWidth=3;c.strokeStyle='rgba(20,18,15,.8)';c.strokeText(n.name,n.x,n.y-28);c.fillStyle='#f5dfb1';c.fillText(n.name,n.x,n.y-28);c.restore()
+ }
  function updateNPCs(g,dt){if(!state.npcs.length)makeNPCs(g);for(const n of state.npcs){n.wait-=dt;if(n.wait<=0){const a=rand(0,Math.PI*2),d=rand(90,260);n.tx=Math.max(70,Math.min(3930,n.homeX+Math.cos(a)*d));n.ty=Math.max(70,Math.min(3930,n.homeY+Math.sin(a)*d));n.wait=rand(7,17)}const dx=n.tx-n.x,dy=n.ty-n.y,d=Math.hypot(dx,dy);if(d>4){const nx=n.x+dx/d*n.speed*dt,ny=n.y+dy/d*n.speed*dt;if(!g.blocked(nx,ny)&&!g.pondAt(nx,ny,10)){n.x=nx;n.y=ny}else n.wait=0;n.dir=dx>=0?1:-1}}}
  function spawnEncounter(g){
   const p=g.player;for(let tries=0;tries<45;tries++){
@@ -102,7 +117,21 @@
   state.weatherChange-=dt;if(state.weatherChange<=0){const b=g.biomeAt(g.player.x,g.player.y);const pool=b==='snow'?['clear','snow','mist']:b==='volcano'?['clear','embers','mist']:b==='swamp'?['clear','rain','mist','spores']:['clear','rain','mist','spores'];state.weatherKind=pool[Math.floor(Math.random()*pool.length)];state.weatherChange=rand(75,130);state.weatherParticles=[];for(let i=0;i<90;i++)state.weatherParticles.push({x:rand(0,g.canvas.width),y:rand(0,g.canvas.height),a:rand(.25,.75),r:rand(1,2.5),v:rand(45,120)})}
   for(const q of state.weatherParticles){q.y+=q.v*dt;q.x+=(state.weatherKind==='rain'?-25:Math.sin(q.y/40)*8)*dt;if(q.y>g.canvas.height+12){q.y=-12;q.x=rand(0,g.canvas.width)}if(q.x< -12)q.x=g.canvas.width+12}
  }
- function drawSecret(c,q,now,p){const d=Math.hypot(p.x-q.x,p.y-q.y);if(d>340)return;const reveal=d<190,pulse=.5+.5*Math.sin(now/420+q.phase);c.save();c.globalAlpha=reveal?.8:.12+pulse*.12;c.strokeStyle='#b8f1c4';c.fillStyle='rgba(135,220,157,.09)';c.lineWidth=2;c.beginPath();c.arc(q.x,q.y,18+pulse*4,0,6.28);c.fill();c.stroke();c.fillStyle='#d5f5bd';c.font='bold 18px Inter';c.textAlign='center';c.fillText(q.kind==='shrine'?'✧':q.kind==='ancient_stone'?'ᛟ':'❀',q.x,q.y+6);if(reveal){c.font='bold 10px Inter';c.fillStyle='#e6f5d7';c.fillText('SEGREDO DESCOBERTO',q.x,q.y-29);if(d<70){c.fillStyle='#14231b';c.fillRect(q.x-39,q.y+25,78,17);c.fillStyle='#eaffd8';c.fillText('[E] INVESTIGAR',q.x,q.y+37)}}c.restore()}
+ function drawSecret(c,q,now,p){
+  const d=Math.hypot(p.x-q.x,p.y-q.y);if(d>340)return;const reveal=d<190,pulse=.5+.5*Math.sin(now/420+q.phase);
+  c.save();c.globalAlpha=reveal?.96:.2+pulse*.2;c.translate(Math.round(q.x),Math.round(q.y));
+  c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(0,15,30,9,0,0,6.28);c.fill();
+  if(q.kind==='shrine'){
+   c.fillStyle='#586d5a';c.fillRect(-23,-2,46,18);c.fillStyle='#8ba78a';c.fillRect(-18,-8,36,8);c.fillStyle='#304d3c';c.fillRect(-14,-25,7,22);c.fillRect(7,-25,7,22);c.fillStyle='#a8e9bc';c.fillRect(-3,-34,6,25);c.fillStyle='#e1ffd0';c.fillRect(-1,-39,2,7)
+  }else if(q.kind==='ancient_stone'){
+   c.fillStyle='#59616a';c.fillRect(-18,-23,36,38);c.fillStyle='#87949a';c.fillRect(-14,-27,28,5);c.fillStyle='#b6e4c0';c.fillRect(-2,-17,4,21);c.fillRect(-9,-10,18,3);c.fillRect(-6,-3,12,3)
+  }else{
+   c.fillStyle='#4b6848';c.beginPath();c.ellipse(0,6,29,12,0,0,6.28);c.fill();for(let i=0;i<8;i++){const a=i*Math.PI/4;c.fillStyle=i%2?'#b4d982':'#e0eaa0';c.beginPath();c.arc(Math.cos(a)*22,Math.sin(a)*9-5,5,0,6.28);c.fill()}c.fillStyle='#f3f6c2';c.beginPath();c.arc(0,-5,5,0,6.28);c.fill()
+  }
+  c.strokeStyle='#b8f1c4';c.lineWidth=2;c.globalAlpha=.35+pulse*.5;c.beginPath();c.arc(0,-7,30+pulse*5,0,6.28);c.stroke();
+  c.restore();
+  if(reveal){c.save();c.font='bold 10px Inter';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#17251d';c.strokeText('SEGREDO DESCOBERTO',q.x,q.y-48);c.fillStyle='#e6f5d7';c.fillText('SEGREDO DESCOBERTO',q.x,q.y-48);if(d<70){c.fillStyle='#14231b';c.fillRect(q.x-43,q.y+28,86,18);c.fillStyle='#eaffd8';c.fillText('[E] INVESTIGAR',q.x,q.y+41)}c.restore()}
+ }
  function resolveSecret(g,q){if(q.found)return;q.found=true;const s=S();if(!s)return;const gold=rand(45,95)|0;s.gold=(s.gold||0)+gold;s.resources??={};const key=q.kind==='shrine'?'crystal':q.kind==='ancient_stone'?'iron':'herb';s.resources[key]=(s.resources[key]||0)+2;if(typeof g.gainExp==='function')g.gainExp(55);notify('✧ Segredo ancestral encontrado! +'+gold+' ouro e materiais raros.','#b9e9bd');if(typeof window.updateUIStats==='function')window.updateUIStats()}
  function update(g,dt){if(!g?.running||!g.player)return;updateNPCs(g,dt);updateWeather(g,dt);
   state.secretAt-=dt;if(state.secretAt<=0&&state.secrets.filter(q=>!q.found).length<3){spawnSecret(g);state.secretAt=rand(75,115)}state.secrets=state.secrets.filter(q=>!q.found&&q.life>0);for(const q of state.secrets)q.life-=dt;
@@ -117,7 +146,15 @@
   if(p.moving&&p.dashT<=0&&Math.floor(now/150)%3===0){c.save();c.globalAlpha=.18;c.fillStyle='#d8c9a2';c.beginPath();c.arc(p.x-5,p.y+13,2.5,0,6.28);c.arc(p.x+6,p.y+14,2,0,6.28);c.fill();c.restore()}
   for(const n of state.npcs)drawNPC(c,n,now);
   for(const q of state.secrets)drawSecret(c,q,now,p);
-  for(const e of state.encounters){const pulse=.5+.5*Math.sin(now/260+e.phase);c.save();c.globalAlpha=.75+pulse*.25;c.fillStyle=e.type==='traveler'?'#8dd6c0':e.type==='cache'?'#f5d47a':e.type==='caravan'?'#d5a56d':'#b6c9e8';c.strokeStyle='#201a12';c.lineWidth=3;c.beginPath();c.arc(e.x,e.y-8,13+pulse*2,0,Math.PI*2);c.fill();c.stroke();c.font='bold 16px Inter';c.textAlign='center';c.fillStyle='#fff1c5';c.fillText(e.icon,e.x,e.y-3);c.font='bold 10px Inter';c.fillText(e.name,e.x,e.y-30);if(Math.hypot(p.x-e.x,p.y-e.y)<100){c.fillStyle='#171d18';c.fillRect(e.x-38,e.y+17,76,17);c.fillStyle='#ffe5a1';c.font='bold 10px Inter';c.fillText('[E] INTERAGIR',e.x,e.y+29)}c.restore()}
+  for(const e of state.encounters){const pulse=.5+.5*Math.sin(now/260+e.phase),d=Math.hypot(p.x-e.x,p.y-e.y);c.save();c.translate(Math.round(e.x),Math.round(e.y));
+   c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(0,13,24,7,0,0,6.28);c.fill();
+   if(e.type==='cache'){c.fillStyle='#76502d';c.fillRect(-17,-12,34,24);c.fillStyle='#b98542';c.fillRect(-18,-14,36,7);c.fillStyle='#e9c16f';c.fillRect(-3,-12,6,24);c.fillStyle='#ffe7a2';c.fillRect(-2,-2,4,5)}
+   else if(e.type==='caravan'){c.fillStyle='#68452d';c.fillRect(-22,-15,44,23);c.fillStyle='#9c7045';c.fillRect(-18,-22,36,9);c.fillStyle='#d5b57c';c.fillRect(-15,-19,30,4);c.fillStyle='#302a25';c.beginPath();c.arc(-13,12,6,0,6.28);c.arc(14,12,6,0,6.28);c.fill();c.strokeStyle='#c8a06a';c.lineWidth=2;c.strokeRect(-22,-15,44,23)}
+   else if(e.type==='traveler'){c.fillStyle='#252c31';c.fillRect(-8,-2,16,13);c.fillStyle='#d4a47a';c.fillRect(-6,-15,12,12);c.fillStyle='#7b4239';c.fillRect(-10,-4,20,7);c.fillStyle='#3b2c26';c.fillRect(-9,10,7,5);c.fillRect(2,10,7,5);c.fillStyle='#e6d7b6';c.fillRect(9,-8,3,18)}
+   else{c.strokeStyle='#d8e4f2';c.lineWidth=3;c.beginPath();c.moveTo(-19,3);c.lineTo(-7,-7);c.lineTo(2,1);c.lineTo(17,-12);c.stroke();c.fillStyle='#c4d5e7';c.beginPath();c.arc(-19,3,3,0,6.28);c.arc(17,-12,3,0,6.28);c.fill()}
+   c.globalAlpha=.35+pulse*.6;c.strokeStyle=e.type==='traveler'?'#8dd6c0':e.type==='cache'?'#f5d47a':e.type==='caravan'?'#d5a56d':'#b6c9e8';c.lineWidth=2;c.beginPath();c.arc(0,-8,29+pulse*5,0,6.28);c.stroke();c.restore();
+   if(d<135){c.save();c.font='bold 10px Inter';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#201a12';c.strokeText(e.name,e.x,e.y-37);c.fillStyle='#fff1c5';c.fillText(e.name,e.x,e.y-37);if(d<58){c.fillStyle='#171d18';c.fillRect(e.x-43,e.y+20,86,18);c.fillStyle='#ffe5a1';c.fillText('[E] INTERAGIR',e.x,e.y+33)}c.restore()}
+  }
   const e=state.event;if(e&&e.status==='active'){const pulse=.5+.5*Math.sin(now/330);c.save();c.strokeStyle='#f5d47a';c.fillStyle='rgba(245,212,122,.07)';c.lineWidth=4;c.setLineDash([12,8]);c.beginPath();c.arc(e.x,e.y,185,0,Math.PI*2);c.fill();c.stroke();c.setLineDash([]);c.globalAlpha=.35+pulse*.55;c.strokeStyle='#fff0b0';c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,205+pulse*9,0,Math.PI*2);c.stroke();c.globalAlpha=1;c.fillStyle='#33250e';c.strokeStyle='#f5d47a';c.lineWidth=2;c.beginPath();c.roundRect(e.x-85,e.y-236,170,28,8);c.fill();c.stroke();c.fillStyle='#ffe5a1';c.font='bold 12px Inter';c.textAlign='center';c.fillText(e.icon+' '+e.title,e.x,e.y-218);c.restore()}
   c.restore();drawWeather(g,now);
  }
