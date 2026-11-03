@@ -1848,6 +1848,29 @@ mc.addEventListener('pointerdown',e=>{const b=e.target.closest('.mcb');if(!b)ret
  else if(id==='skl')useClassSkill();else if(id==='mag'){autoAim();castEquippedSpell()}else if(id==='int')g.interact();else if(id==='trn')activateRPGTransform();
  else if(id==='grp')toggleParty();else if(id==='pvp')togglePvp();else if(id==='trd')toggleTrade();else if(id==='mnu')$('rpg-modal').classList.contains('hidden')?openRPGPanel():closeRPGPanel()});
 function joy(e,b){const r=b.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const m=r.width/2,d=Math.hypot(dx,dy)||1,l=Math.min(d,m);dx=dx/d*l;dy=dy/d*l;const k=$('mk');k.style.cssText=`position:absolute;left:${50+dx/r.width*100-25}%;top:${50+dy/r.height*100-25}%`;const nx=dx/m,ny=dy/m;setK('KeyA',nx<-.3);setK('KeyD',nx>.3);setK('KeyW',ny<-.3);setK('KeyS',ny>.3);if(l>m*.3){aim={x:dx/l,y:dy/l}}}
+/* Fallback touch nativo: mantém o joystick responsivo em navegadores móveis
+   que não entregam pointermove de forma consistente dentro da safe area. */
+let activeJoyTouch=null;
+const joyTouchStart=e=>{
+ const touch=e.changedTouches&&e.changedTouches[0];if(!touch)return;
+ activeJoyTouch=touch.identifier;e.preventDefault();ac();
+ const b=$('mj');if(!b)return;b._j=1;joy({clientX:touch.clientX,clientY:touch.clientY},b);
+};
+const joyTouchMove=e=>{
+ if(activeJoyTouch===null)return;
+ const touch=[...e.changedTouches].find(t=>t.identifier===activeJoyTouch);if(!touch)return;
+ e.preventDefault();const b=$('mj');if(b)joy({clientX:touch.clientX,clientY:touch.clientY},b);
+};
+const joyTouchEnd=e=>{
+ if(activeJoyTouch===null)return;
+ const touch=[...e.changedTouches].find(t=>t.identifier===activeJoyTouch);if(!touch)return;
+ activeJoyTouch=null;const b=$('mj');if(b)b._j=0;
+ ['KeyA','KeyD','KeyW','KeyS'].forEach(k=>setK(k,false));$('mk').style.cssText='';
+};
+$('mj').addEventListener('touchstart',joyTouchStart,{passive:false});
+document.addEventListener('touchmove',joyTouchMove,{passive:false});
+document.addEventListener('touchend',joyTouchEnd,{passive:false});
+document.addEventListener('touchcancel',joyTouchEnd,{passive:false});
 mc.addEventListener('pointermove',e=>{const b=e.target.closest('.mcb');if(!b)return;if(b._drag){const p=[Math.max(3,Math.min(97,e.clientX/innerWidth*100)),Math.max(5,Math.min(95,e.clientY/innerHeight*100))];lay[b.dataset.id]=p;localStorage.setItem('av-lay',JSON.stringify(lay));place()}else if(b._j)joy(e,b)});
 const rel=e=>{const b=e.target.closest('.mcb');if(!b)return;b._drag=0;if(b._j){b._j=0;['KeyA','KeyD','KeyW','KeyS'].forEach(c=>setK(c,false));$('mk').style.cssText=''}if(b.dataset.id==='atk'){clearInterval(holdT);if(window.game)window.game.mouse.down=false}};
 mc.addEventListener('pointerup',rel);mc.addEventListener('pointercancel',rel);
