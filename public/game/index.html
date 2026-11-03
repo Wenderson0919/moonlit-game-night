@@ -485,6 +485,55 @@ const BOSS_ART={
    c.fillStyle=accent;
    if(variant%2===0){c.fillRect(-sz*.18,sz*.05+bob,sz*.55,4);c.fillRect(-sz*.08,sz*.18+bob,sz*.35,3)}
    else{c.beginPath();c.moveTo(-sz*.2,-sz*.2+bob);c.lineTo(0,sz*.12+bob);c.lineTo(sz*.18,-sz*.2+bob);c.fill()}
+   // Identidade individual: detalhes anatômicos e equipamento mudam por criatura,
+   // bioma e raridade, sem reaproveitar apenas a mesma cabeça/corpo.
+   const biome=(Object.keys(BOSS_NAMES).find(k=>BOSS_NAMES[k].includes(name))||'forest');
+   const detail=(index*7+variant*3)%6;
+   const material=biome==='snow'?'#d9f3ff':biome==='volcano'?'#ff7b32':biome==='desert'?'#e8c477':biome==='swamp'?'#8fb45a':'#8bbf76';
+   // Crista, chifres ou placas dorsais com recorte em pixel-art.
+   c.fillStyle=flash?'#fff':material;
+   for(let i=0;i<3+(index%3);i++){
+    const x=(-.62+i*.34)*sz, lift=(i%2?1.05:.82)+(detail%2)*.12;
+    c.beginPath();c.moveTo(x,-sz*.42+bob);c.lineTo(x+sz*.12,-sz*lift+bob);c.lineTo(x+sz*.27,-sz*.38+bob);c.closePath();c.fill();
+   }
+   // Peitoral, placas e cintos variam para dar leitura de armadura ou criatura.
+   if(detail===0||detail===3){
+    c.fillStyle=dark;c.fillRect(-sz*.42,sz*.05+bob,sz*.84,sz*.34);
+    c.fillStyle=accent;c.fillRect(-sz*.34,sz*.1+bob,sz*.68,Math.max(3,sz*.07));
+    c.fillRect(-sz*.12,sz*.25+bob,sz*.24,Math.max(3,sz*.06));
+   }else if(detail===1||detail===4){
+    c.strokeStyle=dark;c.lineWidth=sz*.13;c.beginPath();
+    c.moveTo(-sz*.55,-sz*.18+bob);c.lineTo(-sz*.95,sz*.45+bob+lg);
+    c.moveTo(sz*.55,-sz*.18+bob);c.lineTo(sz*.95,sz*.45+bob-lg);c.stroke();
+    c.fillStyle=accent;c.fillRect(-sz*.82,sz*.25+bob,sz*.24,sz*.2);
+    c.fillRect(sz*.58,sz*.25+bob,sz*.24,sz*.2);
+   }else{
+    c.strokeStyle=accent;c.lineWidth=Math.max(2,sz*.07);c.beginPath();
+    c.moveTo(-sz*.48,sz*.1+bob);c.lineTo(-sz*.12,sz*.42+bob);c.lineTo(sz*.22,sz*.08+bob);c.stroke();
+   }
+   // Apêndice exclusivo: cauda, asa, lâmina ou tentáculo animado.
+   c.strokeStyle=flash?'#fff':base;c.fillStyle=flash?'#fff':accent;
+   if(detail===0){
+    c.lineWidth=sz*.16;c.beginPath();c.moveTo(-sz*.5,sz*.35+bob);c.quadraticCurveTo(-sz*1.35,sz*.9+bob+lg,-sz*1.55,sz*.25+bob);c.stroke();
+   }else if(detail===1){
+    c.beginPath();c.moveTo(-sz*.42,-sz*.15+bob);c.lineTo(-sz*1.55,-sz*1.05+bob);c.lineTo(-sz*1.15,sz*.12+bob);c.closePath();c.fill();
+    c.beginPath();c.moveTo(sz*.42,-sz*.15+bob);c.lineTo(sz*1.55,-sz*1.05+bob);c.lineTo(sz*1.15,sz*.12+bob);c.closePath();c.fill();
+   }else if(detail===2){
+    c.lineWidth=sz*.12;c.beginPath();c.moveTo(sz*.62,sz*.05+bob);c.lineTo(sz*1.15,sz*.5+bob+lg);c.stroke();
+    c.fillRect(sz*1.03,sz*.38+bob+lg,sz*.28,sz*.2);
+   }else if(detail===3){
+    c.fillRect(-sz*1.08,-sz*.55+bob,sz*.28,sz*.72);
+    c.fillRect(-sz*1.18,-sz*.68+bob,sz*.48,sz*.16);
+   }else if(detail===4){
+    c.strokeStyle=accent;c.lineWidth=sz*.09;c.beginPath();c.moveTo(-sz*.45,sz*.1+bob);c.quadraticCurveTo(-sz*1.2,sz*.65+bob,-sz*.8,sz*1.0+bob+lg);c.stroke();
+   }else{
+    c.beginPath();c.moveTo(-sz*.35,-sz*.55+bob);c.lineTo(0,-sz*1.5+bob);c.lineTo(sz*.35,-sz*.55+bob);c.closePath();c.fill();
+   }
+   // Marcas e runas em blocos, mantendo leitura nítida em escala pequena.
+   c.fillStyle=flash?'#fff':T.c;
+   c.fillRect(-sz*.08,sz*.48+bob,sz*.16,Math.max(3,sz*.12));
+   c.fillRect(-sz*.28,sz*.52+bob,Math.max(3,sz*.09),Math.max(3,sz*.09));
+   c.fillRect(sz*.19,sz*.52+bob,Math.max(3,sz*.09),Math.max(3,sz*.09));
    c.lineCap='butt';
   };
  });
