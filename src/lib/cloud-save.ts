@@ -65,6 +65,11 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
   async function applyGrants() {
     const w = frame.contentWindow as GameWin | null;
     if (stopped || !w || typeof w.genItem !== "function") return;
+    const hasHero = () => {
+      if (w.game?.running && w.MMO?.localState?.name) return true;
+      try { return !!JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null")?.name; } catch { return false; }
+    };
+    if (!hasHero()) return; // presente fica guardado até o personagem existir
     const { data: rows } = await supabase
       .from("admin_grants").select("id, kind, payload")
       .eq("target_user_id", userId).is("applied_at", null).order("created_at");
@@ -83,7 +88,7 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
       } else {
         let s: Record<string, any> | null = null;
         try { s = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"); } catch { s = null; }
-        if (!s?.name) continue; // ainda não tem personagem: presente é descartado
+        if (!s?.name) continue;
         applyGrant(s, g, w.genItem);
         localStorage.setItem(SAVE_KEY, JSON.stringify(s));
         const box = w.document.getElementById("continue-text");
