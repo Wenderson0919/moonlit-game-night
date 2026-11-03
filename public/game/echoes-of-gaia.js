@@ -27,7 +27,7 @@
  document.body.append(launch,panel);
  const toggle=()=>{panel.style.display=panel.style.display==='block'?'none':'block';renderPanel()};
  launch.onclick=toggle;panel.querySelector('#eg-close').onclick=toggle;
- const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0,talks:{}};
+ const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0,talks:{},encounters:[],encounterAt:35,encounterSerial:0};
  function rand(a,b){return a+Math.random()*(b-a)}
  function makeNPCs(g){const names=['Lina, a Cartógrafa','Borin, o Viajante','Mestre Oren','Mila, a Mensageira','Tomas, o Aprendiz'];state.npcs=names.map((name,i)=>({name,x:g.player.x+Math.cos(i*1.25)*rand(80,190),y:g.player.y+Math.sin(i*1.25)*rand(70,150),homeX:0,homeY:0,dir:1,speed:rand(9,17),wait:rand(0,3),phase:rand(0,6),tone:['#527d72','#9b7046','#526a9b','#9a5f77','#8b874d'][i]}));state.npcs.forEach(n=>{n.homeX=n.x;n.homeY=n.y})}
  function safeEventPoint(g){const p=g.player;for(let i=0;i<100;i++){const a=rand(0,Math.PI*2),d=rand(430,650),x=Math.max(120,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(120,Math.min(3990,p.y+Math.sin(a)*d));const bio=g.biomeAt(x,y);if(bio&&Math.hypot(x-p.x,y-p.y)>360&&!g.pondAt(x,y,90)&&!g.blocked(x,y)&&!inSafe(x,y,120))return{x,y,bio}}return{x:Math.min(3900,p.x+480),y:Math.min(3900,p.y+300),bio:g.biomeAt(p.x+480,p.y+300)||'forest'}}
@@ -57,15 +57,43 @@
  }
  function drawNPC(c,n,now){c.save();c.translate(n.x,n.y+Math.sin(now/260+n.phase)*1.2);c.fillStyle='#0006';c.beginPath();c.ellipse(0,12,9,3,0,0,Math.PI*2);c.fill();c.fillStyle=n.tone;c.fillRect(-6,-8,12,17);c.fillStyle='#d5ad83';c.fillRect(-5,-17,10,10);c.fillStyle='#302a25';c.fillRect(-5,-19,10,4);c.fillStyle='#f2d59b';c.fillRect(n.dir>0?1:-3,-13,2,2);c.fillStyle='#7b5736';c.fillRect(-7,7,5,5);c.fillRect(2,7,5,5);c.restore();c.font='9px Inter';c.textAlign='center';c.fillStyle='#e9d5a0';c.fillText(n.name,n.x,n.y-24)}
  function updateNPCs(g,dt){if(!state.npcs.length)makeNPCs(g);for(const n of state.npcs){n.wait-=dt;if(n.wait<=0){const a=rand(0,Math.PI*2),d=rand(28,95);n.tx=n.homeX+Math.cos(a)*d;n.ty=n.homeY+Math.sin(a)*d;n.wait=rand(4,10)}const dx=n.tx-n.x,dy=n.ty-n.y,d=Math.hypot(dx,dy);if(d>4){n.x+=dx/d*n.speed*dt;n.y+=dy/d*n.speed*dt;n.dir=dx>=0?1:-1}}}
- function update(g,dt){if(!g?.running||!g.player)return;updateNPCs(g,dt);if(state.event?.status==='active'){if(g.t>state.event.expires){state.event.status='expired';cleanupObjectives(g,state.event);notify('O acontecimento '+state.event.title+' desapareceu.','#d6b47b')}if(g.t-state.lastUi>1){state.lastUi=g.t;renderPanel()}}if(!state.event||state.event.status!=='active'){if(g.t>=state.nextAt){startEvent(g);state.nextAt=g.t+rand(270,390)}}if(state.weatherT>0)state.weatherT=Math.max(0,state.weatherT-dt)}
+ function spawnEncounter(g){
+  const p=g.player;for(let tries=0;tries<45;tries++){
+   const a=rand(0,Math.PI*2),d=rand(280,440),x=Math.max(100,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(100,Math.min(3990,p.y+Math.sin(a)*d));
+   if(inSafe(x,y,130)||g.blocked(x,y)||g.pondAt(x,y,55))continue;
+   const types=['cache','traveler','caravan','tracks'],type=types[Math.floor(Math.random()*types.length)];
+   const e={id:++state.encounterSerial,type,x,y,life:210,used:false,phase:rand(0,6),biome:g.biomeAt(x,y)};
+   if(type==='caravan'){e.name='Caravana abandonada';e.icon='⚑';e.desc='Uma caravana foi deixada na estrada.'}
+   if(type==='cache'){e.name='Esconderijo antigo';e.icon='✧';e.desc='Algo parece brilhar entre as pedras.'}
+   if(type==='traveler'){e.name='Viajante ferido';e.icon='♙';e.desc='Um viajante precisa de ajuda.'}
+   if(type==='tracks'){e.name='Rastros misteriosos';e.icon='➤';e.desc='Pegadas recentes seguem para este ponto.'}
+   state.encounters.push(e);notify('Algo chamou sua atenção nas proximidades: '+e.name+'.','#e8cb8b');return;
+  }
+ }
+ function resolveEncounter(g,e){
+  if(e.used)return;e.used=true;const s=S();if(!s)return;
+  if(e.type==='cache'){const gold=rand(35,75)|0;s.gold=(s.gold||0)+gold;s.resources??={};s.resources.crystal=(s.resources.crystal||0)+1;notify('✧ Você encontrou '+gold+' ouro e um cristal!','#f5d58c')}
+  else if(e.type==='traveler'){const gold=55;s.gold=(s.gold||0)+gold;s.resources??={};s.resources.herb=(s.resources.herb||0)+2;notify('♡ Você ajudou o viajante: +55 ouro e ervas.','#9be2ad')}
+  else if(e.type==='caravan'){const gold=rand(65,115)|0;s.gold=(s.gold||0)+gold;notify('⚑ Você recuperou '+gold+' ouro da caravana.','#f5d58c');const kinds=Object.keys(window.AVENTURIA_CREATURE_DEFS||{}).filter(k=>g.biomeAt(e.x,e.y));if(kinds.length){const k=kinds[Math.floor(Math.random()*kinds.length)];try{g.spawnAnimal(k,e.x+35,e.y+25,{mult:1.15})}catch{}}}
+  else {const gold=40;s.gold=(s.gold||0)+gold;notify('➤ Você seguiu os rastros e encontrou suprimentos: +40 ouro.','#f5d58c')}
+  if(typeof g.gainExp==='function')g.gainExp(35);if(typeof window.updateUIStats==='function')window.updateUIStats();
+ }
+ function update(g,dt){if(!g?.running||!g.player)return;updateNPCs(g,dt);
+  state.encounters=state.encounters.filter(e=>!e.used&&e.life>0);for(const e of state.encounters)e.life-=dt;
+  state.encounterAt-=dt;if(state.encounterAt<=0&&state.encounters.length<2){spawnEncounter(g);state.encounterAt=rand(48,78)}
+  if(state.event?.status==='active'){if(g.t>state.event.expires){state.event.status='expired';cleanupObjectives(g,state.event);notify('O acontecimento '+state.event.title+' desapareceu.','#d6b47b')}if(g.t-state.lastUi>1){state.lastUi=g.t;renderPanel()}}
+  if(!state.event||state.event.status!=='active'){if(g.t>=state.nextAt){startEvent(g);state.nextAt=g.t+rand(180,260)}}
+  if(state.weatherT>0)state.weatherT=Math.max(0,state.weatherT-dt)
+ }
  function drawWorld(g){if(!g?.running||!g.ctx)return;const c=g.ctx,p=g.player,now=performance.now(),camX=p.x-g.canvas.width/2,camY=p.y-g.canvas.height/2;c.save();c.translate(-camX,-camY);
   for(const n of state.npcs)drawNPC(c,n,now);
+  for(const e of state.encounters){const pulse=.5+.5*Math.sin(now/260+e.phase);c.save();c.globalAlpha=.75+pulse*.25;c.fillStyle=e.type==='traveler'?'#8dd6c0':e.type==='cache'?'#f5d47a':e.type==='caravan'?'#d5a56d':'#b6c9e8';c.strokeStyle='#201a12';c.lineWidth=3;c.beginPath();c.arc(e.x,e.y-8,13+pulse*2,0,Math.PI*2);c.fill();c.stroke();c.font='bold 16px Inter';c.textAlign='center';c.fillStyle='#fff1c5';c.fillText(e.icon,e.x,e.y-3);c.font='bold 10px Inter';c.fillText(e.name,e.x,e.y-30);if(Math.hypot(p.x-e.x,p.y-e.y)<100){c.fillStyle='#171d18';c.fillRect(e.x-38,e.y+17,76,17);c.fillStyle='#ffe5a1';c.font='bold 10px Inter';c.fillText('[E] INTERAGIR',e.x,e.y+29)}c.restore()}
   const e=state.event;if(e&&e.status==='active'){const pulse=.5+.5*Math.sin(now/330);c.save();c.strokeStyle='#f5d47a';c.fillStyle='rgba(245,212,122,.07)';c.lineWidth=4;c.setLineDash([12,8]);c.beginPath();c.arc(e.x,e.y,185,0,Math.PI*2);c.fill();c.stroke();c.setLineDash([]);c.globalAlpha=.35+pulse*.55;c.strokeStyle='#fff0b0';c.lineWidth=2;c.beginPath();c.arc(e.x,e.y,205+pulse*9,0,Math.PI*2);c.stroke();c.globalAlpha=1;c.fillStyle='#33250e';c.strokeStyle='#f5d47a';c.lineWidth=2;c.beginPath();c.roundRect(e.x-85,e.y-236,170,28,8);c.fill();c.stroke();c.fillStyle='#ffe5a1';c.font='bold 12px Inter';c.textAlign='center';c.fillText(e.icon+' '+e.title,e.x,e.y-218);c.restore()}
   c.restore();
  }
  function install(g){if(!g||g.__echoesInstalled)return;g.__echoesInstalled=true;const oldLoop=g.loop.bind(g);g.loop=function(ts){const prev=this._echoPrev||ts,dt=Math.min(.05,Math.max(0,(ts-prev)/1000));this._echoPrev=ts;try{update(this,dt)}catch(e){console.warn('[Ecos de Gaia]',e)}return oldLoop(ts)};
   const oldRender=g.render.bind(g);g.render=function(){const r=oldRender();try{drawWorld(this)}catch(e){console.warn('[Ecos de Gaia render]',e)}return r};
-  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player;if(!p)return oldInteract();const near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
+  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player;if(!p)return oldInteract();const found=state.encounters.filter(e=>!e.used&&Math.hypot(p.x-e.x,p.y-e.y)<58).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];if(found){resolveEncounter(this,found);return}const near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
    'Lina, a Cartógrafa':['As trilhas mudam quando Gaia desperta. Observe os sinais dourados no horizonte.','Já desenhei mapas de cinco biomas, mas ainda existem lugares que nem os antigos conhecem.'],
    'Borin, o Viajante':['Ouvi passos enormes perto das montanhas. Não eram de um animal comum.','Uma boa mochila e olhos atentos salvam mais vidas que uma espada afiada.'],
    'Mestre Oren':['A energia de Gaia flui por toda criatura e pedra. Até uma simples erva pode guardar poder.','Não confunda força com coragem. Saber quando recuar também é uma habilidade.'],
@@ -74,7 +102,7 @@
   };const arr=lines[n.name]||['Que os caminhos de Gaia estejam a seu favor.'];const idx=state.talks[n.name]||0;state.talks[n.name]=idx+1;notify('💬 '+n.name+': “'+arr[idx%arr.length]+'”','#f2d59b');return}return oldInteract()}; 
   const oldKill=g.killAnimal.bind(g);g.killAnimal=function(a,silent){if(!silent&&a&&activeNear(a.x,a.y))addProgress('hunt',a.x,a.y);return oldKill(a,silent)};
   const oldAttack=g.attack.bind(g);g.attack=function(){const p=this.player,before=this.nodes?.filter(n=>n.hp>0&&Math.hypot(n.x-p.x,n.y-p.y)<75).map(n=>({n,hp:n.hp}))||[];const r=oldAttack();for(const v of before)if(v.n.hp<=0&&v.hp>0&&activeNear(v.n.x,v.n.y))addProgress('gather',v.n.x,v.n.y);return r};
-  g.start=(function(old){return function(){const r=old.apply(this,arguments);state.event=null;state.nextAt=45;state.npcs=[];state.lastUi=0;return r}})(g.start);
+  g.start=(function(old){return function(){const r=old.apply(this,arguments);state.event=null;state.nextAt=35;state.npcs=[];state.encounters=[];state.encounterAt=25;state.lastUi=0;return r}})(g.start);
   g.addEventListener;
  }
  function key(e){if(e.code==='KeyJ'&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){toggle();e.preventDefault()}}
