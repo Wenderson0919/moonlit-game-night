@@ -27,7 +27,7 @@
  document.body.append(launch,panel);
  const toggle=()=>{panel.style.display=panel.style.display==='block'?'none':'block';renderPanel()};
  launch.onclick=toggle;panel.querySelector('#eg-close').onclick=toggle;
- const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0};
+ const state={event:null,nextAt:50,serial:0,npcs:[],weather:'clear',weatherT:0,lastUi:0,talks:{}};
  function rand(a,b){return a+Math.random()*(b-a)}
  function makeNPCs(g){const names=['Lina, a Cartógrafa','Borin, o Viajante','Mestre Oren','Mila, a Mensageira','Tomas, o Aprendiz'];state.npcs=names.map((name,i)=>({name,x:g.player.x+Math.cos(i*1.25)*rand(80,190),y:g.player.y+Math.sin(i*1.25)*rand(70,150),homeX:0,homeY:0,dir:1,speed:rand(9,17),wait:rand(0,3),phase:rand(0,6),tone:['#527d72','#9b7046','#526a9b','#9a5f77','#8b874d'][i]}));state.npcs.forEach(n=>{n.homeX=n.x;n.homeY=n.y})}
  function safeEventPoint(g){const p=g.player;for(let i=0;i<100;i++){const a=rand(0,Math.PI*2),d=rand(430,650),x=Math.max(120,Math.min(3990,p.x+Math.cos(a)*d)),y=Math.max(120,Math.min(3990,p.y+Math.sin(a)*d));const bio=g.biomeAt(x,y);if(bio&&Math.hypot(x-p.x,y-p.y)>360&&!g.pondAt(x,y,90)&&!g.blocked(x,y)&&!p.inSafeZone)return{x,y,bio}}return{x:Math.min(3900,p.x+480),y:Math.min(3900,p.y+300),bio:g.biomeAt(p.x+480,p.y+300)||'forest'}}
@@ -65,6 +65,13 @@
  }
  function install(g){if(!g||g.__echoesInstalled)return;g.__echoesInstalled=true;const oldLoop=g.loop.bind(g);g.loop=function(ts){const prev=this._echoPrev||ts,dt=Math.min(.05,Math.max(0,(ts-prev)/1000));this._echoPrev=ts;try{update(this,dt)}catch(e){console.warn('[Ecos de Gaia]',e)}return oldLoop(ts)};
   const oldRender=g.render.bind(g);g.render=function(){const r=oldRender();try{drawWorld(this)}catch(e){console.warn('[Ecos de Gaia render]',e)}return r};
+  const oldInteract=g.interact.bind(g);g.interact=function(){const p=this.player,near=state.npcs.map(n=>({n,d:Math.hypot(p.x-n.x,p.y-n.y)})).sort((a,b)=>a.d-b.d)[0];if(near&&near.d<52){const n=near.n,lines={
+   'Lina, a Cartógrafa':['As trilhas mudam quando Gaia desperta. Observe os sinais dourados no horizonte.','Já desenhei mapas de cinco biomas, mas ainda existem lugares que nem os antigos conhecem.'],
+   'Borin, o Viajante':['Ouvi passos enormes perto das montanhas. Não eram de um animal comum.','Uma boa mochila e olhos atentos salvam mais vidas que uma espada afiada.'],
+   'Mestre Oren':['A energia de Gaia flui por toda criatura e pedra. Até uma simples erva pode guardar poder.','Não confunda força com coragem. Saber quando recuar também é uma habilidade.'],
+   'Mila, a Mensageira':['Os mercadores estão inquietos. Eventos estranhos têm surgido longe da vila.','Se encontrar uma fenda brilhante, não toque nela antes de limpar a área!'],
+   'Tomas, o Aprendiz':['Um dia vou explorar todos os biomas! Por enquanto, estou aprendendo a reconhecer os minérios.','Dizem que fragmentos caídos do céu ainda guardam calor.']
+  };const arr=lines[n.name]||['Que os caminhos de Gaia estejam a seu favor.'];const idx=state.talks[n.name]||0;state.talks[n.name]=idx+1;notify('💬 '+n.name+': “'+arr[idx%arr.length]+'”','#f2d59b');return}return oldInteract()}; 
   const oldKill=g.killAnimal.bind(g);g.killAnimal=function(a,silent){if(!silent&&a&&activeNear(a.x,a.y))addProgress('hunt',a.x,a.y);return oldKill(a,silent)};
   const oldAttack=g.attack.bind(g);g.attack=function(){const p=this.player,before=this.nodes?.filter(n=>n.hp>0&&Math.hypot(n.x-p.x,n.y-p.y)<75).map(n=>({n,hp:n.hp}))||[];const r=oldAttack();for(const v of before)if(v.n.hp<=0&&v.hp>0&&activeNear(v.n.x,v.n.y))addProgress('gather',v.n.x,v.n.y);return r};
   g.start=(function(old){return function(){const r=old.apply(this,arguments);state.event=null;state.nextAt=45;state.npcs=[];state.lastUi=0;return r}})(g.start);
