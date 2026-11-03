@@ -12,14 +12,14 @@ const GRANT_POLL_MS = 8000;
 const SYNC_POLL_MS = 15000;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type GameWin = Window & Record<string, any>;
+type GameWin = any;
 
 /** Coloca o personagem da conta no armazenamento do jogo antes de o jogo abrir. */
 export async function prepareCloudSave(userId: string) {
   const { data, error } = await supabase.from("characters").select("data").eq("user_id", userId).maybeSingle();
   if (error) throw error;
   const owner = localStorage.getItem(OWNER_KEY);
-  const cloud = data?.data as Record<string, unknown> | null | undefined;
+  const cloud = data?.data as any;
   if (cloud && typeof cloud === "object" && cloud.name) {
     localStorage.setItem(SAVE_KEY, JSON.stringify(cloud));
   } else if (owner && owner !== userId) {
@@ -39,7 +39,7 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
     pending = undefined;
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw || raw === lastSent || localStorage.getItem(OWNER_KEY) !== userId) return;
-    let s: Record<string, any>;
+    let s: any;
     try { s = JSON.parse(raw); } catch { return; }
     if (!s?.name) return;
     lastSent = raw;
@@ -86,7 +86,7 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
         try { w.updateUIStats?.(); w.saveGame?.(false); } catch { /* jogo ocupado */ }
         if (msg) w.showNotification?.("🎁 " + msg, "#fbbf24");
       } else {
-        let s: Record<string, any> | null = null;
+        let s: any | null = null;
         try { s = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"); } catch { s = null; }
         if (!s?.name) continue;
         applyGrant(s, g, w.genItem);

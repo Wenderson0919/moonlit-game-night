@@ -4,8 +4,8 @@ export type GrantKind = "level" | "gold" | "resource" | "tool" | "build" | "gear
 export type Grant = { kind: GrantKind; payload: Record<string, unknown> };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type State = Record<string, any>;
-type GenItem = (slot: string, rar: number, ilvl: number) => Record<string, any>;
+type State = any;
+type GenItem = (slot: string, rar: number, ilvl: number) => any;
 
 const int = (v: unknown, d = 0) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : d);
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -14,7 +14,7 @@ const nameOf = (list: { id: string; name: string }[], id: string) => list.find((
 
 /** Aplica uma alteração/presente do admin no estado salvo do personagem. Retorna a mensagem mostrada ao jogador. */
 export function applyGrant(s: State, g: Grant, genItem?: GenItem): string | null {
-  const p = g.payload ?? {};
+  const p: any = g.payload ?? {};
   switch (g.kind) {
     case "level": {
       const old = clamp(int(s.level, 1), 1, LEVEL_CAP);
@@ -93,7 +93,7 @@ export function applyGrant(s: State, g: Grant, genItem?: GenItem): string | null
 }
 
 export function describeGrant(g: Grant): string {
-  const p = g.payload ?? {};
+  const p: any = g.payload ?? {};
   const id = String(p.id ?? "");
   switch (g.kind) {
     case "level": return `Nível → ${int(p.level, 1)}`;
