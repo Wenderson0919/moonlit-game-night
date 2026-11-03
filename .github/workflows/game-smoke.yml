@@ -1,0 +1,39 @@
+name: Game smoke checks
+on:
+  push:
+    paths:
+      - "public/game/**"
+      - ".github/workflows/game-smoke.yml"
+  pull_request:
+    paths:
+      - "public/game/**"
+      - ".github/workflows/game-smoke.yml"
+jobs:
+  game-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check Ecos de Gaia JavaScript syntax
+        run: node --check public/game/echoes-of-gaia.js
+      - name: Verify game integration points
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('public/game/index.html', 'utf8');
+          const js = fs.readFileSync('public/game/echoes-of-gaia.js', 'utf8');
+          const checks = [
+            ['module loaded by game page', html.includes('<script src="./echoes-of-gaia.js"></script>')],
+            ['game-ready bootstrap', js.includes("aventuria:game-ready")],
+            ['event objectives spawned', js.includes('seedObjectives(g,state.event)')],
+            ['event cleanup', js.includes('cleanupObjectives(g,e)')],
+            ['NPC interaction wrapper', js.includes('const oldInteract=g.interact.bind(g)')],
+            ['combat progress hook', js.includes('const oldKill=g.killAnimal.bind(g)')],
+            ['gather progress hook', js.includes('const oldAttack=g.attack.bind(g)')],
+            ['full hunt objective count', js.includes('i<e.goal')]
+          ];
+          for (const [name, ok] of checks) console.log((ok ? 'PASS ' : 'FAIL ') + name);
+          if (checks.some(([, ok]) => !ok)) process.exit(1);
+          NODE
