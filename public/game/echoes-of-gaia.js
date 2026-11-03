@@ -38,7 +38,7 @@
   e.spawnedAnimals=[];e.spawnedNodes=[];
   if(e.kind==='hunt'){
    const kinds=huntKinds[e.biome]||huntKinds.forest;
-   for(let i=0;i<Math.min(e.goal,8);i++){const a=rand(i*2.399, i*2.399+1.4),d=rand(45,155),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length];if(typeof g.spawnAnimal==='function'&&window.AVENTURIA_CREATURE_DEFS?.[kind]&&!g.blocked(x,y)&&!g.pondAt(x,y,24)){const mob=g.spawnAnimal(kind,x,y);if(mob){mob.eventSerial=e.serial;e.spawnedAnimals.push(mob)}}}
+   for(let i=0;i<e.goal;i++){const a=rand(i*2.399, i*2.399+1.4),d=rand(45,155),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length];if(typeof g.spawnAnimal==='function'&&window.AVENTURIA_CREATURE_DEFS?.[kind]&&!g.blocked(x,y)&&!g.pondAt(x,y,24)){const mob=g.spawnAnimal(kind,x,y);if(mob){mob.eventSerial=e.serial;e.spawnedAnimals.push(mob)}}}
   }else{
    const kinds=gatherKinds[e.biome]||gatherKinds.forest,defs={bush:{hp:20},herb:{hp:12},cactus:{hp:35},sandstone:{hp:55},ice_crystal:{hp:65},pine:{hp:55},mushroom:{hp:15},ember_vent:{hp:40},obsidian:{hp:90}};
    for(let i=0;i<e.goal;i++){const a=i*2.399,d=rand(35,165),x=e.x+Math.cos(a)*d,y=e.y+Math.sin(a)*d,kind=kinds[i%kinds.length],def=defs?.[kind];if(!def)continue;const node={type:kind,x,y,hp:def.hp,maxHp:def.hp,respawn:0,biome:e.biome,eventSerial:e.serial};g.nodes.push(node);e.spawnedNodes.push(node)}
