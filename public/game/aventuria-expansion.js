@@ -332,7 +332,7 @@ function installGameHooks(){
   const handleNpcPointer=ev=>{
    // Aceita mouse, toque e caneta. Só intercepta quando o toque cai sobre um NPC.
    if(ev.pointerType==='mouse'&&ev.button!==undefined&&ev.button!==0)return;
-   if(ev.target?.closest?.('button,a,input,textarea,select,[role="dialog"]'))return;
+   if(ev.target?.closest?.('#mc,.mcb,#avx-mobile-interact,button,a,input,textarea,select,[role="dialog"]'))return;
    const g=game(),p=g?.player,canvas=g?.canvas;if(!g?.running||!p||p.realmId||!canvas||p.inSafeZone!==true)return;
    const rect=canvas.getBoundingClientRect();
    if(ev.clientX<rect.left||ev.clientX>rect.right||ev.clientY<rect.top||ev.clientY>rect.bottom)return;
