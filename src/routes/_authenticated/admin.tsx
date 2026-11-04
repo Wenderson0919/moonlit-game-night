@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { BUILDS, GEAR_SLOTS, LEVEL_CAP, MOUNTS, PETS, RARITIES, RESOURCES, TOOLS } from "@/lib/game-catalog";
-import { describeGrant, type Grant, type GrantKind } from "@/lib/grants";
+import { CLASSES, describeGrant, type Grant, type GrantKind } from "@/lib/grants";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -107,6 +107,8 @@ function AdminPage() {
           </section>
         </div>
 
+        <GlobalTools adminId={adminId} onSent={setMsg} />
+
         <section className="mt-6 rounded-xl border border-border bg-card/90 p-4">
           <h2 className="font-display text-xl text-primary">Últimos envios</h2>
           <ul className="mt-2 space-y-1 text-sm">
@@ -134,6 +136,9 @@ function PlayerTools({ p, send }: { p: Player; send: (k: GrantKind, payload: Rec
   const [slot, setSlot] = useState(GEAR_SLOTS[0]!.id);
   const [rar, setRar] = useState(4);
   const [ilvl, setIlvl] = useState(Math.max(1, p.level));
+  const [sp, setSp] = useState(5);
+  const [cls, setCls] = useState(p.class_name || CLASSES[0]!);
+  const [mute, setMute] = useState(10);
 
   return (
     <div className="space-y-5">
@@ -192,6 +197,62 @@ function PlayerTools({ p, send }: { p: Player; send: (k: GrantKind, payload: Rec
           Enviar presente
         </button>
       </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground">Poderes de personagem</label>
+        <div className="mt-1 flex gap-2">
+          <button className="btn-gold flex-1" onClick={() => send("heal", {})}>Curar 100%</button>
+          <input className="field w-20" type="number" min={1} max={100} value={sp} onChange={(e) => setSp(+e.target.value)} />
+          <button className="btn-ghost shrink-0" onClick={() => send("skillpoints", { amount: Math.max(1, Math.trunc(sp)) })}>+ Pontos</button>
+        </div>
+        <div className="mt-2 flex gap-2">
+          <select className="field" value={cls} onChange={(e) => setCls(e.target.value)}>
+            {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button className="btn-ghost shrink-0" onClick={() => send("class", { id: cls })}>Trocar classe</button>
+        </div>
+        <button className="btn-ghost mt-2 w-full" onClick={() => { if (confirm(`Reiniciar ${p.name}? Nível, Gold e itens voltam ao começo.`)) void send("reset", {}); }}>
+          Reiniciar personagem
+        </button>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground">Moderação</label>
+        <div className="mt-1 flex gap-2">
+          <button className="btn-ghost flex-1" onClick={() => send("teleport", {})}>Levar à Área Safe</button>
+          <button className="btn-ghost flex-1" onClick={() => send("kick", {})}>Desconectar</button>
+        </div>
+        <div className="mt-2 flex gap-2">
+          <input className="field" type="number" min={0} value={mute} onChange={(e) => setMute(+e.target.value)} title="Minutos" />
+          <button className="btn-ghost shrink-0" onClick={() => send("mute", { minutes: Math.max(0, Math.trunc(mute)) })}>Silenciar (min)</button>
+          <button className="btn-ghost shrink-0" onClick={() => send("mute", { minutes: 0 })}>Liberar</button>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function GlobalTools({ adminId, onSent }: { adminId: string; onSent: (m: string) => void }) {
+  const [text, setText] = useState("");
+  const [tier, setTier] = useState(-1);
+  async function post(kind: string, message: string, payload: Record<string, unknown> = {}) {
+    const { error } = await supabase.from("admin_broadcasts").insert({ kind, message, payload: payload as Json, created_by: adminId });
+    onSent(error ? "Não foi possível enviar: " + error.message : kind === "raid" ? "Raid invocada para todos os jogadores online." : "Aviso enviado para todos online.");
+  }
+  return (
+    <section className="mt-6 rounded-xl border border-border bg-card/90 p-4">
+      <h2 className="font-display text-xl text-primary">Eventos para todos</h2>
+      <div className="mt-2 flex gap-2">
+        <input className="field" maxLength={140} placeholder="Aviso na tela de todos os jogadores online" value={text} onChange={(e) => setText(e.target.value)} />
+        <button className="btn-gold shrink-0" disabled={!text.trim()} onClick={() => { void post("announce", text.trim()); setText(""); }}>Anunciar</button>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <select className="field" value={tier} onChange={(e) => setTier(+e.target.value)}>
+          <option value={-1}>Raridade aleatória</option>
+          {["Comum", "Incomum", "Rara", "Épica", "Lendária"].map((r, i) => <option key={r} value={i}>{r}</option>)}
+        </select>
+        <button className="btn-gold shrink-0" onClick={() => post("raid", "", tier >= 0 ? { tier } : {})}>Invocar raid</button>
+      </div>
+    </section>
   );
 }
