@@ -83,9 +83,21 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
       const running = !!w.game?.running && w.MMO?.localState?.name;
       if (running) {
         const msg = applyGrant(w.MMO.localState, g, w.genItem);
-        try { w.updateUIStats?.(); w.saveGame?.(false); } catch { /* jogo ocupado */ }
-        if (msg) w.showNotification?.("🎁 " + msg, "#fbbf24");
+        try {
+          if (g.kind === "teleport" && w.game.player) {
+            const pt = w.game.safeSpawnPoint?.() ?? null;
+            if (pt) { w.game.player.x = pt.x; w.game.player.y = pt.y; }
+          }
+          w.updateUIStats?.(); w.saveGame?.(false);
+        } catch { /* jogo ocupado */ }
+        if (msg) w.showNotification?.((g.kind === "kick" || g.kind === "mute" ? "⚠️ " : "🎁 ") + msg, "#fbbf24");
+        if (g.kind === "kick") {
+          schedule();
+          window.setTimeout(() => { window.location.href = "/"; }, 2500);
+          return;
+        }
       } else {
+        if (g.kind === "kick" || g.kind === "teleport") { schedule(); continue; }
         let s: any | null = null;
         try { s = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"); } catch { s = null; }
         if (!s?.name) continue;
@@ -97,7 +109,28 @@ export function startCloudSync(frame: HTMLIFrameElement, userId: string, email: 
       schedule();
     }
   }
-  const grantTimer = window.setInterval(() => void applyGrants(), GRANT_POLL_MS);
+
+  // Avisos globais e eventos do admin (valem só para quem está online a partir de agora)
+  let since = new Date().toISOString();
+  async function pollBroadcasts() {
+    const w = frame.contentWindow as GameWin | null;
+    if (stopped || !w?.game?.running) return;
+    const { data: rows } = await supabase.from("admin_broadcasts")
+      .select("id, kind, message, payload, created_at").gt("created_at", since).order("created_at");
+    for (const r of rows ?? []) {
+      since = r.created_at;
+      try {
+        if (r.kind === "announce") w.showNotification?.("📢 Admin: " + r.message, "#fbbf24");
+        if (r.kind === "raid") {
+          const tier = Number((r.payload as any)?.tier);
+          w.game.spawnRaid?.(Number.isInteger(tier) && tier >= 0 && tier <= 4 ? tier : null, null, false);
+          w.showNotification?.("⚔️ O admin invocou uma raid! Veja o painel de raids.", "#f87171");
+        }
+      } catch { /* jogo ocupado */ }
+    }
+  }
+
+  const grantTimer = window.setInterval(() => { void applyGrants(); void pollBroadcasts(); }, GRANT_POLL_MS);
   const onLoad = () => void applyGrants();
   frame.addEventListener("load", onLoad);
 
