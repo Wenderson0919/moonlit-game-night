@@ -16,13 +16,13 @@ const STALE_MS = 6000;
 
 type Remote = {
   id: number; name: string; cls: string; race: string; hair: string; eye: string;
-  skin: string; hairStyle: string; beard: string; outfit: string; outfitStyle: string; cloak: string; accessory: string; mark: string;
+  skin: string; hairStyle: string; beard: string; outfit: string; outfitStyle: string; cloak: string; accessory: string; mark: string; mnt: string; ttl: string;
   x: number; y: number; dir: string; m: boolean; lvl: number; hp: number; mh: number; pv: boolean; last: number;
 };
 
 type Bag = {
   t?: unknown; id?: unknown; name?: unknown; cls?: unknown; race?: unknown; hair?: unknown; eye?: unknown;
-  skin?: unknown; hairStyle?: unknown; beard?: unknown; outfit?: unknown; outfitStyle?: unknown; cloak?: unknown; accessory?: unknown; mark?: unknown;
+  mnt?: unknown; ttl?: unknown; skin?: unknown; hairStyle?: unknown; beard?: unknown; outfit?: unknown; outfitStyle?: unknown; cloak?: unknown; accessory?: unknown; mark?: unknown;
   x?: unknown; y?: unknown; dir?: unknown; d?: unknown; m?: unknown; lvl?: unknown; hp?: unknown; mh?: unknown;
   pv?: unknown; k?: unknown; l?: unknown; by?: unknown; n?: unknown; to?: unknown; from?: unknown; raw?: unknown;
   world?: unknown;
@@ -47,6 +47,8 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
   let lastSend = 0;
   let lastTrack = 0;
   let lastWarn = 0;
+  let mgTokens = 20;
+  let mgRefill = Date.now();
   function track() {
     if (!channel || !me) return;
     lastTrack = Date.now();
@@ -61,7 +63,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
   function toRemote(id: number, a: Bag): Remote {
     return {
       id, name: str(a.name, 24, "Herói"), cls: str(a.cls, 24), race: str(a.race, 24),
-      hair: str(a.hair, 16), eye: str(a.eye, 16), skin: str(a.skin,16), hairStyle: str(a.hairStyle,16), beard: str(a.beard,16), outfit: str(a.outfit,16), outfitStyle: str(a.outfitStyle,16), cloak: str(a.cloak,16), accessory: str(a.accessory,16), mark: str(a.mark,16), x: num(a.x, CX), y: num(a.y, CX + 110),
+      hair: str(a.hair, 16), eye: str(a.eye, 16), skin: str(a.skin,16), hairStyle: str(a.hairStyle,16), beard: str(a.beard,16), outfit: str(a.outfit,16), outfitStyle: str(a.outfitStyle,16), cloak: str(a.cloak,16), accessory: str(a.accessory,16), mark: str(a.mark,16), mnt: str(a.mnt,16), ttl: str(a.ttl,24), x: num(a.x, CX), y: num(a.y, CX + 110),
       dir: str(a.dir, 8, "down"), m: !!a.m, lvl: Math.max(1, Math.min(60, num(a.lvl, 1) | 0)),
       hp: num(a.hp, 100), mh: num(a.mh, 100), pv: !!a.pv, last: Date.now(),
     };
@@ -78,7 +80,7 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
     const p: unknown[] = [];
     for (const o of others.values()) {
       if (now - o.last > STALE_MS) { others.delete(o.id); continue; }
-      p.push([o.id, o.name, o.cls, o.race, o.hair, o.eye, o.x, o.y, o.dir, o.m ? 1 : 0, o.lvl, o.hp, o.mh, o.pv ? 1 : 0, o.skin, o.hairStyle, o.beard, o.outfit, o.outfitStyle, o.cloak, o.accessory, o.mark]);
+      p.push([o.id, o.name, o.cls, o.race, o.hair, o.eye, o.x, o.y, o.dir, o.m ? 1 : 0, o.lvl, o.hp, o.mh, o.pv ? 1 : 0, o.skin, o.hairStyle, o.beard, o.outfit, o.outfitStyle, o.cloak, o.accessory, o.mark, o.mnt, o.ttl]);
     }
     const raidHost = Math.min(myId, ...others.keys());
     deliver({ t: "snap", p, b: [], m: [], n: p.length + 1, rh: raidHost });
@@ -113,6 +115,12 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
       })
       .on("broadcast", { event: "chat" }, ({ payload }: { payload: Bag }) => {
         deliver({ t: "chat", id: num(payload?.id, 0), n: str(payload?.n, 24, "Jogador"), m: str(payload?.m, 120) });
+      })
+      .on("broadcast", { event: "mg" }, ({ payload }: { payload: Bag }) => {
+        // Mensagens do mundo compartilhado (Titã, eventos, avisos). O conteúdo é limitado e só é entregue ao jogo.
+        const from = num(payload?.from, 0);
+        if (!from || from === myId) return;
+        deliver({ t: "mg", from, d: payload?.d });
       })
       .on("broadcast", { event: "sys" }, ({ payload }: { payload: Bag }) => deliver({ t: "sys", m: str(payload?.m, 160) }))
       .on("broadcast", { event: "hurt" }, ({ payload }: { payload: Bag }) => {
@@ -233,6 +241,21 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         const { t: _raidMessageType, ...body } = m;
         const payload = { ...body, from: myId };
         void channel.send({ type: "broadcast", event: "raid", payload });
+        break;
+      }
+      case "mg": {
+        if (!me || !channel) return;
+        const now = Date.now();
+        // balde de fichas: ~20 mensagens/s em média, com rajadas curtas
+        mgTokens = Math.min(20, mgTokens + ((now - mgRefill) / 1000) * 20);
+        mgRefill = now;
+        if (mgTokens < 1) return;
+        mgTokens -= 1;
+        const d = (m as { d?: unknown }).d;
+        let ok = false;
+        try { ok = JSON.stringify(d ?? null).length <= 700; } catch { ok = false; }
+        if (!ok) return;
+        void channel.send({ type: "broadcast", event: "mg", payload: { from: myId, d } });
         break;
       }
       case "chat": {

@@ -179,7 +179,7 @@ function instanceReward(g,s){
  const m=M(),L=lvl();
  if(INS.kind==='dungeon'){
   m.dungeon.clears++;const t=(performance.now()-INS.t0)/1000;if(!m.dungeon.fastest||t<m.dungeon.fastest)m.dungeon.fastest=Math.round(t);
-  INS.chest={x:g.player.x,y:g.player.y-90};INS.won=true;INS.state='chest';notify('🏆 Guardião derrotado! Abra o baú das Profundezas.','#fde047');
+  INS.chest={x:g.player.x,y:g.player.y-90};INS.won=true;INS.state='chest';say('🏆 '+(S().name||'Um herói')+' derrotou o Guardião das Profundezas!');
  }
 }
 function openChest(g,s){
@@ -205,7 +205,7 @@ function instanceTick(g,dt){
    g.hazards=[];
    if(INS.kind==='tower'){
     const m=M(),f=INS.floor,gold=40+f*14+lvl()*3;s.gold=(s.gold||0)+gold;g.gainExp&&g.gainExp(40+f*12);
-    if(f>m.tower.best){m.tower.best=f;notify('🏅 Novo recorde pessoal: andar '+f+'!','#fde047')}
+    if(f>m.tower.best){m.tower.best=f;notify('🏅 Novo recorde pessoal: andar '+f+'!','#fde047');if(f%10===0)say('🗼 '+(s.name||'Um herói')+' chegou ao andar '+f+' da Torre Infinita!')}
     if(f%5===0){s.resources??={};s.resources.diamond=(s.resources.diamond||0)+(f%10===0?3:1);try{if(f%10===0)giveItem(genItem(null,Math.min(4,2+Math.floor(f/15)),lvl(),'forest',true))}catch{}}
     warPoints(f%5===0?10:1);
     s.hp=Math.min((s.maxHp||100)+((window.getRPGStats&&window.getRPGStats().hp)||0),s.hp+Math.round((s.maxHp||100)*.12));
@@ -234,43 +234,60 @@ function instanceHud(){
 /* ============================================================================
    TITÃ COLOSSAL — chefe mundial no mapa aberto
    ========================================================================== */
-const TT={a:null,until:0,next:0,spawned:0};
-function spawnTitan(g,s){
- const p=g.player,L=lvl(),kinds=hostileKinds(),kind=kinds[kinds.length-1-ri(0,Math.min(2,kinds.length-1))];
- for(let tr=0;tr<30;tr++){
-  const an=rnd(0,TAU),d=rnd(950,1500),x=CXW+Math.cos(an)*d,y=CXW+Math.sin(an)*d;
-  if(x<250||y<250||x>3750||y>3750)continue;if(g.pondAt&&g.pondAt(x,y,60))continue;
-  const a=g.spawnAnimal(kind,x,y,{mult:1});const hp=6000+L*220;
-  makeBoss(g,a,{name:'Titã Colossal',pow:1.5,sz:3.2,hp,addKind:kind,cap:8,col:'#f43f5e',big:true});
-  a.ins=false;a.titan=true;a.hx=x;a.hy=y;TT.a=a;TT.until=Date.now()+7*60000;TT.spawned=Date.now();M().wb.dmg=0;
-  notify('🗿 O TITÃ COLOSSAL despertou no mapa! Siga a seta vermelha. Dano total conta para a recompensa.','#f43f5e');
+const TT={a:null,slot:-1,doneSlot:-1,dmgOut:0,sendT:0,hpT:0,posT:0,tpos:null,apply:false};
+const TIT_SLOT=12*60000, TIT_UP=7*60000, TIT_HP=30000;
+const hr=(a,b)=>window.AVENTURIA_HRAND(a,b);
+function titanInfo(now){const slot=Math.floor(now/TIT_SLOT),t0=slot*TIT_SLOT;return {slot,t0,up:now<t0+TIT_UP,until:t0+TIT_UP,next:t0+TIT_SLOT}}
+const NETS=()=>window.AVENTURIA_NET_STATE;
+const netSend=o=>{try{window.AVENTURIA_NET_SEND&&window.AVENTURIA_NET_SEND(o)}catch{}};
+const netOn=(k,f)=>{if(window.AVENTURIA_NET_ON)window.AVENTURIA_NET_ON(k,f)};
+const isHost=()=>{const n=NETS();return !n||!n.ready||!n.raidHost||n.raidHost===n.id};
+const say=m=>{notify(m);netSend({k:'say',m})};
+netOn('say',d=>{if(typeof d.m==='string')notify('🌍 '+d.m.slice(0,140))});
+netOn('td',d=>{const g=G();if(!g||!TT.a||d.s!==TT.slot||!(d.d>0))return;TT.apply=true;try{g.damageTarget(TT.a,Math.min(d.d,TT_CAP()),0,false)}finally{TT.apply=false}});
+netOn('thp',d=>{const g=G();if(!g||!TT.a||d.s!==TT.slot||!(d.h>=0))return;if(d.h<TT.a.hp){TT.apply=true;try{g.damageTarget(TT.a,TT.a.hp-d.h+.01,0,false)}finally{TT.apply=false}}});
+netOn('tpos',d=>{if(TT.a&&d.s===TT.slot&&!isHost())TT.tpos={x:+d.x,y:+d.y}});
+const TT_CAP=()=>TIT_HP*.2;
+function spawnTitan(g,s,slot){
+ const kinds=hostileKinds(),kind=kinds[kinds.length-1-Math.floor(hr(slot,50)*Math.min(3,kinds.length))];
+ for(let i=0;i<20;i++){
+  const an=hr(slot,60+i)*TAU,d=900+hr(slot,90+i)*700,x=CXW+Math.cos(an)*d,y=CXW+Math.sin(an)*d;
+  if(x<300||y<300||x>3700||y>3700)continue;if(g.pondAt&&g.pondAt(x,y,70))continue;
+  const a=g.spawnAnimal(kind,x,y,{mult:1});
+  makeBoss(g,a,{name:'Titã Colossal',pow:1.5,sz:3.2,hp:TIT_HP,addKind:kind,cap:8,col:'#f43f5e',big:true});
+  a.ins=false;a.titan=true;a.hx=x;a.hy=y;TT.a=a;TT.slot=slot;TT.tpos=null;TT.dmgOut=0;M().wb.dmg=0;M().wb.joined=slot;
+  notify('🗿 O TITÃ COLOSSAL despertou no mapa — para todos os jogadores! Siga a seta vermelha. Dano combinado derruba o Titã.','#f43f5e');
   g.shake&&g.shake(8,.8);return true;
  }
  return false;
 }
-function titanTick(g,s,now){
+function titanTick(g,s,now,dt){
  const p=g.player;if(!p||p.realmId||INS.on)return;
- const T=TT;
+ const info=titanInfo(now),T=TT;
  if(T.a){
   const gone=!g.animals.includes(T.a);
-  if(gone||T.a.hp<=0){
-   const m=M(),dmg=m.wb.dmg,need=T.a.maxHp*.04;
-   if(T.a.hp<=0||dmg>=need&&gone){
+  if(gone||T.a.hp<=0||!info.up||info.slot!==T.slot){
+   const m=M(),dmg=m.wb.dmg,need=TIT_HP*.03,killed=gone||T.a.hp<=0;
+   if(killed&&info.slot===T.slot){
     if(dmg>=need){
      const gold=2500+lvl()*120,dia=8+ri(0,4);s.gold=(s.gold||0)+gold;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+dia;
      try{giveItem(genItem(null,Math.min(4,3+ri(0,1)),lvl(),'forest',true))}catch{}
-     m.wb.kills++;warPoints(40);notify('🗿 TITÃ DERROTADO! Participação: +'+gold+' Gold, +'+dia+' Diamantes e um item lendário!','#fde047');g.shake&&g.shake(10,1);upd();persist();
-    }else notify('🗿 O Titã caiu, mas sua participação foi baixa demais para recompensa.');
-   }
-   T.a=null;T.next=now+(8+Math.random()*6)*60000;return;
+     m.wb.kills++;warPoints(40);notify('🗿 TITÃ DERROTADO! Sua participação: +'+gold+' Gold, +'+dia+' Diamantes e um item raro!','#fde047');g.shake&&g.shake(10,1);upd();persist();
+    }else notify('🗿 O Titã caiu, mas sua participação foi baixa demais para recompensa (mínimo 3% da vida dele).');
+    T.doneSlot=T.slot;
+   }else{if(!gone)g.animals.splice(g.animals.indexOf(T.a),1);notify('🗿 O Titã voltou a dormir… Ele retornará em breve.')}
+   T.a=null;T.tpos=null;return;
   }
-  if(now>T.until){g.animals.splice(g.animals.indexOf(T.a),1);T.a=null;T.next=now+8*60000;notify('🗿 O Titã voltou a dormir… Ele retornará.');return}
-  const d=Math.hypot(p.x-T.a.x,p.y-T.a.y);if(d<900&&T.a.bl&&p.inSafeZone!==true)bossTick(g,T.a,Math.min(.1,g._mgDt||.016));
-  // mantém o Titã perto do jogador quando ele já foi atacado (não foge da luta)
+  // sincronização com os outros jogadores
+  T.sendT-=dt;T.hpT-=dt;T.posT-=dt;
+  if(T.sendT<=0&&T.dmgOut>0){T.sendT=.5;netSend({k:'td',s:T.slot,d:Math.round(T.dmgOut)});T.dmgOut=0}
+  if(T.hpT<=0){T.hpT=4;netSend({k:'thp',s:T.slot,h:Math.round(T.a.hp)})}
+  if(isHost()){if(T.posT<=0){T.posT=.35;netSend({k:'tpos',s:T.slot,x:Math.round(T.a.x),y:Math.round(T.a.y)})}}
+  else if(T.tpos){T.a.x+=(T.tpos.x-T.a.x)*.3;T.a.y+=(T.tpos.y-T.a.y)*.3}
+  if(Math.hypot(p.x-T.a.x,p.y-T.a.y)<900&&p.inSafeZone!==true)bossTick(g,T.a,Math.min(.1,dt));
   return;
  }
- if(!T.next)T.next=now+90000+Math.random()*60000;
- if(now>T.next&&p.inSafeZone!==true&&!g.animals.some(a=>a.titan)){if(!spawnTitan(g,s))T.next=now+30000;else T.next=Infinity}
+ if(info.up&&info.slot!==T.doneSlot&&!g.animals.some(a=>a.titan)){spawnTitan(g,s,info.slot)}
 }
 
 /* ============================================================================
@@ -309,6 +326,7 @@ function drawOverlays(g){
   if(d>420){const an=Math.atan2(t.y-p.y,t.x-p.x);c.save();c.translate(p.x+Math.cos(an)*150,p.y+Math.sin(an)*150);c.rotate(an);c.fillStyle='rgba(244,63,94,.95)';c.beginPath();c.moveTo(16,0);c.lineTo(-8,-10);c.lineTo(-8,10);c.closePath();c.fill();c.restore()}
   else{const pc=Math.max(0,t.hp/t.maxHp);c.fillStyle='rgba(8,10,20,.8)';c.fillRect(t.x-90,t.y-t.def.sz-78,180,12);c.fillStyle='#f43f5e';c.fillRect(t.x-88,t.y-t.def.sz-76,176*pc,8)}
  }
+ try{const NS=window.AVENTURIA_NET_STATE;if(NS&&NS.players&&window.AVENTURIA_DRAW_MOUNT&&!p.realmId)for(const q of NS.players.values()){if(q.mnt&&Math.abs(q.x-p.x)<W/2+80&&Math.abs(q.y-p.y)<H/2+80)window.AVENTURIA_DRAW_MOUNT(c,q,now)}}catch(e){}
  if(FISH.state!=='idle'&&FISH.pos){const f=FISH.pos,bob=Math.sin(now/200)*2;c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=1;c.beginPath();c.moveTo(p.x,p.y-10);c.quadraticCurveTo((p.x+f.x)/2,Math.min(p.y,f.y)-30,f.x,f.y+bob);c.stroke();
   c.fillStyle=FISH.state==='bite'?'#ef4444':'#fff';c.beginPath();c.arc(f.x,f.y+bob,4,0,TAU);c.fill();
   if(FISH.state==='bite'){c.font='bold 20px Inter';c.textAlign='center';c.fillStyle='#fde047';c.fillText('!',f.x,f.y-14)}}
@@ -316,7 +334,7 @@ function drawOverlays(g){
 }
 
 /* ============================================================================
-   PESCA (tecla G perto da água) e CULINÁRIA
+   PESCA (tecla N perto da água) e CULINÁRIA
    ========================================================================== */
 const FISHES=[
  {id:'sardine',n:'Sardinha',icon:'🐟',w:50,v:12,rare:0},
@@ -339,7 +357,7 @@ function fishAction(){
  const p=g.player,m=M();
  if(FISH.state==='idle'){
   const pond=g.pondAt&&g.pondAt(p.x,p.y,90);
-  if(!pond){notify('🎣 Chegue perto de um lago ou rio e aperte G para pescar.');return}
+  if(!pond){notify('🎣 Chegue perto de um lago ou rio e aperte N para pescar.');return}
   const an=Math.atan2(pond.y-p.y,pond.x-p.x),d=Math.max(20,Math.hypot(pond.x-p.x,pond.y-p.y)-pond.r*.4);
   FISH.pos={x:p.x+Math.cos(an)*Math.min(d,pond.r+40),y:p.y+Math.sin(an)*Math.min(d,pond.r+40)};
   FISH.state='wait';FISH.t=rnd(2,4.5);FISH.pond=pond;notify('🎣 Lançou a linha… espere a fisgada!');
@@ -357,7 +375,7 @@ function fishTick(g,dt){
  if(FISH.state==='idle')return;
  const p=g.player;if(!p||p.realmId||Math.hypot(p.x-FISH.pos.x,p.y-FISH.pos.y)>260){FISH.state='idle';return}
  FISH.t-=dt;
- if(FISH.state==='wait'&&FISH.t<=0){FISH.state='bite';FISH.t=1.3;notify('❗ Fisgou! Aperte G agora!','#fde047')}
+ if(FISH.state==='wait'&&FISH.t<=0){FISH.state='bite';FISH.t=1.3;notify('❗ Fisgou! Aperte N agora!','#fde047')}
  else if(FISH.state==='bite'&&FISH.t<=0){FISH.state='idle';notify('O peixe escapou…')}
 }
 const RECIPES=[
@@ -387,7 +405,7 @@ function openCookUI(){
  const inv=FISHES.filter(f=>(m.fish.inv[f.id]||0)>0).map(f=>f.icon+' '+f.n+' ×'+m.fish.inv[f.id]).join(' · ')||'<i>nenhum peixe ainda</i>';
  const value=FISHES.reduce((t,f)=>t+(m.fish.inv[f.id]||0)*f.v,0);
  modal('mg-cook',head('🍳 Chef & Pescador')+
-  '<p class="mg-sub">Pesque com <b>G</b> perto da água (lagos, rios, lava e gelo têm peixes diferentes). Cozinhe pratos com buffs ou venda o peixe.</p>'+
+  '<p class="mg-sub">Pesque com <b>N</b> perto da água (lagos, rios, lava e gelo têm peixes diferentes). Cozinhe pratos com buffs ou venda o peixe.</p>'+
   '<p style="font-size:13px;margin:8px 0"><b>Seu estoque:</b> '+inv+'</p>'+
   (b?'<p style="color:#86efac;font-size:12px">✅ Prato ativo: <b>'+b.name+'</b> · '+Math.ceil((b.until-Date.now())/1000)+'s</p>':'')+
   RECIPES.map(r=>'<div class="mg-row"><span style="font-size:26px">'+r.icon+'</span><div class="mg-grow"><b>'+r.n+'</b><div class="mg-sub">'+r.desc+'</div><div class="mg-sub">Requer '+r.need.any+' peixe(s)'+(r.need.rare?' (ao menos '+r.need.rare+' '+(r.id==='moon'?'muito raro(s)':'raro(s)')+')':'')+'</div></div><button class="mg-btn" data-cook="'+r.id+'" '+(cookCan(r)?'':'disabled')+'>Cozinhar</button></div>').join('')+
@@ -478,7 +496,7 @@ function openPrestigeUI(){
   const ci=(typeof CLASS_INFO!=='undefined'&&CLASS_INFO[s.className])||{hp:100};
   s.level=1;s.exp=0;s.maxExp=(typeof xpNeed==='function')?xpNeed(1):120;s.maxHp=ci.hp||100;s.skills={strength:0,vitality:0,wisdom:0,agility:0};s.skillPoints=3;
   const w=s.expansion&&s.expansion.world;if(w){w.skills={};w.spent=0}
-  P.count++;P.points+=2;try{s.hp=s.maxHp}catch{}
+  P.count++;P.points+=2;say('♾️ '+(s.name||'Um herói')+' renasceu pela '+(P.count)+'ª vez!');try{s.hp=s.maxHp}catch{}
   if(s.expansion)s.expansion.title='reborn';
   notify('♾️ RENASCIMENTO '+P.count+'! Você recomeça mais forte. +2 Pontos de Prestígio.','#fde047');const g=G();g&&g.shake&&g.shake(8,.8);upd();persist();openPrestigeUI();
  };
@@ -520,7 +538,7 @@ const STORIES=[
    choices:[{l:'Libertar o espírito',r:'+30 vida permanente e 3 💎',f:(s,g,m)=>{m.story.bonus.hp+=30;s.resources.diamond=(s.resources.diamond||0)+3}},{l:'Selar o espírito',r:'+6% ouro/XP permanente',f:(s,g,m)=>{m.story.bonus.gold+=6}}]}
  ]},
  {id:'fisher',n:'A Lenda do Pescador',icon:'🎣',chapters:[
-  {t:'"Dizem que existe uma Carpa Dourada que realiza desejos. Comece pescando 5 peixes para mostrar paciência."',obj:{type:'fish',n:5,label:'Pesque 5 peixes (tecla G)'},
+  {t:'"Dizem que existe uma Carpa Dourada que realiza desejos. Comece pescando 5 peixes para mostrar paciência."',obj:{type:'fish',n:5,label:'Pesque 5 peixes (tecla N)'},
    choices:[{l:'Dividir com os vilarejos',r:'+700 XP',f:(s,g)=>{g.gainExp&&g.gainExp(700)}},{l:'Guardar para vender',r:'+350 Gold',f:(s)=>{s.gold=(s.gold||0)+350}}]},
   {t:'"Agora cozinhe 3 pratos no Chef para honrar a tradição."',obj:{type:'cook',n:3,label:'Cozinhe 3 pratos'},
    choices:[{l:'Oferecer ao rio',r:'+2 ataque permanente',f:(s,g,m)=>{m.story.bonus.atk+=2}},{l:'Comer o banquete',r:'+25 vida permanente',f:(s,g,m)=>{m.story.bonus.hp+=25}}]},
@@ -572,16 +590,16 @@ function openDungeonUI(tab){
    '<div class="mg-row"><div class="mg-grow"><b>🏅 Recorde pessoal: andar '+m.tower.best+'</b><div class="mg-sub">Subidas: '+m.tower.runs+' · Próxima marca: andar '+(Math.floor(m.tower.best/5)+1)*5+'</div></div><button class="mg-btn" id="mg-go-t">🗼 Subir</button></div>'+
    '<h3>🏆 Marcos</h3>'+[5,10,15,20,30].map(f=>'<div class="mg-row"><span>'+(m.tower.best>=f?'✅':'⬜')+'</span><div class="mg-grow"><b>Andar '+f+'</b><div class="mg-sub">'+(f%10===0?'Item raro + 3 💎':'+1 💎')+'</div></div></div>').join('');
  }else{
-  const T=TT;
-  body='<p class="mg-sub">Um <b>Titã Colossal</b> desperta no mapa aberto de tempos em tempos (fora da Área Safe). Ele tem 4 padrões de ataque e 3 fases. Quem causar ao menos 4% da vida dele recebe a recompensa — por isso, ir em grupo ajuda muito!</p>'+
-   '<div class="mg-row"><div class="mg-grow"><b>'+(T.a?'🗿 O Titã está desperto!':'🗿 O Titã dorme')+'</b><div class="mg-sub">'+(T.a?'Siga a seta vermelha no mapa. Seu dano: '+Math.round(m.wb.dmg)+' / '+Math.round(T.a.maxHp*.04)+' necessários.':'Aparece a cada poucos minutos quando você explora fora da cidade.')+'</div></div><button class="mg-btn warn" id="mg-call" '+(T.a?'disabled':'')+'>Despertar agora (200 G)</button></div>'+
-   '<div class="mg-sub" style="margin-top:6px">Titãs derrotados: '+m.wb.kills+'</div>';
+  const info=titanInfo(Date.now()),mins=Math.max(0,Math.ceil((info.up?info.until-Date.now():info.next-Date.now())/60000));
+  body='<p class="mg-sub">Um <b>Titã Colossal</b> desperta no mapa aberto a cada 12 minutos e fica 7 minutos — <b>para todos os jogadores ao mesmo tempo, no mesmo lugar e com a vida compartilhada</b>. Todo dano somado derruba o Titã; quem causar ao menos 3% da vida dele recebe a recompensa. Quanto mais gente, mais rápido!</p>'+
+   '<div class="mg-row"><div class="mg-grow"><b>'+(TT.a?'🗿 O Titã está desperto!':info.up?'🗿 O Titã despertou (siga a seta)':'🗿 O Titã dorme')+'</b><div class="mg-sub">'+(TT.a?'Vida: '+Math.round(TT.a.hp)+' / '+TIT_HP+' · seu dano: '+Math.round(m.wb.dmg)+' (mínimo '+Math.round(TIT_HP*.03)+')':info.up?'Fora da Área Safe, procure a seta vermelha no mapa. Termina em ~'+mins+' min.':'Desperta de novo em ~'+mins+' min.')+'</div></div></div>'+
+   '<div class="mg-sub" style="margin-top:6px">Titãs derrotados por você: '+m.wb.kills+'</div>';
  }
  modal('mg-dungeon',head('🕳️ Guardião das Profundezas')+'<div class="mg-tabs">'+[['dungeon','Masmorra'],['tower','Torre Infinita'],['titan','Titã']].map(([k,l])=>'<div class="mg-tab '+(tab===k?'on':'')+'" data-tab="'+k+'">'+l+'</div>').join('')+'</div>'+body);
  document.querySelectorAll('#mg-dungeon [data-tab]').forEach(t=>t.onclick=()=>openDungeonUI(t.dataset.tab));
  const d=$('mg-go-d');if(d)d.onclick=()=>{if(L<5&&!confirm('Você está abaixo do nível recomendado. Quer descer mesmo assim?'))return;startInstance('dungeon')};
  const t=$('mg-go-t');if(t)t.onclick=()=>startInstance('tower');
- const c=$('mg-call');if(c)c.onclick=()=>{if((s.gold||0)<200){notify('Você precisa de 200 Gold.');return}s.gold-=200;TT.next=Date.now()-1;TT.forceNow=true;upd();persist();document.querySelectorAll('.mg-modal').forEach(x=>x.remove());notify('🗿 A terra treme… saia da Área Safe para encontrá-lo.')};
+ 
 }
 
 /* ============================================================================
@@ -615,9 +633,9 @@ const GUIDE=[
  {t:'Bem-vindo a Aventuria!',b:'Explore, cace, construa e evolua. A <b>Área Safe</b> no centro é sua cidade: lá ficam todos os NPCs, e nenhuma fera ataca você.'},
  {t:'Movimento e combate',b:'<b>WASD</b> ou setas movem · <b>clique/botão</b> ataca · <b>F</b> habilidade de classe · <b>Q</b> magia equipada · <b>Espaço/Shift</b> esquiva (conforme sua versão) · <b>H</b> poção.'},
  {t:'NPCs e serviços',b:'Chegue perto de um NPC e aperte <b>E</b> (ou o botão na tela). Mercado, forja, magias, mascotes, guildas, missões, <b>Cronista</b> (login diário e títulos) e muito mais.'},
- {t:'Montarias e Fúria',b:'<b>V</b> monta/desmonta · <b>X</b> libera a <b>Fúria Desperta</b> (a barra enche com abates; Elites ☠ enchem mais).'},
+ {t:'Montarias e Fúria',b:'<b>Z</b> monta/desmonta · <b>X</b> libera a <b>Fúria Desperta</b> (a barra enche com abates; Elites ☠ enchem mais).'},
  {t:'Masmorra, Torre e Titã',b:'Fale com o <b>Guardião das Profundezas</b>: Masmorra de 5 andares, Torre Infinita e o <b>Titã Colossal</b> que desperta no mapa.'},
- {t:'Pesca, cozinha e leilão',b:'<b>G</b> perto da água pesca · o <b>Chef</b> cozinha pratos com buffs · o <b>Leiloeiro</b> vende seus itens · o <b>General</b> lidera a guerra de guildas.'},
+ {t:'Pesca, cozinha e leilão',b:'<b>N</b> perto da água pesca · o <b>Chef</b> cozinha pratos com buffs · o <b>Leiloeiro</b> vende seus itens · o <b>General</b> lidera a guerra de guildas.'},
  {t:'Mapa e atalhos',b:'<b>M</b> amplia o mini-mapa (NPCs, Elites, baú caído, Titã) · <b>F1</b> ou <b>?</b> reabre este guia · <b>Esc</b> fecha janelas · <b>B</b> construção · <b>C</b> criação · <b>P</b> personagem.'},
  {t:'Perigos do mundo',b:'No <b>Vulcão</b> caem bombas de lava; no <b>Pântano</b> a neblina esconde monstros; à noite as feras ficam mais fortes (mas rendem mais). Fique de olho nos <b>acontecimentos</b> que surgem no topo da tela!'}
 ];
@@ -628,7 +646,7 @@ function openGuide(i){
 }
 window.addEventListener('keydown',e=>{
  if(inputBusy(e)||!G()||!G().running)return;
- if(e.code==='KeyG'&&!e.repeat){fishAction()}
+ if(e.code==='KeyN'&&!e.repeat){fishAction()}
  else if(e.code==='KeyM'&&!e.repeat){toggleMap()}
  else if((e.code==='F1'||(e.key==='?'))&&!e.repeat){e.preventDefault();$('mg-guide')?$('mg-guide').remove():openGuide(0)}
 });
@@ -663,7 +681,7 @@ function installHooks(){
   }catch(e){console.error(e)}}
   return r;
  };
- if(od)P.damageTarget=function(t,d){const r=od.apply(this,arguments);try{if(t&&t.titan){const m=M();if(m)m.wb.dmg+=Math.max(0,d||0)}}catch{}return r};
+ if(od)P.damageTarget=function(t,d){const r=od.apply(this,arguments);try{if(t&&t.titan&&!TT.apply){const m=M(),x=Math.max(0,d||0);if(m)m.wb.dmg+=x;TT.dmgOut+=x}}catch{}return r};
  if(om)P.drawMinimap=function(){om.call(this);try{minimapExtras(this)}catch(e){}};
  if(or)P.render=function(){or.call(this);try{drawOverlays(this)}catch(e){console.error('[mega] overlay',e)}};
  return true;
@@ -678,9 +696,9 @@ setInterval(()=>{
  M();
  try{
   instanceTick(g,dt);fishTick(g,dt);hazardWeather(g,s,dt,Date.now());regenTick(g,s,dt);
-  if(!INS.on){titanTick(g,s,Date.now())}
+  if(!INS.on){titanTick(g,s,Date.now(),dt)}
   slow+=dt;if(slow>1){slow=0;marketTick();warTick();instanceHud();
-   if(TT.forceNow&&!g.player.realmId&&g.player.inSafeZone!==true){TT.forceNow=false;if(!TT.a&&!spawnTitan(g,s))notify('Não consegui posicionar o Titã agora. Tente de novo.')}}
+}
   if(!guideShown&&now-tutAt>2500&&!M().tut.seen){guideShown=true;M().tut.seen=true;openGuide(0);persist()}
  }catch(e){if(!window.__mgErr){window.__mgErr=1;console.error('[mega]',e)}}
 },100);

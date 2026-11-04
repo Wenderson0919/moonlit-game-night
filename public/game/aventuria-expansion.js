@@ -349,6 +349,20 @@ function mountAndPetDraw(g){
  if(e.petEquipped&&e.pet){const bob=Math.sin(now/180)*4,emoji=e.pet==='slime'?'🟢':e.pet==='fox'?'🦊':'✨';c.font='20px serif';c.textAlign='center';c.fillText(emoji,p.x+30,p.y-24+bob)}
  c.restore();
 }
+/* ===================== MUNDO COMPARTILHADO ===================== */
+// Tudo que é "do mundo" (hora do dia, clima, acontecimentos, Titã) é calculado a partir do relógio UTC e de uma
+// semente determinística: todos os jogadores veem a mesma coisa, no mesmo lugar, sem servidor de jogo.
+// Ações de um jogador (pegar um baú, causar dano ao Titã) viajam por mensagens "mg" para os demais.
+function hrand(slot,salt){let x=(Math.imul((slot|0),374761393)+Math.imul((salt|0),668265263))>>>0;x=Math.imul(x^(x>>>13),1274126177)>>>0;x=(x^(x>>>16))>>>0;x=Math.imul(x,2246822519)>>>0;x=(x^(x>>>15))>>>0;return x/4294967296}
+window.AVENTURIA_HRAND=hrand;
+const NETH={};
+window.AVENTURIA_NET_ON=(k,fn)=>{NETH[k]=fn};
+window.AVENTURIA_NET_IN=m=>{const d=m&&m.d;if(d&&d.k&&NETH[d.k])NETH[d.k](d,m.from)};
+const netSend=o=>{try{window.AVENTURIA_NET_SEND&&window.AVENTURIA_NET_SEND(o)}catch{}};
+window.AVENTURIA_NET_BROADCAST=netSend;
+const claimed=new Set();
+window.AVENTURIA_NET_ON('claim',d=>{claimed.add(d.id)});
+const nowUtc=()=>Date.now();
 /* ===================== AMBIENTE: dia/noite, iluminação, clima e eventos ===================== */
 // 24h de jogo = 8 minutos reais (1h = 20s). O jogo começa às 06:00 e o horário é salvo no personagem.
 const DAY_SECONDS=480,HOUR_SEC=DAY_SECONDS/24,TAU=Math.PI*2,SAFE_R=680;
@@ -368,12 +382,19 @@ let meteor=null,meteorNext=0,fireflies=null,darkCv=null,darkCtx=null,envHudAt=0;
 function periodOf(h){return h<5?['Madrugada','🌙']:h<7?['Amanhecer','🌅']:h<12?['Manhã','☀️']:h<17?['Tarde','🌤️']:h<20?['Entardecer','🌇']:['Noite','🌙']}
 function fmtHour(h){const hh=Math.floor(h),mm=Math.floor((h-hh)*6)*10;return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
 function weatherLabel(){const d=WEATHER[W.kind]||WEATHER.clear;return (W.kind==='clear'&&ENV.night>.5?'🌙':d.i)+' '+d.n}
+/* Tempo compartilhado: o relógio do mundo vem do relógio UTC, então todos os jogadores veem o mesmo dia/noite,
+   o mesmo clima e os mesmos acontecimentos ao mesmo tempo, sem precisar de servidor. */
+const hourAt=ms=>(6+(((ms/1000)%DAY_SECONDS)/DAY_SECONDS)*24)%24;
+const nightOf=h=>(h>=20||h<5)?1:h<7?1-smooth(5,7,h):h<17?0:smooth(17,20,h);
+function hrand(slot,salt){let x=(Math.imul(slot|0,374761393)+Math.imul(salt|0,668265263))>>>0;x=Math.imul(x^(x>>>13),1274126177)>>>0;x^=x>>>16;return (x>>>0)/4294967296}
+window.AVENTURIA_HRAND=hrand;
+const hourAtMs=ms=>(6+(((ms/1000)%DAY_SECONDS)/HOUR_SEC))%24;
+const nightOfHour=h=>(h>=20||h<5)?1:h<7?1-smooth(5,7,h):h<17?0:smooth(17,20,h);
+const nightAtMs=ms=>nightOfHour(hourAtMs(ms));
 function updateEnv(g){
- const e=ensure();
- if(ENV._base===undefined)ENV._base=(e&&Number.isFinite(e.clockHour)?e.clockHour:6)-g.t/HOUR_SEC;
- const h=(((ENV._base+g.t/HOUR_SEC)%24)+24)%24;ENV.hour=h;
+ const h=hourAtMs(Date.now());ENV.hour=h;
  // escuridão: 0 de dia, 1 de noite; amanhecer 5-7h e entardecer 17-20h com transição suave
- ENV.night=(h>=20||h<5)?1:h<7?1-smooth(5,7,h):h<17?0:smooth(17,20,h);
+ ENV.night=nightOfHour(h);
  ENV.warm=(h>=5&&h<7)?Math.sin(smooth(5,7,h)*Math.PI):(h>=17&&h<20)?Math.sin(smooth(17,20,h)*Math.PI):0;
  const [name,icon]=periodOf(h);
  if(ENV.period!==name){
@@ -386,21 +407,23 @@ function updateEnv(g){
  }
  ENV._started=true;
 }
-function pickWeather(biome){
- const pool=WPOOL[biome]||WPOOL.forest;let k=pool[Math.floor(Math.random()*pool.length)];
- if(ENV.warm>.05&&ENV.hour<12&&(biome==='forest'||biome==='swamp'||biome==='snow')&&Math.random()<.4)k='fog';
+function pickWeather(biome,slot){
+ const pool=WPOOL[biome]||WPOOL.forest;const sl=slot===undefined?Math.floor(Date.now()/90000):slot;
+ const bi=['forest','desert','snow','swamp','volcano'].indexOf(biome);
+ let k=pool[Math.floor(hrand(sl,100+bi)*pool.length)];
+ if(nightOfHour(hourAtMs(sl*90000))<.4&&hourAtMs(sl*90000)<12&&hourAtMs(sl*90000)>=5&&(biome==='forest'||biome==='swamp'||biome==='snow')&&hrand(sl,200+bi)<.4)k='fog';
  return k;
 }
 function updateWeather(g,dt,now){
  const p=g.player,biome=p.realmId?({verdant:'forest',frost:'snow',mire:'swamp',ember:'volcano'}[p.realmId]||'forest'):(p.biome||'forest');
- if(W.biome===null){W.biome=biome;W.kind=W.target=pickWeather(biome);W.k=1;W.state='hold';W.until=now+60000+Math.random()*60000}
- // ao mudar de bioma o clima local muda, com transição suave (no máximo a cada 20s para não piscar na divisa)
- if(biome!==W.biome){W.biome=biome;if(now-W.bc>20000){W.bc=now;const nk=pickWeather(biome);if(nk!==W.kind){W.target=nk;W.state='out'}}}
- if(W.state==='hold'&&now>W.until){W.target=pickWeather(biome);W.state=W.target===W.kind?'hold':'out';if(W.state==='hold')W.until=now+60000+Math.random()*70000}
+ const want=pickWeather(biome);
+ if(W.biome===null){W.biome=biome;W.kind=W.target=want;W.k=1;W.state='hold'}
+ W.biome=biome;
+ if(W.state==='hold'&&want!==W.kind){W.target=want;W.state='out'}
  if(W.state==='out'){
   W.k-=dt/3;
   if(W.k<=0){W.k=0;const prev=W.kind;W.kind=W.target;W.parts=[];W.state='in';if(prev!==W.kind&&W.kind!=='clear')notify((WEATHER[W.kind].i)+' '+WEATHER[W.kind].n+' começou.')}
- }else if(W.state==='in'){W.k+=dt/3;if(W.k>=1){W.k=1;W.state='hold';W.until=now+60000+Math.random()*70000}}
+ }else if(W.state==='in'){W.k+=dt/3;if(W.k>=1){W.k=1;W.state='hold'}}
  ENV.kind=W.kind;ENV.k=W.k;
 }
 function strikeLightning(g,now){
@@ -489,26 +512,32 @@ function drawFireflies(g,dt,now){
  c.restore();
 }
 /* Estrela cadente: de noite, fora da cidade, cai um fragmento que dá Gold e diamantes se for coletado */
-function meteorUpdate(g,e,s,now){
+function meteorUpdate(g,e,st,now){
  const p=g.player;if(!p||p.realmId)return;
- if(!meteor){
-  if(ENV.night>.7&&!p.inSafeZone&&now>meteorNext){
-   const a=Math.random()*TAU,d=380+Math.random()*240,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
-   if(Math.hypot(x-EXP_CX,y-EXP_CX)<SAFE_R+120||x<200||y<200||x>EXP_MAP-200||y>EXP_MAP-200){meteorNext=now+4000;return}
-   meteor={x,y,at:now+3500,until:now+110000,landed:false};meteorNext=now+(100+Math.random()*80)*1000;
-   notify('☄️ Uma estrela cadente cruzou o céu! Siga a luz até o ponto de impacto.');
+ const t=Date.now(),SL=150000,slot=Math.floor(t/SL),t0=slot*SL;
+ // uma estrela cadente por janela de 2,5 min, só à noite; mesma posição para todos os jogadores
+ if(!meteor||meteor.slot!==slot){
+  if(meteor&&meteor.slot!==slot){if(meteor.landed&&!claimed.has('m'+meteor.slot))notify('☄️ O fragmento estelar se apagou.');meteor=null}
+  if(hrand(slot,300)<.55&&nightAtMs(t0)>.7&&t<t0+110000&&!claimed.has('m'+slot)){
+   for(let i=0;i<10;i++){
+    const a=hrand(slot,310+i)*TAU,d=950+hrand(slot,330+i)*750,x=EXP_CX+Math.cos(a)*d,y=EXP_CX+Math.sin(a)*d;
+    if(x<250||y<250||x>EXP_MAP-250||y>EXP_MAP-250||g.pondAt?.(x,y,40))continue;
+    meteor={slot,x,y,at:t0+4000,until:t0+110000,landed:false,told:false};break;
+   }
   }
-  return;
  }
- const m=meteor;
- if(!m.landed&&now>=m.at){m.landed=true;g.shake?.(6,.5);notify('💥 O fragmento estelar caiu! Corra para coletá-lo antes do amanhecer.')}
- if(ENV.night<.3||now>m.until){if(m.landed)notify('☄️ O fragmento estelar se apagou.');meteor=null;return}
+ const m=meteor;if(!m)return;
+ if(claimed.has('m'+m.slot)){meteor=null;return}
+ if(!m.told){m.told=true;notify('☄️ Uma estrela cadente cruzou o céu! Siga a luz até o ponto de impacto.')}
+ if(!m.landed&&t>=m.at){m.landed=true;g.shake?.(3,.3);notify('💥 O fragmento estelar caiu! Corra para coletá-lo antes do amanhecer.')}
+ if(t>m.until||nightAtMs(t)<.3){meteor=null;return}
  if(m.landed&&Math.hypot(p.x-m.x,p.y-m.y)<80){
-  const gold=120+Math.floor(Math.random()*140)+(s.level||1)*4,dia=1+(Math.random()<.4?1:0);
-  s.gold=(s.gold||0)+gold;s.resources??={};s.resources.diamond=(s.resources.diamond||0)+dia;
+  const gold=120+Math.floor(Math.random()*140)+(st.level||1)*4,dia=1+(Math.random()<.4?1:0);
+  st.gold=(st.gold||0)+gold;st.resources??={};st.resources.diamond=(st.resources.diamond||0)+dia;
   if(e.world)e.world.seasonXp=(e.world.seasonXp||0)+60;
   g.floatText?.(m.x,m.y-30,'+'+gold+' Gold','#f59e0b');g.floatText?.(m.x,m.y-50,'+'+dia+' Diamante','#67e8f9');
-  notify('✨ Fragmento estelar coletado: +'+gold+' Gold e +'+dia+' Diamante!');meteor=null;persist();if(typeof updateUIStats==='function')updateUIStats();
+  notify('✨ Fragmento estelar coletado: +'+gold+' Gold e +'+dia+' Diamante!');
+  claimed.add('m'+m.slot);netSend({k:'claim',id:'m'+m.slot,by:(st.name||'Alguém')});meteor=null;persist();if(typeof updateUIStats==='function')updateUIStats();
  }
 }
 function drawMeteor(c,p,now){
@@ -535,45 +564,55 @@ const EV_BUFFS={
  blessing:{icon:'🌿',name:'Bênção da Floresta',desc:'Regenera vida e +20% de XP/ouro',mul:1.2,dur:70,col:'#86efac',regen:true}
 };
 function evMaxHp(s){return (s.maxHp||100)+((window.getRPGStats?.()||{}).hp||0)}
-function startEvent(g,s,kind){
- const p=g.player,now=Date.now();
- if(EV_BUFFS[kind]){
-  const b=EV_BUFFS[kind];EV.buff={kind,until:now+b.dur*1000};window.AVENTURIA_EVENT_MUL=b.mul;
-  notify(b.icon+' '+b.name+'! '+b.desc+' por '+b.dur+'s.');g.shake?.(4,.4);g.floatText?.(p.x,p.y-60,b.icon+' '+b.name,b.col);return;
+const EV_SLOT=180000;
+const EV_POOL=['frenzy','frenzy','blessing','chest','chest','merchant'];
+// O acontecimento da janela atual é o mesmo para todos: depende só do relógio UTC.
+function evCurrent(g,now){
+ const slot=Math.floor(now/EV_SLOT),t0=slot*EV_SLOT;
+ if(hrand(slot,1)>=.6)return null;
+ const pool=nightAtMs(t0)>.55?EV_POOL.concat(['bloodmoon','bloodmoon']):EV_POOL;
+ const kind=pool[Math.floor(hrand(slot,2)*pool.length)],def=EV_BUFFS[kind],dur=def?def.dur*1000:95000;
+ if(now>=t0+dur)return null;
+ return {slot,kind,until:t0+dur,t0};
+}
+function evSpot(g,slot,kind,until){
+ for(let i=0;i<12;i++){
+  const a=hrand(slot,10+i)*Math.PI*2,d=950+hrand(slot,40+i)*750,x=EXP_CX+Math.cos(a)*d,y=EXP_CX+Math.sin(a)*d;
+  if(x<200||y<200||x>EXP_MAP-200||y>EXP_MAP-200||g.pondAt?.(x,y,40))continue;
+  return {kind,x,y,until,slot};
  }
- // pontos de interesse: ficam fora da área safe, a uma caminhada de distância
- for(let tries=0;tries<12;tries++){
-  const a=Math.random()*Math.PI*2,d=420+Math.random()*320,x=p.x+Math.cos(a)*d,y=p.y+Math.sin(a)*d;
-  if(Math.hypot(x-EXP_CX,y-EXP_CX)<SAFE_R+120||x<200||y<200||x>EXP_MAP-200||y>EXP_MAP-200)continue;
-  EV.spot={kind,x,y,until:now+95000};
-  notify(kind==='chest'?'📦 Um baú caiu do céu por perto! Siga o brilho dourado.':'🧳 Um mercador errante foi visto por perto — ele troca presentes!');
-  return;
- }
+ return null;
 }
 function eventUpdate(g,s,now){
  const p=g.player;if(!p||p.realmId)return;
- const b=EV.buff;
- if(b){
-  const def=EV_BUFFS[b.kind];
-  if(now>=b.until||(def.night&&ENV.night<.25)){notify(def.icon+' '+def.name+' terminou.');EV.buff=null;window.AVENTURIA_EVENT_MUL=1}
-  else if(def.regen&&s.hp>0){const cap=evMaxHp(s);if(s.hp<cap&&now-(EV._reg||0)>1000){EV._reg=now;s.hp=Math.min(cap,s.hp+Math.ceil(cap*.015))}}
+ const t=Date.now(),cur=evCurrent(g,t);
+ // bônus (Frenesi, Lua de Sangue, Bênção): valem para todos ao mesmo tempo
+ if(cur&&EV_BUFFS[cur.kind]){
+  const b=EV_BUFFS[cur.kind];
+  if(!EV.buff||EV.buff.slot!==cur.slot){
+   EV.buff={kind:cur.kind,until:cur.until,slot:cur.slot};window.AVENTURIA_EVENT_MUL=b.mul;
+   notify(b.icon+' '+b.name+'! '+b.desc+' por '+Math.max(1,Math.round((cur.until-t)/1000))+'s (para todos os jogadores).');g.shake?.(4,.4);
+  }
+  if(b.regen&&s.hp>0){const cap=evMaxHp(s);if(s.hp<cap&&now-(EV._reg||0)>1000){EV._reg=now;s.hp=Math.min(cap,s.hp+Math.ceil(cap*.015))}}
+ }else if(EV.buff){const d=EV_BUFFS[EV.buff.kind];notify(d.icon+' '+d.name+' terminou.');EV.buff=null;window.AVENTURIA_EVENT_MUL=1}
+ // pontos de interesse (baú caído, mercador errante): mesma posição para todos; quem pega primeiro avisa os demais
+ if(cur&&!EV_BUFFS[cur.kind]&&!claimed.has('e'+cur.slot)){
+  if(!EV.spot||EV.spot.slot!==cur.slot){
+   EV.spot=evSpot(g,cur.slot,cur.kind,cur.until);
+   if(EV.spot)notify(cur.kind==='chest'?'📦 Um baú caiu do céu em algum lugar do mapa! Siga a seta dourada.':'🧳 Um mercador errante foi visto no mapa — ele troca presentes!');
+  }
+ }else if(EV.spot){
+  if(claimed.has('e'+EV.spot.slot)){notify(EV.spot.kind==='chest'?'📦 Outro jogador abriu o baú caído.':'🧳 Outro jogador falou com o mercador errante.')}
+  else notify(EV.spot.kind==='chest'?'📦 O baú desapareceu na neblina.':'🧳 O mercador seguiu viagem.');
+  EV.spot=null;
  }
  const sp=EV.spot;
- if(sp){
-  if(now>sp.until){notify(sp.kind==='chest'?'📦 O baú desapareceu na neblina.':'🧳 O mercador seguiu viagem.');EV.spot=null}
-  else if(Math.hypot(p.x-sp.x,p.y-sp.y)<70){
-   s.resources??={};s.items??={};const lv=s.level||1;
-   if(sp.kind==='chest'){const gold=150+Math.floor(Math.random()*200)+lv*6,dia=Math.random()<.5?1:0;s.gold=(s.gold||0)+gold;if(dia)s.resources.diamond=(s.resources.diamond||0)+dia;s.resources.wood=(s.resources.wood||0)+4;s.resources.iron=(s.resources.iron||0)+2;
-    g.floatText?.(sp.x,sp.y-30,'+'+gold+' Gold','#f59e0b');notify('📦 Baú aberto: +'+gold+' Gold'+(dia?', +1 Diamante':'')+', madeira e ferro!')}
-   else{const r=Math.random();if(r<.5){s.items.potion=(s.items.potion||0)+2;notify('🧳 O mercador deixou 2 Poções de Vida para você!')}else{const gold=100+lv*8;s.gold=(s.gold||0)+gold;notify('🧳 O mercador pagou '+gold+' Gold por uma boa conversa!')}}
-   g.shake?.(3,.3);EV.spot=null;persist();if(typeof updateUIStats==='function')updateUIStats();
-  }
- }
- if(!EV.buff&&!sp&&now>EV.next){
-  if(!EV.next){EV.next=now+40000+Math.random()*40000;return}
-  if(p.inSafeZone){EV.next=now+15000;return}
-  const pool=['frenzy','frenzy','blessing','chest','chest','merchant'];if(ENV.night>.55)pool.push('bloodmoon','bloodmoon');
-  startEvent(g,s,pool[Math.floor(Math.random()*pool.length)]);EV.next=now+(150+Math.random()*120)*1000;
+ if(sp&&Math.hypot(p.x-sp.x,p.y-sp.y)<70){
+  s.resources??={};s.items??={};const lv=s.level||1;
+  if(sp.kind==='chest'){const gold=150+Math.floor(Math.random()*200)+lv*6,dia=Math.random()<.5?1:0;s.gold=(s.gold||0)+gold;if(dia)s.resources.diamond=(s.resources.diamond||0)+dia;s.resources.wood=(s.resources.wood||0)+4;s.resources.iron=(s.resources.iron||0)+2;
+   g.floatText?.(sp.x,sp.y-30,'+'+gold+' Gold','#f59e0b');notify('📦 Baú aberto: +'+gold+' Gold'+(dia?', +1 Diamante':'')+', madeira e ferro!')}
+  else{const r=Math.random();if(r<.5){s.items.potion=(s.items.potion||0)+2;notify('🧳 O mercador deixou 2 Poções de Vida para você!')}else{const gold=100+lv*8;s.gold=(s.gold||0)+gold;notify('🧳 O mercador pagou '+gold+' Gold por uma boa conversa!')}}
+  g.shake?.(3,.3);claimed.add('e'+sp.slot);netSend({k:'claim',id:'e'+sp.slot,by:s.name||'Alguém'});EV.spot=null;persist();if(typeof updateUIStats==='function')updateUIStats();
  }
 }
 function drawEvents(c,p,now){
@@ -729,9 +768,9 @@ function mountUpdate(g,dt){
  }
  mountFx.lx=p.x;mountFx.ly=p.y;
 }
-function drawMount(c,p,e,now){
+function drawMount(c,p,e,now,noParts){
  const m=activeMount(e);
- for(const q of mountFx.parts){c.globalAlpha=Math.max(0,q.t*1.6);c.fillStyle=q.c;c.beginPath();c.arc(q.x,q.y,2+q.t*3,0,Math.PI*2);c.fill()}c.globalAlpha=1;
+ if(!noParts)for(const q of mountFx.parts){c.globalAlpha=Math.max(0,q.t*1.6);c.fillStyle=q.c;c.beginPath();c.arc(q.x,q.y,2+q.t*3,0,Math.PI*2);c.fill()}c.globalAlpha=1;
  if(!m||p.realmId)return;
  const face=p.dir==='left'?-1:p.dir==='right'?1:(p._mf||1);p._mf=face;
  const mv=!!p.moving,ph=now/(mv?70:420),bob=mv?Math.abs(Math.sin(ph))*2:Math.sin(now/500)*.6;
@@ -790,7 +829,7 @@ function openMountUI(){
  };
  const spots=g?findTravelSpots(g):{};
  const travel=Object.keys(BIO_NAME).filter(k=>spots[k]).map(k=>'<button data-travel="'+k+'" style="padding:7px 9px;border-radius:8px;background:#26414e;border:1px solid #4f7c8c;font-size:12px">'+BIO_NAME[k]+'</button>').join('');
- m.innerHTML='<div style="width:min(560px,100%);max-height:92vh;overflow:auto;background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:16px;color:white"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-weight:800">🐎 Domador de Montarias</h2><button id="avx-mount-close">✕</button></div><p style="color:#cbd5e1;font-size:12px;margin:4px 0 10px">Gold: <b>'+Math.floor(s.gold||0)+'</b> · Diamantes: <b>'+dia+'</b> · Nível da montaria: <b>'+lv+'/10</b> (+4% velocidade por nível, sobe cavalgando) · Tecla <b>V</b> monta/desmonta</p><div style="display:grid;gap:8px">'+MOUNTS.map(card).join('')+'</div><h3 style="margin:14px 0 6px;font-weight:800">🧭 Viagem rápida <span style="font-size:11px;color:#bdcbd0;font-weight:400">· 40 Gold, a partir da Área Safe</span></h3><div style="display:flex;flex-wrap:wrap;gap:6px">'+(travel||'<span style="font-size:12px;color:#94a3b8">Mapa indisponível.</span>')+'</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="avx-mount-houses" style="padding:7px 10px;border-radius:8px;background:#3a3a52">🏡 Casas e profissões</button></div></div>';
+ m.innerHTML='<div style="width:min(560px,100%);max-height:92vh;overflow:auto;background:#14262c;border:1px solid #c6a66a;border-radius:16px;padding:16px;color:white"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="font-weight:800">🐎 Domador de Montarias</h2><button id="avx-mount-close">✕</button></div><p style="color:#cbd5e1;font-size:12px;margin:4px 0 10px">Gold: <b>'+Math.floor(s.gold||0)+'</b> · Diamantes: <b>'+dia+'</b> · Nível da montaria: <b>'+lv+'/10</b> (+4% velocidade por nível, sobe cavalgando) · Tecla <b>Z</b> monta/desmonta</p><div style="display:grid;gap:8px">'+MOUNTS.map(card).join('')+'</div><h3 style="margin:14px 0 6px;font-weight:800">🧭 Viagem rápida <span style="font-size:11px;color:#bdcbd0;font-weight:400">· 40 Gold, a partir da Área Safe</span></h3><div style="display:flex;flex-wrap:wrap;gap:6px">'+(travel||'<span style="font-size:12px;color:#94a3b8">Mapa indisponível.</span>')+'</div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="avx-mount-houses" style="padding:7px 10px;border-radius:8px;background:#3a3a52">🏡 Casas e profissões</button></div></div>';
  $('avx-mount-close').onclick=()=>m.remove();m.onclick=ev=>{if(ev.target===m)m.remove()};
  $('avx-mount-houses').onclick=()=>{m.remove();renderPanel();const cards=findServiceCards([['growth','Casas e construção de vilas'],['growth','Profissões e especializações']]);if(cards.length)openNPCServiceWindow(cards,[['growth','Casas e construção de vilas'],['growth','Profissões e especializações']]);else notify('Serviço indisponível agora.')};
  m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{
@@ -864,8 +903,12 @@ function titleApply(force){
  if(el&&t&&t.id!=='adv'){const want=s.name+' «'+t.name+'»';if(el.textContent!==want)el.textContent=want}
  if(!e._loginNote&&loginAvailable(e)){e._loginNote=true;notify('🎁 Há uma recompensa diária esperando no Cronista (norte da praça)!')}
 }
-if(!window.__avxMountKey){window.__avxMountKey=true;window.addEventListener('keydown',ev=>{if(ev.code==='KeyV'&&!ev.repeat&&!/INPUT|TEXTAREA|SELECT/.test(ev.target?.tagName||'')){toggleMount(window.game)}})}
+if(!window.__avxMountKey){window.__avxMountKey=true;window.addEventListener('keydown',ev=>{if(ev.code==='KeyZ'&&!ev.repeat&&!/INPUT|TEXTAREA|SELECT/.test(ev.target?.tagName||'')){toggleMount(window.game)}})}
 window.AVENTURIA_TOGGLE_MOUNT=()=>toggleMount(game());
+window.AVENTURIA_MOUNT_ID=()=>{try{const e=ensure();return (e&&e.mounts&&e.mounts.active)||''}catch{return ''}};
+window.AVENTURIA_TITLE=()=>{try{const e=ensure(),t=TITLES.find(x=>x.id===(e&&e.title));return t&&t.id!=='adv'?t.name:''}catch{return ''}};
+window.AVENTURIA_MOUNTS=MOUNTS;
+window.AVENTURIA_DRAW_MOUNT=(c,q,now)=>drawMount(c,q,{mounts:{active:q.mnt}},now,true);
 window.AVENTURIA_EVENT_STATE=()=>({spot:EV.spot,buff:EV.buff});window.AVENTURIA_EV=EV;window.AVENTURIA_TITLES=TITLES;
 function drawEnvironment(g){
  if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
