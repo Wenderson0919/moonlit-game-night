@@ -703,7 +703,7 @@ setInterval(()=>{
  }catch(e){if(!window.__mgErr){window.__mgErr=1;console.error('[mega]',e)}}
 },100);
 let tries=0;const boot=setInterval(()=>{
- tries++;const a=registerNpcs(),b=installHooks();buildTouch();
+ tries++;const a=registerNpcs(),b=installHooks();
  if(!tutAt)tutAt=performance.now();
  if((a&&b)||tries>120)clearInterval(boot);
 },500);

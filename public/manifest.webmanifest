@@ -1,0 +1,16 @@
+{
+  "name": "Aventuria Online",
+  "short_name": "Aventuria",
+  "description": "MMORPG sandbox no navegador com mundo compartilhado.",
+  "start_url": "/jogar",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b1420",
+  "theme_color": "#0b1420",
+  "icons": [
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}
+  ]
+}

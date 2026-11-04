@@ -469,12 +469,14 @@ function drawWeatherLayer(g,dt,now){
  if(kind==='storm'&&k>.6&&now>W.nextStrike)strikeLightning(g,now);
  c.restore();
 }
+const LOWQ=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
 function drawLighting(g,now){
  const def=WEATHER[W.kind]||WEATHER.clear,base=Math.min(.8,ENV.night*.6+def.dim*W.k);
  if(base<.02&&ENV.warm<.02)return;
  const c=g.ctx,Wd=g.canvas.width,Hd=g.canvas.height,p=g.player;
- if(!darkCv||darkCv.width!==Wd||darkCv.height!==Hd){darkCv=document.createElement('canvas');darkCv.width=Wd;darkCv.height=Hd;darkCtx=darkCv.getContext('2d')}
- const d=darkCtx;
+ const Q=LOWQ?.5:1,qw=Math.ceil(Wd*Q),qh=Math.ceil(Hd*Q);
+ if(!darkCv||darkCv.width!==qw||darkCv.height!==qh){darkCv=document.createElement('canvas');darkCv.width=qw;darkCv.height=qh;darkCtx=darkCv.getContext('2d')}
+ const d=darkCtx;d.setTransform(Q,0,0,Q,0,0);
  if(base>=.02){
   d.globalCompositeOperation='source-over';d.clearRect(0,0,Wd,Hd);d.fillStyle='rgba(8,12,42,'+base+')';d.fillRect(0,0,Wd,Hd);
   d.globalCompositeOperation='destination-out';
@@ -493,7 +495,7 @@ function drawLighting(g,now){
   if(meteor&&meteor.landed)lamp(meteor.x,meteor.y,210,.95);
   const tr=ensure()?.advanced?.treasure;if(tr)lamp(tr.x,tr.y,110,.5);
   d.globalCompositeOperation='source-over';
-  c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(darkCv,0,0);c.restore();
+  c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(darkCv,0,0,Wd,Hd);c.restore();
  }
  if(ENV.warm>.02){c.save();c.setTransform(1,0,0,1,0,0);c.fillStyle='rgba(255,140,60,'+(ENV.warm*.16)+')';c.fillRect(0,0,Wd,Hd);c.restore()}
 }
@@ -501,7 +503,7 @@ function drawFireflies(g,dt,now){
  const biome=g.player.biome,on=ENV.night>.3&&(W.kind==='clear'||W.kind==='fog')&&(biome==='forest'||biome==='swamp');
  if(!on)return;
  const c=g.ctx,Wd=g.canvas.width,Hd=g.canvas.height;
- if(!fireflies)fireflies=Array.from({length:28},()=>({x:Math.random(),y:Math.random(),ph:Math.random()*TAU,sp:.4+Math.random()*.6}));
+ if(!fireflies)fireflies=Array.from({length:LOWQ?12:28},()=>({x:Math.random(),y:Math.random(),ph:Math.random()*TAU,sp:.4+Math.random()*.6}));
  c.save();c.setTransform(1,0,0,1,0,0);c.globalCompositeOperation='lighter';
  for(const f of fireflies){
   f.x=(f.x+Math.cos(now/1800*f.sp+f.ph)*.012*dt+1)%1;f.y=(f.y+Math.sin(now/1500*f.sp+f.ph)*.01*dt+1)%1;
