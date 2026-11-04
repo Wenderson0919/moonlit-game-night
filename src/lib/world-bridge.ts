@@ -25,6 +25,7 @@ type Bag = {
   skin?: unknown; hairStyle?: unknown; beard?: unknown; outfit?: unknown; outfitStyle?: unknown; cloak?: unknown; accessory?: unknown; mark?: unknown;
   x?: unknown; y?: unknown; dir?: unknown; d?: unknown; m?: unknown; lvl?: unknown; hp?: unknown; mh?: unknown;
   pv?: unknown; k?: unknown; l?: unknown; by?: unknown; n?: unknown; to?: unknown; from?: unknown; raw?: unknown;
+  world?: unknown;
 };
 
 const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
@@ -123,6 +124,13 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         const raw = Math.max(0, Math.min(500, num(payload?.raw, 0)));
         deliver({ t: "hurt", raw, src: from.name, from: from.id, kind: "pvp" });
       })
+      .on("broadcast", { event: "world" }, ({ payload }: { payload: Bag }) => {
+        const from = num(payload?.from, 0);
+        // Somente o líder determinístico do mundo publica o snapshot autoritativo.
+        const leader = Math.min(myId, ...others.keys());
+        if (!from || from !== leader || !payload.world || typeof payload.world !== "object") return;
+        deliver({ t: "world", from, world: payload.world });
+      })
       .on("broadcast", { event: "fx" }, ({ payload }: { payload: Bag }) => {
         const id = num(payload?.id, 0);
         if (!id || id === myId || !Array.isArray(payload?.l)) return;
@@ -199,6 +207,17 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         if (!me) return;
         Object.assign(me, toRemote(myId, { ...me, ...m, dir: m.d, m: m.m, pv: m.pv, name: me.name, cls: me.cls }));
         broadcastState();
+        break;
+      }
+      case "world": {
+        if (!me || !channel || !m.world || typeof m.world !== "object") return;
+        const leader = Math.min(myId, ...others.keys());
+        if (leader !== myId) return;
+        const world = m.world as Record<string, unknown>;
+        // Limites rígidos para evitar snapshots excessivos ou dados arbitrários.
+        const animals = Array.isArray(world.animals) ? world.animals.slice(0, 180) : [];
+        const loot = Array.isArray(world.loot) ? world.loot.slice(0, 100) : [];
+        void channel.send({ type: "broadcast", event: "world", payload: { from: myId, world: { animals, loot, tick: num(world.tick, 0) } } });
         break;
       }
       case "fx": {
