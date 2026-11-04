@@ -220,6 +220,11 @@ export function startWorldBridge(frame: HTMLIFrameElement, onStatus?: (s: Bridge
         if (!me) return;
         const text = str(m.m, 120).trim();
         if (!text) return;
+        const mutedUntil = num((frame.contentWindow as { MMO?: { localState?: { mutedUntil?: number } } } | null)?.MMO?.localState?.mutedUntil, 0);
+        if (mutedUntil > Date.now()) {
+          deliver({ t: "sys", m: `Você está silenciado por mais ${Math.ceil((mutedUntil - Date.now()) / 60000)} min.` });
+          return;
+        }
         const payload = { id: myId, n: me.name, m: text };
         void channel?.send({ type: "broadcast", event: "chat", payload });
         deliver({ t: "chat", ...payload });

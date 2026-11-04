@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_broadcasts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          message: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          message?: string
+          payload?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          message?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       admin_grants: {
         Row: {
           applied_at: string | null

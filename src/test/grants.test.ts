@@ -33,3 +33,25 @@ describe("presentes e alterações do admin", () => {
     expect(s.resources.hack).toBeUndefined();
   });
 });
+
+describe("novos poderes do admin", () => {
+  it("silenciar guarda o fim do silêncio; 0 libera", () => {
+    const s: any = {};
+    applyGrant(s, { kind: "mute", payload: { minutes: 10 } });
+    expect(s.mutedUntil).toBeGreaterThan(Date.now() + 9 * 60000);
+    applyGrant(s, { kind: "mute", payload: { minutes: 0 } });
+    expect(s.mutedUntil).toBe(0);
+  });
+  it("trocar classe só aceita classes do jogo", () => {
+    const s: any = { className: "Mago" };
+    applyGrant(s, { kind: "class", payload: { id: "Hacker" } });
+    expect(s.className).toBe("Mago");
+    applyGrant(s, { kind: "class", payload: { id: "Arqueiro" } });
+    expect(s.className).toBe("Arqueiro");
+  });
+  it("reiniciar volta para nível 1 e 0 Gold", () => {
+    const s: any = { level: 30, gold: 9000, inventory: [1] };
+    applyGrant(s, { kind: "reset", payload: {} });
+    expect([s.level, s.gold, s.inventory.length]).toEqual([1, 0, 0]);
+  });
+});
