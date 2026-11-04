@@ -238,6 +238,7 @@ function leaveRealm(){
  restoreRealmWorld(g,realmReturnSnapshot);realmReturnSnapshot=null;
  s.x=g.player.x;s.y=g.player.y;persist();notify('Você voltou ao mundo principal.');
 }
+window.AVENTURIA_REALM_API={enter:r=>enterRealm(r),leave:()=>leaveRealm(),active:()=>!!realmReturnSnapshot};
 function interactRealmPortal(g){const p=g.player;if(realmReturnSnapshot&&p?.realmId&&Math.hypot(p.x-2000,p.y-2000)<150){leaveRealm();return true}return false}
 
 
@@ -864,6 +865,8 @@ function titleApply(force){
  if(!e._loginNote&&loginAvailable(e)){e._loginNote=true;notify('🎁 Há uma recompensa diária esperando no Cronista (norte da praça)!')}
 }
 if(!window.__avxMountKey){window.__avxMountKey=true;window.addEventListener('keydown',ev=>{if(ev.code==='KeyV'&&!ev.repeat&&!/INPUT|TEXTAREA|SELECT/.test(ev.target?.tagName||'')){toggleMount(window.game)}})}
+window.AVENTURIA_TOGGLE_MOUNT=()=>toggleMount(game());
+window.AVENTURIA_EVENT_STATE=()=>({spot:EV.spot,buff:EV.buff});window.AVENTURIA_EV=EV;window.AVENTURIA_TITLES=TITLES;
 function drawEnvironment(g){
  if(!g?.running||!g.ctx||!g.canvas||!g.player)return;
  const now=performance.now(),dt=Math.min(.05,(now-(ENV._last||now))/1000);ENV._last=now;
@@ -1145,7 +1148,7 @@ function openTownNPC(id){
  chronicler:()=>openChronicleUI(),
  };
  // um erro dentro de um serviço nunca deve deixar o NPC "mudo": avisa e registra no console
- try{actions[id]?.()}catch(err){console.error('Falha ao abrir NPC '+id,err);notify('Não foi possível abrir este serviço agora. Tente de novo.')}
+ try{(actions[id]||window.AVENTURIA_EXTRA_NPC?.[id])?.()}catch(err){console.error('Falha ao abrir NPC '+id,err);notify('Não foi possível abrir este serviço agora. Tente de novo.')}
 }
 
 const overlay=document.createElement('div');overlay.id='avx-world-overlay';overlay.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:12;background:transparent;transition:background 2s';
