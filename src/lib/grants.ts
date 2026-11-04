@@ -1,6 +1,8 @@
 import { BUILDS, GEAR_SLOTS, LEVEL_CAP, MOUNTS, PETS, RESOURCES, TOOLS } from "./game-catalog";
 
-export type GrantKind = "level" | "gold" | "resource" | "tool" | "build" | "gear" | "pet" | "mount";
+export type GrantKind =
+  | "level" | "gold" | "resource" | "tool" | "build" | "gear" | "pet" | "mount"
+  | "heal" | "skillpoints" | "class" | "reset" | "mute" | "teleport" | "kick";
 export type Grant = { kind: GrantKind; payload: Record<string, unknown> };
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -88,9 +90,39 @@ export function applyGrant(s: State, g: Grant, genItem?: GenItem): string | null
       if (!ms.owned.includes(id)) ms.owned.push(id);
       return `Presente: montaria ${name}`;
     }
+    case "heal": {
+      s.hp = int(s.maxHp, 100);
+      return "O admin curou você por completo!";
+    }
+    case "skillpoints": {
+      const n = clamp(int(p.amount, 1), 1, 100);
+      s.skillPoints = int(s.skillPoints, 0) + n;
+      return `+${n} pontos de habilidade do admin!`;
+    }
+    case "class": {
+      const c = String(p.id ?? "");
+      if (!CLASSES.includes(c)) return null;
+      s.className = c;
+      return `Sua classe agora é ${c}!`;
+    }
+    case "reset": {
+      s.level = 1; s.exp = 0; s.maxExp = xpNeed(1); s.gold = 0; s.skillPoints = 3;
+      s.inventory = []; s.resources = {}; s.items = {};
+      s.maxHp = 100; s.hp = 100;
+      return "Seu personagem foi reiniciado pelo admin.";
+    }
+    case "mute": {
+      const min = clamp(int(p.minutes, 10), 0, 60 * 24 * 30);
+      s.mutedUntil = min ? Date.now() + min * 60000 : 0;
+      return min ? `Você foi silenciado no chat por ${min} minuto(s).` : "Você pode falar no chat de novo.";
+    }
+    case "teleport": return "O admin levou você para a Área Safe.";
+    case "kick": return "Você foi desconectado pelo admin.";
   }
   return null;
 }
+
+export const CLASSES = ["Guerreiro", "Mago", "Arqueiro", "Assassino", "Curandeiro"];
 
 export function describeGrant(g: Grant): string {
   const p: any = g.payload ?? {};
@@ -104,6 +136,13 @@ export function describeGrant(g: Grant): string {
     case "gear": return `${nameOf(GEAR_SLOTS, String(p.slot)) ?? "Equipamento"} ${["Comum", "Incomum", "Raro", "Épico", "Lendário"][int(p.rar)] ?? ""}`;
     case "pet": return `Mascote ${nameOf(PETS, id) ?? id}`;
     case "mount": return `Montaria ${nameOf(MOUNTS, id) ?? id}`;
+    case "heal": return "Cura completa";
+    case "skillpoints": return `+${int(p.amount, 1)} pontos de habilidade`;
+    case "class": return `Classe → ${id}`;
+    case "reset": return "Reiniciar personagem";
+    case "mute": return int(p.minutes, 0) ? `Silenciado ${int(p.minutes)} min` : "Fim do silêncio";
+    case "teleport": return "Levado à Área Safe";
+    case "kick": return "Desconectado";
   }
   return g.kind;
 }
