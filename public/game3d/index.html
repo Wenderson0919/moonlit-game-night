@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b1420">
+<title>Aventuria 3D</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="view"></div>
+
+<div id="loading"><div class="logo">AVENTURIA <b>3D</b></div><div class="bar"><i id="load-fill"></i></div><small id="load-txt">Forjando o mundo…</small></div>
+
+<div id="start" style="display:none">
+  <div class="panel">
+    <div class="logo">AVENTURIA <b>3D</b></div>
+    <p class="sub">Um mundo aberto de fantasia para jogar sozinho. Explore cinco biomas, enfrente chefes e escreva sua lenda.</p>
+    <button id="btn-continue" class="btn gold big" style="display:none"></button>
+    <h3>Escolha sua classe</h3>
+    <div id="classes"></div>
+    <div class="row"><input id="hero-name" maxlength="14" placeholder="Nome do herói" autocomplete="off"><button id="btn-play" class="btn gold big">Novo Herói</button></div>
+    <small id="help-line" class="dim"></small>
+  </div>
+</div>
+
+<div id="hud" style="display:none">
+  <div id="card">
+    <div id="lvlbadge"><span id="lvl">1</span></div>
+    <div class="bars">
+      <div id="pname">Herói</div>
+      <div class="bar hp"><i id="hp-fill"></i><span id="hp-txt"></span></div>
+      <div class="bar mp"><i id="mp-fill"></i><span id="mp-txt"></span></div>
+      <div class="bar xp"><i id="xp-fill"></i><span id="xp-txt"></span></div>
+    </div>
+    <div id="goldline">🪙 <b id="gold">0</b></div>
+    <div id="buffs"></div>
+    <div id="fury"><i id="fury-fill"></i><span>FÚRIA</span></div>
+  </div>
+  <div id="mmwrap"><canvas id="minimap" width="160" height="160"></canvas><div id="clock"></div><div id="zone-mini"></div></div>
+  <div id="topbtns"><button id="b-bag" title="Mochila (I)">🎒</button><button id="b-map" title="Mapa (M)">🗺️</button><button id="b-menu" title="Menu (Esc)">☰</button></div>
+  <div id="quest" style="display:none"></div>
+  <div id="boss" style="display:none"><div id="boss-name"></div><div class="bossbar"><i id="boss-fill"></i></div></div>
+  <div id="toasts"></div>
+  <div id="prompt" style="display:none"></div>
+  <div id="hotbar"></div>
+  <div id="zone"></div>
+  <div id="levelup">NÍVEL ACIMA!</div>
+</div>
+<div id="popups"></div>
+<div id="flash"></div>
+
+<div id="death" style="display:none"><div><h1>Você caiu…</h1><p id="death-sub"></p><button id="btn-respawn" class="btn gold big">Renascer na cidade</button></div></div>
+
+<div id="modal" style="display:none"><div id="mbox"><div class="mhead"><h2 id="mtitle"></h2><button id="mclose">✕</button></div><div id="mbody"></div></div></div>
+
+<div id="touch" style="display:none">
+  <div id="touch-area"></div>
+  <div id="joy"><div id="knob"></div></div>
+  <button class="tbtn t-atk" data-k="atk"><span class="ic">⚔️</span><i class="cd"></i></button>
+  <button class="tbtn t-s0" data-s="0"><span class="ic"></span><i class="cd"></i></button>
+  <button class="tbtn t-s1" data-s="1"><span class="ic"></span><i class="cd"></i></button>
+  <button class="tbtn t-s2" data-s="2"><span class="ic"></span><i class="cd"></i></button>
+  <button class="tbtn t-ult" data-k="ult"><span class="ic">🔥</span><i class="cd"></i></button>
+  <button class="tbtn t-jump" data-k="jump"><span class="ic">⤒</span></button>
+  <button class="tbtn t-dodge" data-k="dodge"><span class="ic">💨</span></button>
+  <button class="tbtn t-pot" data-k="pot"><span class="ic">🧪</span><b class="cnt"></b></button>
+  <button class="tbtn t-mnt" data-k="mnt"><span class="ic">🐎</span></button>
+  <button class="tbtn t-use" id="tb-use" data-k="use" style="display:none"><span class="ic">✋</span></button>
+</div>
+
+<div id="err" style="display:none"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
